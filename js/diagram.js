@@ -1,0 +1,1239 @@
+/* ============================================================
+   diagram.js  –  SVG-Editor: Rendering, Drag & Drop, Werkzeuge
+   ============================================================ */
+'use strict';
+
+(function () {
+  const NODE_ENTITY_W = 140;
+  const NODE_ENTITY_H = 50;
+  const NODE_ATTR_RX = 60;
+  const NODE_ATTR_RY = 26;
+  const NODE_REL_W = 130;
+  const NODE_REL_H = 60;
+
+  function S() {
+    return window.AppState.state;
+  }
+  function genId() {
+    return window.AppState.genId();
+  }
+  function byId(id) {
+    return window.AppState.getNodeById(id);
+  }
+
+  const svg = document.getElementById('er-canvas');
+  const edgesLayer = document.getElementById('edges-layer');
+  const nodesLayer = document.getElementById('nodes-layer');
+  const modalBackdrop = document.getElementById('modal-backdrop');
+  const modalTitle = document.getElementById('modal-title');
+  const modalSubtitle = document.getElementById('modal-subtitle');
+  const modalEntity1 = document.getElementById('modal-entity-1');
+  const modalEntity2 = document.getElementById('modal-entity-2');
+  const modalCardinality = document.getElementById('modal-cardinality');
+  const modalOk = document.getElementById('modal-ok');
+  const modalCancel = document.getElementById('modal-cancel');
+  const contextMenu = document.getElementById('context-menu');
+  const ctxRename = document.getElementById('ctx-rename');
+  const ctxEditRelationship = document.getElementById('ctx-edit-relationship');
+  const ctxAddAttr = document.getElementById('ctx-add-attr');
+  const ctxTogglePk = document.getElementById('ctx-toggle-pk');
+  const ctxDelete = document.getElementById('ctx-delete');
+  const btnZoomIn = document.getElementById('btn-zoom-in');
+  const btnZoomOut = document.getElementById('btn-zoom-out');
+  const btnZoom100 = document.getElementById('btn-zoom-100');
+  const btnCenter = document.getElementById('btn-center');
+  const zoomLevel = document.getElementById('zoom-level');
+
+  let dragging = null;
+  let panning = null;
+  let spacePressed = false;
+  let hasPanned = false;
+  let selectedNodeId = null;
+  let suppressClick = false;
+  let ctxTarget = null;
+  let activeModalCleanup = null;
+  const viewState = { x: 0, y: 0, scale: 1 };
+
+  const ZOOM_MIN = 0.35;
+  const ZOOM_MAX = 3;
+  const ZOOM_STEP = 1.15;
+
+  function applyViewTransform() {
+    const transform = `matrix(${viewState.scale} 0 0 ${viewState.scale} ${viewState.x} ${viewState.y})`;
+    edgesLayer.setAttribute('transform', transform);
+    nodesLayer.setAttribute('transform', transform);
+  }
+
+  function updateZoomIndicator() {
+    if (!zoomLevel) return;
+    const zoomPercent = Math.round(viewState.scale * 100);
+    zoomLevel.textContent = `${zoomPercent}%`;
+    zoomLevel.style.display = zoomPercent === 100 ? 'none' : 'inline-flex';
+  }
+
+  function isRelationshipEdge(edge) {
+    if (!edge) return false;
+    if (edge.edgeType) return edge.edgeType === 'relationship';
+    const fromNode = byId(edge.fromId);
+    const toNode = byId(edge.toId);
+    if (!fromNode || !toNode) return false;
+    return (
+      (fromNode.type === 'relationship' && toNode.type === 'entity') ||
+      (fromNode.type === 'entity' && toNode.type === 'relationship')
+    );
+  }
+
+  function getLocalSVGPoint(e) {
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function getSVGPoint(e) {
+    const local = getLocalSVGPoint(e);
+    return {
+      x: (local.x - viewState.x) / viewState.scale,
+      y: (local.y - viewState.y) / viewState.scale,
+    };
+  }
+
+  function getCanvasCenterLocal() {
+    const box = svg.getBoundingClientRect();
+    return { x: box.width / 2, y: box.height / 2 };
+  }
+
+  function setZoom(nextScale, anchorLocalX, anchorLocalY) {
+    const clamped = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, nextScale));
+    const worldX = (anchorLocalX - viewState.x) / viewState.scale;
+    const worldY = (anchorLocalY - viewState.y) / viewState.scale;
+    viewState.scale = clamped;
+    viewState.x = anchorLocalX - worldX * clamped;
+    viewState.y = anchorLocalY - worldY * clamped;
+    applyViewTransform();
+    updateZoomIndicator();
+  }
+
+  function getDiagramBounds() {
+    if (!S().nodes.length) return null;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    S().nodes.forEach((node) => {
+      const box = getNodeBounds(node);
+      minX = Math.min(minX, box.x);
+      minY = Math.min(minY, box.y);
+      maxX = Math.max(maxX, box.x + box.w);
+      maxY = Math.max(maxY, box.y + box.h);
+    });
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  function centerView() {
+    const bounds = getDiagramBounds();
+    if (!bounds) {
+      viewState.x = 0;
+      viewState.y = 0;
+      viewState.scale = 1;
+      applyViewTransform();
+      updateZoomIndicator();
+      return;
+    }
+
+    const centerX = (bounds.minX + bounds.maxX) / 2;
+    const centerY = (bounds.minY + bounds.maxY) / 2;
+    const viewportCenter = getCanvasCenterLocal();
+    viewState.x = viewportCenter.x - centerX * viewState.scale;
+    viewState.y = viewportCenter.y - centerY * viewState.scale;
+    applyViewTransform();
+    updateZoomIndicator();
+  }
+
+  function bindViewportControls() {
+    if (btnZoomIn) {
+      btnZoomIn.addEventListener('click', () => {
+        const c = getCanvasCenterLocal();
+        setZoom(viewState.scale * ZOOM_STEP, c.x, c.y);
+      });
+    }
+    if (btnZoomOut) {
+      btnZoomOut.addEventListener('click', () => {
+        const c = getCanvasCenterLocal();
+        setZoom(viewState.scale / ZOOM_STEP, c.x, c.y);
+      });
+    }
+    if (btnZoom100) {
+      btnZoom100.addEventListener('click', () => {
+        const c = getCanvasCenterLocal();
+        setZoom(1, c.x, c.y);
+      });
+    }
+    if (btnCenter) {
+      btnCenter.addEventListener('click', () => {
+        centerView();
+      });
+    }
+  }
+
+  function getNodeCenter(node) {
+    switch (node.type) {
+      case 'entity':
+        return { x: node.x + NODE_ENTITY_W / 2, y: node.y + NODE_ENTITY_H / 2 };
+      case 'attribute':
+        return { x: node.x + NODE_ATTR_RX, y: node.y + NODE_ATTR_RY };
+      case 'relationship':
+        return { x: node.x + NODE_REL_W / 2, y: node.y + NODE_REL_H / 2 };
+      default:
+        return { x: node.x, y: node.y };
+    }
+  }
+
+  function getRelationshipCorners(node) {
+    return [
+      { index: 0, x: node.x + NODE_REL_W / 2, y: node.y },
+      { index: 1, x: node.x + NODE_REL_W, y: node.y + NODE_REL_H / 2 },
+      { index: 2, x: node.x + NODE_REL_W / 2, y: node.y + NODE_REL_H },
+      { index: 3, x: node.x, y: node.y + NODE_REL_H / 2 },
+    ];
+  }
+
+  function getNearestRelationshipCorner(node, targetX, targetY) {
+    const corners = getRelationshipCorners(node);
+
+    let nearest = corners[0];
+    let nearestDist = Infinity;
+    corners.forEach((corner) => {
+      const dx = targetX - corner.x;
+      const dy = targetY - corner.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq < nearestDist) {
+        nearest = corner;
+        nearestDist = distSq;
+      }
+    });
+
+    return nearest;
+  }
+
+  function segmentsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+    const d1x = bx - ax;
+    const d1y = by - ay;
+    const d2x = dx - cx;
+    const d2y = dy - cy;
+    const denom = d1x * d2y - d1y * d2x;
+    if (Math.abs(denom) < 1e-10) return false;
+    const t = ((cx - ax) * d2y - (cy - ay) * d2x) / denom;
+    const u = ((cx - ax) * d1y - (cy - ay) * d1x) / denom;
+    return t > 0.02 && t < 0.98 && u > 0.02 && u < 0.98;
+  }
+
+  function buildRelationshipCornerAssignments() {
+    const assignments = new Map();
+    const relationshipNodes = S().nodes.filter((node) => node.type === 'relationship');
+
+    relationshipNodes.forEach((relationshipNode) => {
+      const incidentEdges = S().edges.filter(
+        (edge) =>
+          isRelationshipEdge(edge) && (edge.fromId === relationshipNode.id || edge.toId === relationshipNode.id),
+      );
+      if (!incidentEdges.length) return;
+
+      const relCenter = getNodeCenter(relationshipNode);
+
+      // Sort corners by angle around diamond center
+      const corners = getRelationshipCorners(relationshipNode)
+        .map((c) => ({ ...c, angle: Math.atan2(c.y - relCenter.y, c.x - relCenter.x) }))
+        .sort((a, b) => a.angle - b.angle);
+
+      // Resolve each edge to its target entity center + angle
+      const edgeData = incidentEdges
+        .map((edge) => {
+          const otherId = edge.fromId === relationshipNode.id ? edge.toId : edge.fromId;
+          const otherNode = byId(otherId);
+          if (!otherNode) return null;
+          const c = getNodeCenter(otherNode);
+          return { edge, cx: c.x, cy: c.y, angle: Math.atan2(c.y - relCenter.y, c.x - relCenter.x) };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.angle - b.angle);
+
+      const n = edgeData.length;
+      if (n === 0) return;
+
+      // Generate all combinations of n corners from 4
+      const subsets = [];
+      const buildSubsets = (start, current) => {
+        if (current.length === n) {
+          subsets.push([...current]);
+          return;
+        }
+        for (let i = start; i < 4; i++) {
+          current.push(i);
+          buildSubsets(i + 1, current);
+          current.pop();
+        }
+      };
+      buildSubsets(0, []);
+
+      let bestScore = Infinity;
+      let bestAssignment = null;
+
+      subsets.forEach((subset) => {
+        const subCorners = subset.map((i) => corners[i]);
+
+        // Try all n cyclic rotations of the corner→edge matching
+        for (let rot = 0; rot < n; rot++) {
+          const candidate = edgeData.map((ed, i) => ({
+            edge: ed.edge,
+            corner: subCorners[(i + rot) % n],
+            cx: ed.cx,
+            cy: ed.cy,
+          }));
+
+          // Count crossing pairs (use entity centers as far-end proxy)
+          let crossings = 0;
+          for (let a = 0; a < candidate.length; a++) {
+            for (let b = a + 1; b < candidate.length; b++) {
+              const A = candidate[a];
+              const B = candidate[b];
+              if (segmentsIntersect(A.corner.x, A.corner.y, A.cx, A.cy, B.corner.x, B.corner.y, B.cx, B.cy)) {
+                crossings++;
+              }
+            }
+          }
+
+          // Secondary criterion: minimize total squared distance
+          const totalDist = candidate.reduce(
+            (sum, { corner, cx, cy }) => sum + (cx - corner.x) ** 2 + (cy - corner.y) ** 2,
+            0,
+          );
+
+          const score = crossings * 1e12 + totalDist;
+          if (score < bestScore) {
+            bestScore = score;
+            bestAssignment = candidate;
+          }
+        }
+      });
+
+      if (bestAssignment) {
+        bestAssignment.forEach(({ edge, corner }) => {
+          assignments.set(`${edge.id}:${relationshipNode.id}`, { x: corner.x, y: corner.y });
+        });
+      }
+    });
+
+    return assignments;
+  }
+
+  function getEdgeEndpoint(node, targetX, targetY) {
+    const c = getNodeCenter(node);
+    const dx = targetX - c.x;
+    const dy = targetY - c.y;
+    const len = Math.sqrt(dx * dx + dy * dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+
+    if (node.type === 'entity') {
+      const hw = NODE_ENTITY_W / 2;
+      const hh = NODE_ENTITY_H / 2;
+      const t = Math.min(hw / Math.abs(ux || 0.0001), hh / Math.abs(uy || 0.0001));
+      return { x: c.x + ux * t, y: c.y + uy * t };
+    }
+    if (node.type === 'attribute') {
+      const rx = NODE_ATTR_RX;
+      const ry = NODE_ATTR_RY;
+      const angle = Math.atan2(dy * rx, dx * ry);
+      return { x: c.x + rx * Math.cos(angle), y: c.y + ry * Math.sin(angle) };
+    }
+    return getNearestRelationshipCorner(node, targetX, targetY);
+  }
+
+  function edgeLabel(edge, side) {
+    const raw = side === 'from' ? edge.chenFrom || '1' : edge.chenTo || 'n';
+    return String(raw).toLowerCase();
+  }
+
+  function makeText(x, y, text) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', x);
+    t.setAttribute('y', y);
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('font-size', '13');
+    t.setAttribute('fill', '#1e293b');
+    t.textContent = text;
+    return t;
+  }
+
+  function makePrimaryKeyDecoration(text, centerX, centerY) {
+    const width = Math.max(8, (text || '').trim().length * 7.1);
+    const underline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    underline.setAttribute('x1', centerX - width / 2);
+    underline.setAttribute('x2', centerX + width / 2);
+    underline.setAttribute('y1', centerY + 14);
+    underline.setAttribute('y2', centerY + 14);
+    underline.setAttribute('stroke', '#1e293b');
+    underline.setAttribute('stroke-width', '2.5');
+    underline.setAttribute('stroke-linecap', 'round');
+    return underline;
+  }
+
+  function makeLabelText(x, y, text) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', x);
+    t.setAttribute('y', y);
+    t.setAttribute('class', 'edge-label');
+    t.setAttribute('font-size', '13');
+    t.setAttribute('font-weight', '700');
+    t.setAttribute('fill', '#1e293b');
+    t.textContent = text;
+    return t;
+  }
+
+  function getNodeBounds(node) {
+    if (node.type === 'entity') return { x: node.x, y: node.y, w: NODE_ENTITY_W, h: NODE_ENTITY_H };
+    if (node.type === 'attribute') return { x: node.x, y: node.y, w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 };
+    return { x: node.x, y: node.y, w: NODE_REL_W, h: NODE_REL_H };
+  }
+
+  function boxesOverlap(a, b, padding = 18) {
+    return !(
+      a.x + a.w + padding <= b.x ||
+      b.x + b.w + padding <= a.x ||
+      a.y + a.h + padding <= b.y ||
+      b.y + b.h + padding <= a.y
+    );
+  }
+
+  function clampPosition(type, x, y) {
+    return { x, y };
+  }
+
+  function positionIsFree(type, x, y) {
+    const candidate = getNodeBounds({ type, x, y });
+    return !S().nodes.some((node) => boxesOverlap(candidate, getNodeBounds(node)));
+  }
+
+  function findFreePosition(type, preferredX, preferredY) {
+    const angles = 12;
+    for (let ring = 0; ring < 12; ring += 1) {
+      const radius = ring * 42;
+      for (let step = 0; step < angles; step += 1) {
+        const angle = (step / angles) * Math.PI * 2;
+        const candidate = clampPosition(
+          type,
+          preferredX + Math.cos(angle) * radius,
+          preferredY + Math.sin(angle) * radius,
+        );
+        if (positionIsFree(type, candidate.x, candidate.y)) return candidate;
+      }
+    }
+    return clampPosition(type, preferredX, preferredY);
+  }
+
+  function getCardinalityTypeFromEdges(existingEdges) {
+    const left = existingEdges[0] ? edgeLabel(existingEdges[0], 'to') : '1';
+    const right = existingEdges[1] ? edgeLabel(existingEdges[1], 'to') : '1';
+    return `${left}:${right}`;
+  }
+
+  function getCardinalityParts(type) {
+    switch ((type || '1:1').toLowerCase()) {
+      case '1:n':
+        return ['1', 'n'];
+      case 'n:1':
+        return ['n', '1'];
+      case 'n:m':
+        return ['n', 'm'];
+      default:
+        return ['1', '1'];
+    }
+  }
+
+  function renderAll() {
+    edgesLayer.innerHTML = '';
+    nodesLayer.innerHTML = '';
+    const relationshipCornerAssignments = buildRelationshipCornerAssignments();
+    S().edges.forEach((edge) => renderEdge(edge, relationshipCornerAssignments));
+    S().nodes.forEach(renderNode);
+  }
+
+  function applySelectedStyle(shape, strokeColor) {
+    shape.setAttribute('stroke', strokeColor);
+    shape.setAttribute('stroke-width', '3');
+    shape.style.filter = 'drop-shadow(0 6px 14px rgba(30, 41, 59, 0.18))';
+  }
+
+  function renderNode(node) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'node node-' + node.type);
+    g.setAttribute('data-id', node.id);
+    g.setAttribute('transform', `translate(${node.x},${node.y})`);
+    const isSelected = selectedNodeId === node.id;
+
+    let shape;
+    let textEl;
+    if (node.type === 'entity') {
+      shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      shape.setAttribute('width', NODE_ENTITY_W);
+      shape.setAttribute('height', NODE_ENTITY_H);
+      shape.setAttribute('fill', isSelected ? '#bfdbfe' : '#dbeafe');
+      shape.setAttribute('stroke', '#2563eb');
+      shape.setAttribute('stroke-width', '2');
+      textEl = makeText(NODE_ENTITY_W / 2, NODE_ENTITY_H / 2, node.name || 'Entitätsklasse');
+    } else if (node.type === 'attribute') {
+      shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+      shape.setAttribute('cx', NODE_ATTR_RX);
+      shape.setAttribute('cy', NODE_ATTR_RY);
+      shape.setAttribute('rx', NODE_ATTR_RX);
+      shape.setAttribute('ry', NODE_ATTR_RY);
+      shape.setAttribute('fill', isSelected ? '#fde68a' : '#fef3c7');
+      shape.setAttribute('stroke', '#d97706');
+      shape.setAttribute('stroke-width', '2');
+
+      textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      textEl.setAttribute('x', NODE_ATTR_RX);
+      textEl.setAttribute('y', NODE_ATTR_RY);
+      textEl.setAttribute('text-anchor', 'middle');
+      textEl.setAttribute('dominant-baseline', 'middle');
+      textEl.setAttribute('font-size', '13');
+      textEl.setAttribute('fill', '#1e293b');
+      if (node.isPrimaryKey) {
+        textEl.setAttribute('font-weight', '800');
+        textEl.textContent = node.name || 'Attribut';
+      } else {
+        textEl.textContent = node.name || 'Attribut';
+      }
+    } else {
+      shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      shape.setAttribute(
+        'points',
+        `${NODE_REL_W / 2},0 ${NODE_REL_W},${NODE_REL_H / 2} ${NODE_REL_W / 2},${NODE_REL_H} 0,${NODE_REL_H / 2}`,
+      );
+      shape.setAttribute('fill', isSelected ? '#bbf7d0' : '#dcfce7');
+      shape.setAttribute('stroke', '#16a34a');
+      shape.setAttribute('stroke-width', '2');
+      textEl = makeText(NODE_REL_W / 2, NODE_REL_H / 2, node.name || 'Beziehung');
+    }
+
+    if (isSelected) {
+      const selectedStroke = node.type === 'entity' ? '#1d4ed8' : node.type === 'attribute' ? '#b45309' : '#15803d';
+      applySelectedStyle(shape, selectedStroke);
+    }
+
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    hit.setAttribute('x', -5);
+    hit.setAttribute('y', -5);
+    const bbox =
+      node.type === 'entity'
+        ? { w: NODE_ENTITY_W + 10, h: NODE_ENTITY_H + 10 }
+        : node.type === 'attribute'
+          ? { w: NODE_ATTR_RX * 2 + 10, h: NODE_ATTR_RY * 2 + 10 }
+          : { w: NODE_REL_W + 10, h: NODE_REL_H + 10 };
+    hit.setAttribute('width', bbox.w);
+    hit.setAttribute('height', bbox.h);
+    hit.setAttribute('fill', 'transparent');
+
+    g.appendChild(shape);
+    if (textEl) g.appendChild(textEl);
+    if (node.type === 'attribute' && node.isPrimaryKey) {
+      g.appendChild(makePrimaryKeyDecoration(node.name || 'Attribut', NODE_ATTR_RX, NODE_ATTR_RY));
+    }
+    g.appendChild(hit);
+
+    bindNodeEvents(g, node);
+    nodesLayer.appendChild(g);
+  }
+
+  function renderEdge(edge, relationshipCornerAssignments) {
+    const fromNode = byId(edge.fromId);
+    const toNode = byId(edge.toId);
+    if (!fromNode || !toNode) return;
+
+    const fc = getNodeCenter(fromNode);
+    const tc = getNodeCenter(toNode);
+    const fp =
+      fromNode.type === 'relationship'
+        ? relationshipCornerAssignments.get(`${edge.id}:${fromNode.id}`) || getEdgeEndpoint(fromNode, tc.x, tc.y)
+        : getEdgeEndpoint(fromNode, tc.x, tc.y);
+    const tp =
+      toNode.type === 'relationship'
+        ? relationshipCornerAssignments.get(`${edge.id}:${toNode.id}`) || getEdgeEndpoint(toNode, fc.x, fc.y)
+        : getEdgeEndpoint(toNode, fc.x, fc.y);
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', fp.x);
+    line.setAttribute('y1', fp.y);
+    line.setAttribute('x2', tp.x);
+    line.setAttribute('y2', tp.y);
+    line.setAttribute('class', 'edge-line');
+    line.setAttribute('data-id', edge.id);
+    line.setAttribute('stroke', '#475569');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('fill', 'none');
+
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    hit.setAttribute('x1', fp.x);
+    hit.setAttribute('y1', fp.y);
+    hit.setAttribute('x2', tp.x);
+    hit.setAttribute('y2', tp.y);
+    hit.setAttribute('class', 'edge-hit');
+    hit.setAttribute('data-id', edge.id);
+
+    edgesLayer.appendChild(line);
+
+    if (isRelationshipEdge(edge)) {
+      const OFFSET = 30;
+      const dx = tp.x - fp.x;
+      const dy = tp.y - fp.y;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+      const ux = dx / len;
+      const uy = dy / len;
+      const entityIsTarget = toNode.type === 'entity';
+      const label = entityIsTarget ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from');
+      const anchorX = entityIsTarget ? tp.x : fp.x;
+      const anchorY = entityIsTarget ? tp.y : fp.y;
+      const direction = entityIsTarget ? -1 : 1;
+      const text = makeLabelText(anchorX + ux * OFFSET * direction, anchorY + uy * OFFSET * direction - 12, label);
+      edgesLayer.appendChild(text);
+    }
+
+    edgesLayer.appendChild(hit);
+
+    hit.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+    hit.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideContextMenu();
+      if (isRelationshipEdge(edge)) {
+        showContextMenu(e, 'edge', edge.id);
+      }
+    });
+  }
+
+  function setSelectModeVisual() {
+    document.querySelectorAll('.tool-btn').forEach((btn) => btn.classList.remove('active'));
+    svg.className.baseVal = '';
+    svg.classList.add('tool-select');
+  }
+
+  function getSpawnPosition(type) {
+    const box = svg.getBoundingClientRect();
+    const worldLeft = -viewState.x / viewState.scale;
+    const worldTop = -viewState.y / viewState.scale;
+    const preferredX = worldLeft + (type === 'entity' ? box.width * 0.2 : box.width * 0.55) / viewState.scale;
+    const preferredY = worldTop + (box.height * 0.18) / viewState.scale;
+    const dims =
+      type === 'entity'
+        ? { w: NODE_ENTITY_W, h: NODE_ENTITY_H }
+        : type === 'attribute'
+          ? { w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 }
+          : { w: NODE_REL_W, h: NODE_REL_H };
+    return findFreePosition(type, preferredX - dims.w / 2, preferredY - dims.h / 2);
+  }
+
+  function getAttributeSpawnPosition(entityNode) {
+    const center = getNodeCenter(entityNode);
+    for (let ring = 0; ring < 4; ring += 1) {
+      const radius = 116 + ring * 34;
+      for (let step = 0; step < 12; step += 1) {
+        const angle = (step / 12) * Math.PI * 2;
+        const candidate = clampPosition(
+          'attribute',
+          center.x + Math.cos(angle) * radius - NODE_ATTR_RX,
+          center.y + Math.sin(angle) * radius - NODE_ATTR_RY,
+        );
+        if (positionIsFree('attribute', candidate.x, candidate.y)) return candidate;
+      }
+    }
+    return findFreePosition('attribute', center.x + 90 - NODE_ATTR_RX, center.y - NODE_ATTR_RY);
+  }
+
+  function addNode(type, x, y) {
+    const node = {
+      id: genId(),
+      type,
+      x,
+      y,
+      name: type === 'entity' ? 'Entitätsklasse' : type === 'attribute' ? 'Attribut' : 'Beziehung',
+      isPrimaryKey: false,
+    };
+    S().nodes.push(node);
+    renderAll();
+    selectNodeFn(node.id);
+    setTimeout(() => {
+      const g = nodesLayer.querySelector(`[data-id="${node.id}"]`);
+      if (g) startInlineEdit(node, g);
+    }, 30);
+    return node;
+  }
+
+  function findEdge(fromId, toId, edgeType) {
+    return S().edges.find(
+      (e) =>
+        e.edgeType === edgeType &&
+        ((e.fromId === fromId && e.toId === toId) || (e.fromId === toId && e.toId === fromId)),
+    );
+  }
+
+  function createEdge(fromId, toId, edgeType) {
+    const existing = findEdge(fromId, toId, edgeType);
+    if (existing) return existing.id;
+    const edge = {
+      id: genId(),
+      fromId,
+      toId,
+      edgeType,
+      chenFrom: '1',
+      chenTo: 'n',
+    };
+    S().edges.push(edge);
+    renderAll();
+    return edge.id;
+  }
+
+  function addEntityAction() {
+    const p = getSpawnPosition('entity');
+    addNode('entity', p.x, p.y);
+  }
+
+  function addAttributeToEntity(entityId) {
+    const entityNode = byId(entityId);
+    if (!entityNode || entityNode.type !== 'entity') return;
+    const p = getAttributeSpawnPosition(entityNode);
+    const attrNode = addNode('attribute', p.x, p.y);
+    createEdge(entityNode.id, attrNode.id, 'attribute');
+  }
+
+  function addRelationshipAction() {
+    const p = getSpawnPosition('relationship');
+    addNode('relationship', p.x, p.y);
+  }
+
+  function bindToolbarActions() {
+    document.querySelectorAll('.tool-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        hideContextMenu();
+        const tool = btn.dataset.tool;
+        if (tool === 'entity') addEntityAction();
+        if (tool === 'relationship') addRelationshipAction();
+        setSelectModeVisual();
+      });
+    });
+  }
+
+  function getRelationshipEntityEdges(relationshipId) {
+    return S().edges.filter((edge) => {
+      if (!isRelationshipEdge(edge)) return false;
+      if (edge.fromId !== relationshipId && edge.toId !== relationshipId) return false;
+      const otherId = edge.fromId === relationshipId ? edge.toId : edge.fromId;
+      const otherNode = byId(otherId);
+      return otherNode && otherNode.type === 'entity';
+    });
+  }
+
+  function fillEntitySelect(select, entities, selectedId) {
+    select.innerHTML = '';
+    const empty = document.createElement('option');
+    empty.value = '';
+    empty.textContent = '- keine -';
+    select.appendChild(empty);
+
+    entities.forEach((entity) => {
+      const option = document.createElement('option');
+      option.value = entity.id;
+      option.textContent = entity.name || 'Entitätsklasse';
+      select.appendChild(option);
+    });
+
+    select.value = selectedId || '';
+  }
+
+  function getRelationshipEntityId(edge, relationshipId) {
+    return edge.fromId === relationshipId ? edge.toId : edge.fromId;
+  }
+
+  function getRelationshipNodeIdFromEdge(edge) {
+    if (!edge || !isRelationshipEdge(edge)) return null;
+    const fromNode = byId(edge.fromId);
+    const toNode = byId(edge.toId);
+    if (fromNode?.type === 'relationship') return fromNode.id;
+    if (toNode?.type === 'relationship') return toNode.id;
+    return null;
+  }
+
+  function createRelationshipEdge(relationshipId, entityId, cardinality) {
+    const existing = findEdge(relationshipId, entityId, 'relationship');
+    if (existing) {
+      existing.fromId = relationshipId;
+      existing.toId = entityId;
+      existing.chenFrom = '1';
+      existing.chenTo = (cardinality || '1').toLowerCase();
+      return existing.id;
+    }
+
+    const edge = {
+      id: genId(),
+      fromId: relationshipId,
+      toId: entityId,
+      edgeType: 'relationship',
+      chenFrom: '1',
+      chenTo: (cardinality || '1').toLowerCase(),
+    };
+    S().edges.push(edge);
+    return edge.id;
+  }
+
+  function openRelationshipModal(relationshipId) {
+    const relationshipNode = byId(relationshipId);
+    if (!relationshipNode || relationshipNode.type !== 'relationship') return;
+
+    if (activeModalCleanup) activeModalCleanup();
+
+    const entities = S().nodes.filter((node) => node.type === 'entity');
+    const existingEdges = getRelationshipEntityEdges(relationshipId).slice(0, 2);
+
+    modalTitle.textContent = 'Beziehung bearbeiten';
+    modalSubtitle.textContent = `Verbinde ${relationshipNode.name || 'Beziehung'} mit bis zu zwei Entitätsklassen.`;
+
+    fillEntitySelect(
+      modalEntity1,
+      entities,
+      existingEdges[0] ? getRelationshipEntityId(existingEdges[0], relationshipId) : '',
+    );
+    fillEntitySelect(
+      modalEntity2,
+      entities,
+      existingEdges[1] ? getRelationshipEntityId(existingEdges[1], relationshipId) : '',
+    );
+    modalCardinality.value = getCardinalityTypeFromEdges(existingEdges);
+
+    modalBackdrop.style.display = '';
+
+    const cleanup = () => {
+      modalOk.removeEventListener('click', onOk);
+      modalCancel.removeEventListener('click', onCancel);
+      modalBackdrop.style.display = 'none';
+      if (activeModalCleanup === cleanup) activeModalCleanup = null;
+    };
+
+    const onOk = () => {
+      const entityId1 = modalEntity1.value;
+      const entityId2 = modalEntity2.value;
+      const [leftCardinality, rightCardinality] = getCardinalityParts(modalCardinality.value);
+
+      if (entityId1 && entityId2 && entityId1 === entityId2) {
+        alert('Bitte zwei unterschiedliche Entitätsklassen auswählen.');
+        return;
+      }
+
+      S().edges = S().edges.filter((edge) => {
+        if (!isRelationshipEdge(edge)) return true;
+        if (edge.fromId !== relationshipId && edge.toId !== relationshipId) return true;
+        const otherId = edge.fromId === relationshipId ? edge.toId : edge.fromId;
+        const otherNode = byId(otherId);
+        return !(otherNode && otherNode.type === 'entity');
+      });
+
+      if (entityId1) createRelationshipEdge(relationshipId, entityId1, leftCardinality);
+      if (entityId2) createRelationshipEdge(relationshipId, entityId2, rightCardinality);
+
+      cleanup();
+      selectNodeFn(relationshipId);
+      renderAll();
+    };
+
+    const onCancel = () => cleanup();
+
+    activeModalCleanup = cleanup;
+    modalOk.addEventListener('click', onOk);
+    modalCancel.addEventListener('click', onCancel);
+  }
+
+  function showContextMenu(event, type, id) {
+    ctxTarget = { type, id };
+
+    let showRename = false;
+    let showEditRelationship = false;
+    let showAddAttr = false;
+    let showTogglePk = false;
+    let showDelete = false;
+
+    if (type === 'node') {
+      const node = byId(id);
+      if (!node) return;
+      showRename = true;
+      showEditRelationship = node.type === 'relationship';
+      showAddAttr = node.type === 'entity';
+      showTogglePk = node.type === 'attribute';
+      showDelete = true;
+
+      if (showTogglePk) {
+        ctxTogglePk.textContent = node.isPrimaryKey ? 'Primärschlüssel entfernen' : 'Als Primärschlüssel markieren';
+      }
+    }
+
+    if (type === 'edge') {
+      const edge = window.AppState.getEdgeById(id);
+      showEditRelationship = !!edge && isRelationshipEdge(edge);
+      showDelete = !!edge && isRelationshipEdge(edge);
+    }
+
+    ctxRename.style.display = showRename ? '' : 'none';
+    ctxEditRelationship.style.display = showEditRelationship ? '' : 'none';
+    ctxAddAttr.style.display = showAddAttr ? '' : 'none';
+    ctxTogglePk.style.display = showTogglePk ? '' : 'none';
+    ctxDelete.style.display = showDelete ? '' : 'none';
+
+    if (!showRename && !showEditRelationship && !showAddAttr && !showTogglePk && !showDelete) {
+      ctxTarget = null;
+      return;
+    }
+
+    contextMenu.style.display = 'block';
+    const { innerWidth, innerHeight } = window;
+    const menuWidth = contextMenu.offsetWidth;
+    const menuHeight = contextMenu.offsetHeight;
+    const left = Math.min(event.clientX, innerWidth - menuWidth - 8);
+    const top = Math.min(event.clientY, innerHeight - menuHeight - 8);
+    contextMenu.style.left = `${Math.max(8, left)}px`;
+    contextMenu.style.top = `${Math.max(8, top)}px`;
+  }
+
+  function hideContextMenu() {
+    contextMenu.style.display = 'none';
+    ctxTarget = null;
+  }
+
+  function bindNodeEvents(g, node) {
+    g.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      hideContextMenu();
+
+      selectNodeFn(node.id);
+
+      const svgPt = getSVGPoint(e);
+      dragging = {
+        nodeId: node.id,
+        offsetX: svgPt.x - node.x,
+        offsetY: svgPt.y - node.y,
+        linkedAttributeIds:
+          node.type === 'entity'
+            ? S()
+                .edges.filter(
+                  (edge) => edge.edgeType === 'attribute' && (edge.fromId === node.id || edge.toId === node.id),
+                )
+                .map((edge) => (edge.fromId === node.id ? edge.toId : edge.fromId))
+            : [],
+      };
+      suppressClick = false;
+      e.preventDefault();
+    });
+
+    g.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (suppressClick) {
+        suppressClick = false;
+        return;
+      }
+      if (node.type === 'relationship') {
+        openRelationshipModal(node.id);
+      }
+    });
+
+    g.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      startInlineEdit(node, g);
+    });
+
+    g.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideContextMenu();
+      showContextMenu(e, 'node', node.id);
+    });
+  }
+
+  svg.addEventListener('mousemove', (e) => {
+    if (panning) {
+      const local = getLocalSVGPoint(e);
+      viewState.x = panning.startViewX + (local.x - panning.startX);
+      viewState.y = panning.startViewY + (local.y - panning.startY);
+      hasPanned = hasPanned || Math.abs(local.x - panning.startX) > 2 || Math.abs(local.y - panning.startY) > 2;
+      applyViewTransform();
+      return;
+    }
+    if (!dragging) return;
+    const svgPt = getSVGPoint(e);
+    const node = byId(dragging.nodeId);
+    if (!node) {
+      dragging = null;
+      return;
+    }
+    const newX = svgPt.x - dragging.offsetX;
+    const newY = svgPt.y - dragging.offsetY;
+    const dx = newX - node.x;
+    const dy = newY - node.y;
+    node.x = newX;
+    node.y = newY;
+    if (node.type === 'entity' && dragging.linkedAttributeIds.length) {
+      dragging.linkedAttributeIds.forEach((attrId) => {
+        const attrNode = byId(attrId);
+        if (!attrNode || attrNode.type !== 'attribute') return;
+        attrNode.x += dx;
+        attrNode.y += dy;
+      });
+    }
+    suppressClick = true;
+    renderAll();
+  });
+
+  svg.addEventListener('mouseup', () => {
+    dragging = null;
+    panning = null;
+    svg.classList.remove('is-panning');
+  });
+  svg.addEventListener('mouseleave', () => {
+    dragging = null;
+    panning = null;
+    svg.classList.remove('is-panning');
+  });
+
+  svg.addEventListener('mousedown', (e) => {
+    const backgroundClick = e.target === svg || (e.target.tagName === 'rect' && !e.target.closest('.node'));
+    const shouldPan = backgroundClick && (e.button === 0 || e.button === 1 || (e.button === 0 && spacePressed));
+    if (!shouldPan) return;
+
+    const local = getLocalSVGPoint(e);
+    panning = {
+      startX: local.x,
+      startY: local.y,
+      startViewX: viewState.x,
+      startViewY: viewState.y,
+    };
+    hasPanned = false;
+    svg.classList.add('is-panning');
+    hideContextMenu();
+    e.preventDefault();
+  });
+
+  svg.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      const local = getLocalSVGPoint(e);
+      const factor = e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+      setZoom(viewState.scale * factor, local.x, local.y);
+    } else {
+      const panFactor = e.shiftKey ? 1 : 0.65;
+      viewState.x -= e.deltaX * panFactor;
+      viewState.y -= e.deltaY * panFactor;
+      applyViewTransform();
+    }
+    e.preventDefault();
+  });
+
+  svg.addEventListener('click', (e) => {
+    if (hasPanned) {
+      hasPanned = false;
+      return;
+    }
+    hideContextMenu();
+    if (e.target === svg || (e.target.tagName === 'rect' && !e.target.closest('.node'))) {
+      deselectAll();
+    }
+  });
+
+  svg.addEventListener('contextmenu', (e) => {
+    if (e.target === svg || (e.target.tagName === 'rect' && !e.target.closest('.node'))) {
+      hideContextMenu();
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === ' ') {
+      spacePressed = true;
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const tag = document.activeElement.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (selectedNodeId) {
+        deleteNode(selectedNodeId);
+        return;
+      }
+    }
+    if (e.key === 'Escape') {
+      hideContextMenu();
+      if (activeModalCleanup) activeModalCleanup();
+      deselectAll();
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.key === ' ') {
+      spacePressed = false;
+    }
+  });
+
+  function deleteNode(nodeId) {
+    S().nodes = S().nodes.filter((n) => n.id !== nodeId);
+    S().edges = S().edges.filter((e) => e.fromId !== nodeId && e.toId !== nodeId);
+    deselectAll();
+    renderAll();
+  }
+
+  function deleteEdge(edgeId) {
+    S().edges = S().edges.filter((e) => e.id !== edgeId);
+    deselectAll();
+    renderAll();
+  }
+
+  function selectNodeFn(id) {
+    selectedNodeId = id;
+    window.AppSelect.selectNode(id);
+    renderAll();
+  }
+
+  function deselectAll() {
+    selectedNodeId = null;
+    window.AppSelect.clearSelection();
+    renderAll();
+  }
+
+  modalBackdrop.addEventListener('click', (e) => {
+    if (e.target === modalBackdrop) {
+      if (activeModalCleanup) activeModalCleanup();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!contextMenu.contains(e.target)) {
+      hideContextMenu();
+    }
+  });
+
+  ctxRename.addEventListener('click', () => {
+    if (!ctxTarget || ctxTarget.type !== 'node') return;
+    const node = byId(ctxTarget.id);
+    hideContextMenu();
+    if (node) startInlineEdit(node);
+  });
+
+  ctxEditRelationship.addEventListener('click', () => {
+    if (!ctxTarget) return;
+
+    let relationshipId = null;
+    if (ctxTarget.type === 'node') {
+      const node = byId(ctxTarget.id);
+      if (node?.type === 'relationship') relationshipId = node.id;
+    }
+    if (ctxTarget.type === 'edge') {
+      const edge = window.AppState.getEdgeById(ctxTarget.id);
+      relationshipId = getRelationshipNodeIdFromEdge(edge);
+    }
+
+    hideContextMenu();
+    if (relationshipId) {
+      selectNodeFn(relationshipId);
+      openRelationshipModal(relationshipId);
+    }
+  });
+
+  ctxAddAttr.addEventListener('click', () => {
+    if (!ctxTarget || ctxTarget.type !== 'node') return;
+    const node = byId(ctxTarget.id);
+    hideContextMenu();
+    if (node && node.type === 'entity') addAttributeToEntity(node.id);
+  });
+
+  ctxTogglePk.addEventListener('click', () => {
+    if (!ctxTarget || ctxTarget.type !== 'node') return;
+    const node = byId(ctxTarget.id);
+    hideContextMenu();
+    if (!node || node.type !== 'attribute') return;
+
+    node.isPrimaryKey = !node.isPrimaryKey;
+    selectNodeFn(node.id);
+    const pkCheckbox = document.getElementById('prop-pk');
+    if (pkCheckbox) pkCheckbox.checked = !!node.isPrimaryKey;
+    renderAll();
+  });
+
+  ctxDelete.addEventListener('click', () => {
+    if (!ctxTarget) return;
+    const target = ctxTarget;
+    hideContextMenu();
+    if (target.type === 'node') deleteNode(target.id);
+    if (target.type === 'edge') deleteEdge(target.id);
+  });
+
+  function startInlineEdit(node) {
+    selectNodeFn(node.id);
+    let cx;
+    let cy;
+    let fw;
+    if (node.type === 'entity') {
+      cx = node.x + NODE_ENTITY_W / 2;
+      cy = node.y + NODE_ENTITY_H / 2;
+      fw = NODE_ENTITY_W - 10;
+    } else if (node.type === 'attribute') {
+      cx = node.x + NODE_ATTR_RX;
+      cy = node.y + NODE_ATTR_RY;
+      fw = NODE_ATTR_RX * 2 - 10;
+    } else {
+      cx = node.x + NODE_REL_W / 2;
+      cy = node.y + NODE_REL_H / 2;
+      fw = NODE_REL_W - 20;
+    }
+
+    const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+    fo.setAttribute('x', cx - fw / 2);
+    fo.setAttribute('y', cy - 14);
+    fo.setAttribute('width', fw);
+    fo.setAttribute('height', 28);
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = node.name || '';
+    input.className = 'svg-inline-input';
+    input.style.width = fw + 'px';
+
+    fo.appendChild(input);
+    nodesLayer.appendChild(fo);
+    input.focus();
+    input.select();
+
+    const commit = () => {
+      const val = input.value.trim();
+      node.name = val || node.name;
+      if (nodesLayer.contains(fo)) nodesLayer.removeChild(fo);
+      document.getElementById('prop-name').value = node.name;
+      renderAll();
+    };
+
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === 'Escape') {
+        e.preventDefault();
+        commit();
+      }
+    });
+  }
+
+  bindToolbarActions();
+  bindViewportControls();
+  setSelectModeVisual();
+  applyViewTransform();
+  updateZoomIndicator();
+
+  window.Diagram = {
+    renderAll,
+    deleteNode,
+    deleteEdge,
+  };
+})();
