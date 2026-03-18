@@ -12,13 +12,6 @@
       <div id="header-left">
         <span id="app-title">📊 ER-Diagramm Editor</span>
       </div>
-      <div id="header-center">
-        <div id="notation-switch">
-          <span class="notation-label">Notation:</span>
-          <button id="btn-chen" class="notation-btn active" title="Chen-Notation (1, N, M)">Chen</button>
-          <button id="btn-minmax" class="notation-btn" title="Für diesen Modus deaktiviert" disabled>Min-Max</button>
-        </div>
-      </div>
       <div id="header-right">
         <button id="btn-import" class="header-btn" title="Diagramm aus JSON-Datei laden">⬆ Importieren</button>
         <button id="btn-export-json" class="header-btn" title="Diagramm als JSON speichern">⬇ JSON-Export</button>
@@ -31,7 +24,10 @@
     <!-- ===== TABS ===== -->
     <div id="tabs">
       <button class="tab-btn active" data-tab="diagram">🔷 ER-Diagramm</button>
-      <button class="tab-btn" data-tab="relmodel">🗃 Relationenmodell</button>
+      <div class="tabs-spacer"></div>
+      <button id="btn-relmodel-toggle" class="tab-btn tab-btn-right" data-tab="relmodel">
+        🗃 Relationenmodell <span class="relmodel-toggle-chevron">&#x276F;</span>
+      </button>
     </div>
 
     <!-- ===== MAIN LAYOUT ===== -->
@@ -60,8 +56,11 @@
 
           <div id="prop-node" style="display: none">
             <div class="prop-row">
-              <label class="prop-label">Name:</label>
-              <input type="text" id="prop-name" class="prop-input" placeholder="Name eingeben" />
+              <label class="prop-label" for="prop-name">Name:</label>
+              <div class="prop-input-wrap">
+                <input type="text" id="prop-name" class="prop-input" placeholder="Name eingeben" />
+                <span class="prop-input-icon" aria-hidden="true">✎</span>
+              </div>
             </div>
             <div class="prop-row" id="prop-pk-row" style="display: none">
               <label class="prop-label">
@@ -77,6 +76,10 @@
               <span id="prop-related-label" class="prop-label"></span>
               <div id="prop-related-list" class="prop-related-list"></div>
             </div>
+            <div class="prop-row" id="prop-relationships-row" style="display: none">
+              <span class="prop-label">Zugehörige Beziehungen:</span>
+              <div id="prop-relationships-list" class="prop-related-list"></div>
+            </div>
           </div>
         </div>
 
@@ -88,7 +91,9 @@
           <div class="legend-item"><span class="legend-box entity-color"></span> Entitätsklasse</div>
           <div class="legend-item"><span class="legend-ellipse attribute-color"></span> Attribut</div>
           <div class="legend-item"><span class="legend-diamond relationship-color"></span> Beziehung</div>
-          <div class="legend-item"><span class="legend-ellipse pk-color"></span> Primärschlüssel (unterstrichen)</div>
+          <div class="legend-item">
+            <span class="legend-ellipse pk-color"></span> Primärschlüssel (PS, unterstrichen)
+          </div>
         </div>
       </aside>
 
@@ -115,38 +120,47 @@
         </svg>
       </main>
 
-      <!-- === RELATIONEN-MODELL-BEREICH === -->
-      <main id="relmodel-container" data-tab-content="relmodel" style="display: none">
-        <div id="relmodel-header">
-          <h2>Schritt 1 – Überführung ins Relationenmodell</h2>
-          <p class="relmodel-intro">
-            Übertrage das ER-Diagramm manuell in das Relationenmodell. Trage für jede Relation den Namen und alle
-            Attribute ein. Markiere Primärschlüssel-Attribute mit der Checkbox. Fremdschlüssel-Attribute mit einem
-            <code>*</code> am Ende kennzeichnen (z.B. <code>KundeNr*</code>).<br />
-            Wenn du fertig bist, klicke auf <strong>„Überprüfen"</strong>.
-          </p>
-          <div id="relmodel-btn-row">
-            <button id="btn-add-relation" class="rel-btn primary">+ Relation hinzufügen</button>
-            <button id="btn-check" class="rel-btn success">✔ Überprüfen</button>
-            <button id="btn-show-solution" class="rel-btn warning">💡 Lösung anzeigen</button>
-            <button id="btn-reset-relmodel" class="rel-btn danger">↺ Zurücksetzen</button>
-          </div>
-        </div>
-
-        <div id="feedback-area"></div>
-
-        <div id="relmodel-columns">
-          <div id="student-input-area">
-            <h3>Deine Relationen</h3>
-            <div id="student-relations-list"></div>
+      <!-- === RELATIONEN-MODELL-DRAWER (RECHTS) === -->
+      <div id="relmodel-backdrop" aria-hidden="true"></div>
+      <div id="relmodel-resizer" aria-hidden="true"></div>
+      <aside id="relmodel-drawer" aria-label="Relationenmodell">
+        <main id="relmodel-container" data-tab-content="relmodel">
+          <div id="relmodel-header">
+            <h2>Überführung ins Relationenmodell</h2>
+            <div id="relmodel-btn-row">
+              <button id="btn-info-modal" class="rel-btn" title="Hinweise zur Bedienung">ℹ️ Info</button>
+              <button id="btn-rules-modal" class="rel-btn" title="Transformationsregeln ERM → Relationenmodell">
+                📚 Regeln
+              </button>
+            </div>
           </div>
 
-          <div id="solution-area" style="display: none">
-            <h3>Musterlösung</h3>
-            <div id="solution-display"></div>
+          <div id="feedback-area"></div>
+
+          <div id="relmodel-columns">
+            <div id="student-input-area">
+              <h3>Deine Relationen</h3>
+              <div id="student-relations-list"></div>
+              <div id="student-actions-row">
+                <button id="btn-add-relation" class="rel-btn primary">+ Relation hinzufügen</button>
+                <button id="btn-check" class="rel-btn success">✔ Überprüfen</button>
+                <button id="btn-reset-relmodel" class="rel-btn danger">↺ Zurücksetzen</button>
+              </div>
+            </div>
+
+            <div id="solution-area">
+              <h3>Musterlösung</h3>
+              <div id="solution-actions-row">
+                <button id="btn-show-solution" class="rel-btn warning">💡 Lösung anzeigen</button>
+                <button id="btn-hide-solution" class="rel-btn solution-hide-btn" style="display: none">
+                  Lösung ausblenden
+                </button>
+              </div>
+              <div id="solution-display" style="display: none"></div>
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </aside>
     </div>
     <!-- /#main-layout -->
 
@@ -191,11 +205,86 @@
     </div>
 
     <div id="context-menu" style="display: none">
-      <button id="ctx-rename" class="ctx-item" type="button">Umbenennen</button>
       <button id="ctx-edit-relationship" class="ctx-item" type="button">Beziehung bearbeiten</button>
       <button id="ctx-add-attr" class="ctx-item" type="button">Attribut hinzufügen</button>
       <button id="ctx-toggle-pk" class="ctx-item" type="button">Als Primärschlüssel markieren</button>
+      <button id="ctx-rename" class="ctx-item" type="button">Umbenennen</button>
       <button id="ctx-delete" class="ctx-item danger" type="button">Löschen</button>
+    </div>
+
+    <!-- ===== MODAL: Info ===== -->
+    <div
+      id="modal-info-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-info-title"
+    >
+      <div class="info-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-info-title">ℹ️ Hinweise zur Relationenmodell-Aufgabe</h3>
+          <button class="info-modal-close" id="btn-info-modal-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <p>
+            Übertrage das ER-Diagramm manuell ins Relationenmodell. Trage für jede Relation den Namen und alle Attribute
+            ein.
+          </p>
+          <p>Wenn du fertig bist, klicke auf <strong>„Überprüfen"</strong>.</p>
+          <h4>Zeichenlegende</h4>
+          <ul>
+            <li>
+              <strong>PS (Primärschlüssel)</strong> – mit der Checkbox <em>PS</em> markieren. In der Musterlösung
+              <u>unterstrichen</u> dargestellt.
+            </li>
+            <li>
+              <strong>FS (Fremdschlüssel)</strong> – mit der Checkbox <em>FS</em> markieren. In der Musterlösung
+              <span style="color: #2563eb">blau</span> mit <code>↑</code> dargestellt.
+            </li>
+            <li>Ein Attribut kann gleichzeitig PS und FS sein (z.&nbsp;B. bei M:N-Beziehungen).</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL: Transformationsregeln ===== -->
+    <div
+      id="modal-rules-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-rules-title"
+    >
+      <div class="info-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-rules-title">📚 Transformationsregeln: ERM → Relationenmodell</h3>
+          <button class="info-modal-close" id="btn-rules-modal-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <h4>1. Entitätsklassen</h4>
+          <p>
+            Jede Entitätsklasse wird zu einer eigenen Relation. Alle Attribute werden übernommen. Der Primärschlüssel
+            (PS) bleibt bestehen.
+          </p>
+          <h4>2. 1:N-Beziehung</h4>
+          <p>
+            Der PS der <em>1-Seite</em> wandert als Fremdschlüssel (FS) in die Relation der <em>N-Seite</em>. Eigene
+            Attribute der Beziehung kommen ebenfalls in die N-Seite.
+          </p>
+          <h4>3. 1:1-Beziehung</h4>
+          <p>
+            Der PS einer Seite wandert als FS in die andere Relation. Eigene Attribute der Beziehung werden mitgenommen.
+          </p>
+          <h4>4. M:N-Beziehung</h4>
+          <p>
+            Es entsteht eine <em>neue Relation</em> mit dem Namen der Beziehung. Die PS beider beteiligten
+            Entitätsklassen werden als FS übernommen und bilden gemeinsam den zusammengesetzten PS. Eigene Attribute der
+            Beziehung werden ebenfalls aufgenommen.
+          </p>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts -->

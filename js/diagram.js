@@ -14,6 +14,18 @@
   function S() {
     return window.AppState.state;
   }
+
+  function requestRelModelSync(debounced = true) {
+    if (!window.RelModel) return;
+    if (debounced && typeof window.RelModel.requestSyncFromDiagramDebounced === 'function') {
+      window.RelModel.requestSyncFromDiagramDebounced();
+      return;
+    }
+    if (typeof window.RelModel.syncFromDiagram === 'function') {
+      window.RelModel.syncFromDiagram();
+    }
+  }
+
   function genId() {
     return window.AppState.genId();
   }
@@ -400,6 +412,30 @@
     return { x: node.x, y: node.y, w: NODE_REL_W, h: NODE_REL_H };
   }
 
+  function clampValue(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function movePointToRectClearance(point, rect, clearance, fallbackDirX, fallbackDirY) {
+    const nearestX = clampValue(point.x, rect.x, rect.x + rect.w);
+    const nearestY = clampValue(point.y, rect.y, rect.y + rect.h);
+
+    let dirX = point.x - nearestX;
+    let dirY = point.y - nearestY;
+    let distance = Math.sqrt(dirX * dirX + dirY * dirY);
+
+    if (distance < 0.0001) {
+      dirX = fallbackDirX;
+      dirY = fallbackDirY;
+      distance = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+    }
+
+    return {
+      x: nearestX + (dirX / distance) * clearance,
+      y: nearestY + (dirY / distance) * clearance,
+    };
+  }
+
   function boxesOverlap(a, b, padding = 18) {
     return !(
       a.x + a.w + padding <= b.x ||
@@ -588,17 +624,37 @@
 
     if (isRelationshipEdge(edge)) {
       const OFFSET = 30;
+      const LABEL_OFFSET = 16;
+      const ENTITY_CLEARANCE = 24;
       const dx = tp.x - fp.x;
       const dy = tp.y - fp.y;
       const len = Math.sqrt(dx * dx + dy * dy) || 1;
       const ux = dx / len;
       const uy = dy / len;
       const entityIsTarget = toNode.type === 'entity';
+      const entityNode = entityIsTarget ? toNode : fromNode;
       const label = entityIsTarget ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from');
       const anchorX = entityIsTarget ? tp.x : fp.x;
       const anchorY = entityIsTarget ? tp.y : fp.y;
       const direction = entityIsTarget ? -1 : 1;
-      const text = makeLabelText(anchorX + ux * OFFSET * direction, anchorY + uy * OFFSET * direction - 12, label);
+      const baseLabelX = anchorX + ux * OFFSET * direction;
+      const baseLabelY = anchorY + uy * OFFSET * direction;
+
+      let normalX = -uy;
+      let normalY = ux;
+      if (normalY > 0) {
+        normalX *= -1;
+        normalY *= -1;
+      }
+
+      const preferredPoint = {
+        x: baseLabelX + normalX * LABEL_OFFSET,
+        y: baseLabelY + normalY * LABEL_OFFSET,
+      };
+      const entityBounds = getNodeBounds(entityNode);
+      const finalPoint = movePointToRectClearance(preferredPoint, entityBounds, ENTITY_CLEARANCE, normalX, normalY);
+
+      const text = makeLabelText(finalPoint.x, finalPoint.y, label);
       edgesLayer.appendChild(text);
     }
 
@@ -611,9 +667,6 @@
       e.preventDefault();
       e.stopPropagation();
       hideContextMenu();
-      if (isRelationshipEdge(edge)) {
-        showContextMenu(e, 'edge', edge.id);
-      }
     });
   }
 
@@ -711,6 +764,31 @@
     createEdge(entityNode.id, attrNode.id, 'attribute');
   }
 
+  function getAttributeSpawnPositionForNode(node) {
+    const center = getNodeCenter(node);
+    for (let ring = 0; ring < 4; ring += 1) {
+      const radius = 116 + ring * 34;
+      for (let step = 0; step < 12; step += 1) {
+        const angle = (step / 12) * Math.PI * 2;
+        const candidate = clampPosition(
+          'attribute',
+          center.x + Math.cos(angle) * radius - NODE_ATTR_RX,
+          center.y + Math.sin(angle) * radius - NODE_ATTR_RY,
+        );
+        if (positionIsFree('attribute', candidate.x, candidate.y)) return candidate;
+      }
+    }
+    return findFreePosition('attribute', center.x + 90 - NODE_ATTR_RX, center.y - NODE_ATTR_RY);
+  }
+
+  function addAttributeToRelationship(relationshipId) {
+    const relationshipNode = byId(relationshipId);
+    if (!relationshipNode || relationshipNode.type !== 'relationship') return;
+    const p = getAttributeSpawnPositionForNode(relationshipNode);
+    const attrNode = addNode('attribute', p.x, p.y);
+    createEdge(relationshipNode.id, attrNode.id, 'attribute');
+  }
+
   function addRelationshipAction() {
     const p = getSpawnPosition('relationship');
     addNode('relationship', p.x, p.y);
@@ -766,6 +844,16 @@
     if (fromNode?.type === 'relationship') return fromNode.id;
     if (toNode?.type === 'relationship') return toNode.id;
     return null;
+  }
+
+  function attributeBelongsToRelationship(attributeId) {
+    const edge = S().edges.find(
+      (e) => e.edgeType === 'attribute' && (e.fromId === attributeId || e.toId === attributeId),
+    );
+    if (!edge) return false;
+    const otherId = edge.fromId === attributeId ? edge.toId : edge.fromId;
+    const otherNode = byId(otherId);
+    return !!otherNode && otherNode.type === 'relationship';
   }
 
   function createRelationshipEdge(relationshipId, entityId, cardinality) {
@@ -847,6 +935,7 @@
       cleanup();
       selectNodeFn(relationshipId);
       renderAll();
+      requestRelModelSync();
     };
 
     const onCancel = () => cleanup();
@@ -870,19 +959,13 @@
       if (!node) return;
       showRename = true;
       showEditRelationship = node.type === 'relationship';
-      showAddAttr = node.type === 'entity';
-      showTogglePk = node.type === 'attribute';
+      showAddAttr = node.type === 'entity' || node.type === 'relationship';
+      showTogglePk = node.type === 'attribute' && !attributeBelongsToRelationship(node.id);
       showDelete = true;
 
       if (showTogglePk) {
         ctxTogglePk.textContent = node.isPrimaryKey ? 'Primärschlüssel entfernen' : 'Als Primärschlüssel markieren';
       }
-    }
-
-    if (type === 'edge') {
-      const edge = window.AppState.getEdgeById(id);
-      showEditRelationship = !!edge && isRelationshipEdge(edge);
-      showDelete = !!edge && isRelationshipEdge(edge);
     }
 
     ctxRename.style.display = showRename ? '' : 'none';
@@ -925,7 +1008,7 @@
         offsetX: svgPt.x - node.x,
         offsetY: svgPt.y - node.y,
         linkedAttributeIds:
-          node.type === 'entity'
+          node.type === 'entity' || node.type === 'relationship'
             ? S()
                 .edges.filter(
                   (edge) => edge.edgeType === 'attribute' && (edge.fromId === node.id || edge.toId === node.id),
@@ -983,7 +1066,7 @@
     const dy = newY - node.y;
     node.x = newX;
     node.y = newY;
-    if (node.type === 'entity' && dragging.linkedAttributeIds.length) {
+    if ((node.type === 'entity' || node.type === 'relationship') && dragging.linkedAttributeIds.length) {
       dragging.linkedAttributeIds.forEach((attrId) => {
         const attrNode = byId(attrId);
         if (!attrNode || attrNode.type !== 'attribute') return;
@@ -1085,12 +1168,14 @@
     S().edges = S().edges.filter((e) => e.fromId !== nodeId && e.toId !== nodeId);
     deselectAll();
     renderAll();
+    requestRelModelSync();
   }
 
   function deleteEdge(edgeId) {
     S().edges = S().edges.filter((e) => e.id !== edgeId);
     deselectAll();
     renderAll();
+    requestRelModelSync();
   }
 
   function selectNodeFn(id) {
@@ -1125,17 +1210,11 @@
   });
 
   ctxEditRelationship.addEventListener('click', () => {
-    if (!ctxTarget) return;
+    if (!ctxTarget || ctxTarget.type !== 'node') return;
 
     let relationshipId = null;
-    if (ctxTarget.type === 'node') {
-      const node = byId(ctxTarget.id);
-      if (node?.type === 'relationship') relationshipId = node.id;
-    }
-    if (ctxTarget.type === 'edge') {
-      const edge = window.AppState.getEdgeById(ctxTarget.id);
-      relationshipId = getRelationshipNodeIdFromEdge(edge);
-    }
+    const node = byId(ctxTarget.id);
+    if (node?.type === 'relationship') relationshipId = node.id;
 
     hideContextMenu();
     if (relationshipId) {
@@ -1146,9 +1225,11 @@
 
   ctxAddAttr.addEventListener('click', () => {
     if (!ctxTarget || ctxTarget.type !== 'node') return;
+
     const node = byId(ctxTarget.id);
     hideContextMenu();
     if (node && node.type === 'entity') addAttributeToEntity(node.id);
+    if (node && node.type === 'relationship') addAttributeToRelationship(node.id);
   });
 
   ctxTogglePk.addEventListener('click', () => {
@@ -1162,6 +1243,7 @@
     const pkCheckbox = document.getElementById('prop-pk');
     if (pkCheckbox) pkCheckbox.checked = !!node.isPrimaryKey;
     renderAll();
+    requestRelModelSync();
   });
 
   ctxDelete.addEventListener('click', () => {
@@ -1214,6 +1296,7 @@
       if (nodesLayer.contains(fo)) nodesLayer.removeChild(fo);
       document.getElementById('prop-name').value = node.name;
       renderAll();
+      requestRelModelSync();
     };
 
     input.addEventListener('blur', commit);
@@ -1233,6 +1316,8 @@
 
   window.Diagram = {
     renderAll,
+    selectNode: selectNodeFn,
+    clearSelection: deselectAll,
     deleteNode,
     deleteEdge,
   };

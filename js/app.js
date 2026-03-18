@@ -36,47 +36,126 @@ function getConnectedNodes(nodeId, edgeType) {
     .filter((entry) => !!entry.node);
 }
 
-function renderRelatedInfo(node) {
-  const row = document.getElementById('prop-related-row');
-  const label = document.getElementById('prop-related-label');
-  const list = document.getElementById('prop-related-list');
+function compareAttributesPrimaryFirst(a, b) {
+  if (!!a.isPrimaryKey !== !!b.isPrimaryKey) return a.isPrimaryKey ? -1 : 1;
+  return (a.name || '').localeCompare(b.name || '', 'de', { sensitivity: 'base' });
+}
 
-  row.style.display = '';
-  list.innerHTML = '';
+function compareRelatedItemsByLabel(a, b) {
+  return (a.label || '').localeCompare(b.label || '', 'de', { sensitivity: 'base' });
+}
 
-  let items = [];
-  if (node.type === 'entity') {
-    label.textContent = 'Zugehörige Attribute:';
-    items = getConnectedNodes(node.id, 'attribute').map(
-      ({ node: relatedNode }) => `${relatedNode.name || 'Attribut'}${relatedNode.isPrimaryKey ? ' (PK)' : ''}`,
-    );
-  } else if (node.type === 'relationship') {
-    label.textContent = 'Verbundene Entitätsklassen:';
-    items = getConnectedNodes(node.id, 'relationship').map(({ edge, node: relatedNode }) => {
-      const cardinality = edge.fromId === node.id ? edge.chenTo || '1' : edge.chenFrom || '1';
-      return `${relatedNode.name || 'Entitätsklasse'} (${String(cardinality).toLowerCase()})`;
-    });
+function hasExportableDiagram() {
+  return state.nodes.length > 0;
+}
+
+function renderRelatedItems(listElement, items, listNodeType = '') {
+  listElement.innerHTML = '';
+  if (listNodeType) {
+    listElement.dataset.nodeType = listNodeType;
   } else {
-    label.textContent = 'Zugehörige Entitätsklasse:';
-    items = getConnectedNodes(node.id, 'attribute').map(
-      ({ node: relatedNode }) => relatedNode.name || 'Entitätsklasse',
-    );
+    delete listElement.dataset.nodeType;
   }
 
   if (items.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'prop-related-empty';
     empty.textContent = 'Keine Einträge';
-    list.appendChild(empty);
+    listElement.appendChild(empty);
     return;
   }
 
   items.forEach((item) => {
+    if (item.nodeId) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'prop-related-item prop-related-link';
+      if (item.nodeType) {
+        button.dataset.nodeType = item.nodeType;
+      }
+      button.textContent = item.label;
+      button.title = item.label;
+      button.addEventListener('click', () => {
+        if (window.Diagram?.selectNode) {
+          window.Diagram.selectNode(item.nodeId);
+          return;
+        }
+        window.AppSelect.selectNode(item.nodeId);
+      });
+      listElement.appendChild(button);
+      return;
+    }
+
     const line = document.createElement('div');
     line.className = 'prop-related-item';
-    line.textContent = item;
-    list.appendChild(line);
+    line.textContent = item.label;
+    listElement.appendChild(line);
   });
+}
+
+function renderRelatedInfo(node) {
+  const row = document.getElementById('prop-related-row');
+  const label = document.getElementById('prop-related-label');
+  const list = document.getElementById('prop-related-list');
+  const relationshipsRow = document.getElementById('prop-relationships-row');
+  const relationshipsList = document.getElementById('prop-relationships-list');
+
+  row.style.display = '';
+  relationshipsRow.style.display = 'none';
+
+  let items = [];
+  if (node.type === 'entity') {
+    label.textContent = 'Zugehörige Attribute:';
+    items = getConnectedNodes(node.id, 'attribute')
+      .map(({ node: relatedNode }) => relatedNode)
+      .sort(compareAttributesPrimaryFirst)
+      .map((relatedNode) => ({
+        nodeId: relatedNode.id,
+        nodeType: relatedNode.type,
+        label: `${relatedNode.name || 'Attribut'}${relatedNode.isPrimaryKey ? ' (PS)' : ''}`,
+      }));
+
+    const relationshipItems = getConnectedNodes(node.id, 'relationship')
+      .map(({ edge, node: relatedNode }) => {
+        const cardinality = edge.toId === node.id ? edge.chenTo || '1' : edge.chenFrom || '1';
+        return {
+          nodeId: relatedNode.id,
+          nodeType: relatedNode.type,
+          label: `${relatedNode.name || 'Beziehung'} (${String(cardinality).toLowerCase()})`,
+        };
+      })
+      .sort(compareRelatedItemsByLabel);
+
+    relationshipsRow.style.display = '';
+    renderRelatedItems(relationshipsList, relationshipItems, 'relationship');
+  } else if (node.type === 'relationship') {
+    label.textContent = 'Verbundene Entitätsklassen:';
+    items = getConnectedNodes(node.id, 'relationship')
+      .map(({ edge, node: relatedNode }) => {
+        const cardinality = edge.fromId === node.id ? edge.chenTo || '1' : edge.chenFrom || '1';
+        return {
+          nodeId: relatedNode.id,
+          nodeType: relatedNode.type,
+          label: `${relatedNode.name || 'Entitätsklasse'} (${String(cardinality).toLowerCase()})`,
+        };
+      })
+      .sort(compareRelatedItemsByLabel);
+  } else {
+    label.textContent = 'Zugehöriges Element:';
+    items = getConnectedNodes(node.id, 'attribute')
+      .map(({ node: relatedNode }) => ({
+        nodeId: relatedNode.id,
+        nodeType: relatedNode.type,
+        label: relatedNode.name || (relatedNode.type === 'relationship' ? 'Beziehung' : 'Entitätsklasse'),
+      }))
+      .sort(compareRelatedItemsByLabel);
+  }
+
+  const listType =
+    node.type === 'entity' ? 'attribute' :
+    node.type === 'relationship' ? 'entity' :
+    '';
+  renderRelatedItems(list, items, listType);
 }
 
 function inferEdgeType(edge) {
@@ -93,37 +172,97 @@ function inferEdgeType(edge) {
 
 // ---- Tabs ----
 function initTabs() {
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
+  const diagramBtn = document.querySelector('.tab-btn[data-tab="diagram"]');
+  const relmodelBtn = document.getElementById('btn-relmodel-toggle');
+  const relmodelDrawer = document.getElementById('relmodel-drawer');
+  const relmodelResizer = document.getElementById('relmodel-resizer');
+  const relmodelBackdrop = document.getElementById('relmodel-backdrop');
+  const mainLayout = document.getElementById('main-layout');
+  if (!diagramBtn || !relmodelBtn || !relmodelDrawer || !relmodelResizer || !relmodelBackdrop || !mainLayout) return;
 
-      document.getElementById('canvas-container').style.display = tab === 'diagram' ? '' : 'none';
-      document.getElementById('relmodel-container').style.display = tab === 'relmodel' ? '' : 'none';
+  let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
+  const mobileMedia = window.matchMedia('(max-width: 860px)');
 
-      if (tab === 'relmodel') {
-        // Relmodelformular synchronisieren wenn ER-Diagramm vorliegt
-        if (window.RelModel) window.RelModel.syncFromDiagram();
-      }
-    });
+  const clampDrawerWidth = (value) => {
+    const maxWidth = Math.max(320, Math.min(window.innerWidth * 0.72, mainLayout.getBoundingClientRect().width - 180));
+    return Math.max(320, Math.min(maxWidth, value));
+  };
+
+  const syncBackdrop = () => {
+    const shouldShow = mobileMedia.matches && !relmodelDrawer.classList.contains('collapsed');
+    relmodelBackdrop.classList.toggle('visible', shouldShow);
+  };
+
+  const setDrawerState = (open) => {
+    relmodelDrawer.classList.toggle('collapsed', !open);
+    relmodelResizer.classList.toggle('collapsed', !open);
+    relmodelBtn.classList.toggle('active', open);
+
+    if (open) {
+      relmodelDrawer.style.width = `${clampDrawerWidth(lastOpenWidth)}px`;
+      if (window.RelModel) window.RelModel.syncFromDiagram();
+    }
+
+    syncBackdrop();
+  };
+
+  const stopResize = () => {
+    relmodelResizer.classList.remove('is-dragging');
+    document.body.classList.remove('is-resizing-drawer');
+    window.removeEventListener('mousemove', onPointerMove);
+    window.removeEventListener('mouseup', stopResize);
+  };
+
+  const onPointerMove = (event) => {
+    const layoutRect = mainLayout.getBoundingClientRect();
+    const nextWidth = clampDrawerWidth(layoutRect.right - event.clientX);
+    lastOpenWidth = nextWidth;
+    relmodelDrawer.style.width = `${nextWidth}px`;
+  };
+
+  diagramBtn.classList.add('active');
+  setDrawerState(false);
+
+  relmodelBtn.addEventListener('click', () => {
+    setDrawerState(relmodelDrawer.classList.contains('collapsed'));
   });
-}
 
-// ---- Notation-Umschalter ----
-function initNotation() {
-  state.notation = 'chen';
-  const chenBtn = document.getElementById('btn-chen');
-  const minmaxBtn = document.getElementById('btn-minmax');
-  chenBtn.classList.add('active');
-  minmaxBtn.classList.remove('active');
-  minmaxBtn.disabled = true;
+  diagramBtn.addEventListener('click', () => {
+    if (mobileMedia.matches) {
+      setDrawerState(false);
+      return;
+    }
+    setDrawerState(true);
+  });
 
-  document.getElementById('btn-chen').addEventListener('click', () => {
-    state.notation = 'chen';
-    document.getElementById('btn-chen').classList.add('active');
-    document.getElementById('btn-minmax').classList.remove('active');
-    if (window.Diagram) window.Diagram.renderAll();
+  relmodelResizer.addEventListener('mousedown', (event) => {
+    if (mobileMedia.matches) return;
+    if (relmodelDrawer.classList.contains('collapsed')) return;
+    event.preventDefault();
+    relmodelResizer.classList.add('is-dragging');
+    document.body.classList.add('is-resizing-drawer');
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', stopResize);
+  });
+
+  window.addEventListener('resize', () => {
+    if (!relmodelDrawer.classList.contains('collapsed')) {
+      lastOpenWidth = clampDrawerWidth(relmodelDrawer.getBoundingClientRect().width || lastOpenWidth);
+      relmodelDrawer.style.width = `${lastOpenWidth}px`;
+    }
+    syncBackdrop();
+  });
+
+  relmodelBackdrop.addEventListener('click', () => {
+    setDrawerState(false);
+  });
+
+  mobileMedia.addEventListener('change', () => {
+    if (!mobileMedia.matches) {
+      setDrawerState(true);
+      return;
+    }
+    syncBackdrop();
   });
 }
 
@@ -159,6 +298,7 @@ function clearSelection() {
   document.getElementById('prop-empty').style.display = '';
   document.getElementById('prop-node').style.display = 'none';
   document.getElementById('prop-related-row').style.display = 'none';
+  document.getElementById('prop-relationships-row').style.display = 'none';
 }
 
 function initPropertiesPanel() {
@@ -169,6 +309,7 @@ function initPropertiesPanel() {
     if (!node) return;
     node.name = e.target.value;
     if (window.Diagram) window.Diagram.renderAll();
+    if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
     selectNode(_selectedNodeId);
   });
 
@@ -179,12 +320,18 @@ function initPropertiesPanel() {
     if (!node || node.type !== 'attribute') return;
     node.isPrimaryKey = e.target.checked;
     if (window.Diagram) window.Diagram.renderAll();
+    if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
     selectNode(_selectedNodeId);
   });
 }
 
 // ---- JSON Export ----
 function exportJSON() {
+  if (!hasExportableDiagram()) {
+    alert('Ein leeres ER-Diagramm kann nicht exportiert werden.');
+    return;
+  }
+
   const data = JSON.stringify(
     { notation: state.notation, nodes: state.nodes, edges: state.edges, nextId: state.nextId },
     null,
@@ -219,10 +366,9 @@ function importJSON(file) {
       state.edges.forEach((edge) => {
         edge.edgeType = inferEdgeType(edge);
       });
-      document.getElementById('btn-chen').classList.add('active');
-      document.getElementById('btn-minmax').classList.remove('active');
       clearSelection();
       if (window.Diagram) window.Diagram.renderAll();
+      if (window.RelModel) window.RelModel.syncFromDiagram();
     } catch (err) {
       alert('Fehler beim Importieren: ' + err.message);
     }
@@ -236,7 +382,7 @@ function exportPNG() {
   const margin = 10;
   const exportFontFamily = getComputedStyle(document.body).fontFamily || "system-ui, 'Segoe UI', sans-serif";
 
-  if (!state.nodes.length) {
+  if (!hasExportableDiagram()) {
     alert('Es sind keine Elemente zum Exportieren vorhanden.');
     return;
   }
@@ -343,9 +489,39 @@ function clearAll() {
 
 // ---- Bootstrap ----
 document.addEventListener('DOMContentLoaded', () => {
+  state.notation = 'chen';
   initTabs();
-  initNotation();
   initPropertiesPanel();
+
+  // Info-Modals
+  function openModal(backdropId) {
+    const el = document.getElementById(backdropId);
+    if (el) {
+      el.style.display = 'flex';
+      el.focus();
+    }
+  }
+  function closeModal(backdropId) {
+    const el = document.getElementById(backdropId);
+    if (el) el.style.display = 'none';
+  }
+  ['info', 'rules'].forEach((name) => {
+    const btn = document.getElementById(`btn-${name}-modal`);
+    const closeBtn = document.getElementById(`btn-${name}-modal-close`);
+    const backdrop = document.getElementById(`modal-${name}-backdrop`);
+    if (btn) btn.addEventListener('click', () => openModal(`modal-${name}-backdrop`));
+    if (closeBtn) closeBtn.addEventListener('click', () => closeModal(`modal-${name}-backdrop`));
+    if (backdrop)
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal(`modal-${name}-backdrop`);
+      });
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal('modal-info-backdrop');
+      closeModal('modal-rules-backdrop');
+    }
+  });
 
   document.getElementById('btn-export-json').addEventListener('click', exportJSON);
   document.getElementById('btn-export-png').addEventListener('click', exportPNG);

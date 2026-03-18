@@ -4,6 +4,106 @@
 'use strict';
 
 (function () {
+  const FK_SUFFIX = '↑';
+
+  function normalize(s) {
+    return (s || '').trim().toLowerCase().replace(/\s+/g, '');
+  }
+
+  function hasForeignKeyMarker(name) {
+    return /[↑*]\s*$/u.test((name || '').trim());
+  }
+
+  function stripForeignKeyMarker(name) {
+    return (name || '')
+      .trim()
+      .replace(/[↑*]\s*$/u, '')
+      .trim();
+  }
+
+  function normalizeForeignKeyMarker(name) {
+    const base = stripForeignKeyMarker(name);
+    if (!base) return '';
+    return hasForeignKeyMarker(name) ? `${base}${FK_SUFFIX}` : base;
+  }
+
+  function normAttr(name) {
+    return normalize(stripForeignKeyMarker(name));
+  }
+
+  function sortAttrsPrimaryFirst(attrs) {
+    return attrs.sort((a, b) => {
+      if (!!a.isPk !== !!b.isPk) return a.isPk ? -1 : 1;
+
+      const aIsFk = !!a.isFk || hasForeignKeyMarker(a.name);
+      const bIsFk = !!b.isFk || hasForeignKeyMarker(b.name);
+      if (!a.isPk && !b.isPk && aIsFk !== bIsFk) return aIsFk ? 1 : -1;
+
+      return stripForeignKeyMarker(a.name || '').localeCompare(stripForeignKeyMarker(b.name || ''), 'de', {
+        sensitivity: 'base',
+      });
+    });
+  }
+
+  function ensureStudentIds() {
+    _studentRelations.forEach((rel) => {
+      if (!rel.id) rel.id = newRelId();
+      rel.attrs = Array.isArray(rel.attrs) ? rel.attrs : [];
+      rel.attrs.forEach((attr) => {
+        if (!attr.id) attr.id = newAttrId();
+      });
+    });
+  }
+
+  function removeEmptyAttrs(rel) {
+    rel.attrs = (rel.attrs || []).filter((attr) => (attr.name || '').trim().length > 0);
+  }
+
+  function hasAnyAttrName(rel) {
+    return (rel.attrs || []).some((attr) => (attr.name || '').trim().length > 0);
+  }
+
+  function removeCompletelyEmptyRelations() {
+    _studentRelations = _studentRelations.filter((rel) => {
+      const hasName = (rel.name || '').trim().length > 0;
+      const hasAttrs = hasAnyAttrName(rel);
+      return hasName || hasAttrs;
+    });
+  }
+
+  function clearInlineError(rel) {
+    if (!rel) return;
+    rel.inlineError = '';
+  }
+
+  function validateRelationInline(rel) {
+    if (!(rel.name || '').trim()) {
+      return 'Bitte Relationsnamen eintragen.';
+    }
+
+    if (!Array.isArray(rel.attrs) || rel.attrs.length === 0) {
+      return 'Jede Relation braucht mindestens ein Attribut.';
+    }
+
+    const hasPk = rel.attrs.some((attr) => !!attr.isPk && (attr.name || '').trim().length > 0);
+    if (!hasPk) {
+      return 'Jede Relation benötigt einen Primärschlüssel.';
+    }
+
+    return '';
+  }
+
+  function validateAllRelationsInline() {
+    let hasErrors = false;
+    _studentRelations.forEach((rel) => {
+      removeEmptyAttrs(rel);
+      const error = validateRelationInline(rel);
+      rel.inlineError = error;
+      if (error) hasErrors = true;
+    });
+    return hasErrors;
+  }
+
   // ======================================================================
   // LÖSUNG BERECHNEN
   // ======================================================================
@@ -47,12 +147,7 @@
 
       const sides = entityEdges.map((e) => {
         const isFrom = e.fromId === relNode.id;
-        if (state.notation === 'chen') {
-          return String(isFrom ? e.chenTo || '1' : e.chenFrom || '1').toLowerCase();
-        } else {
-          const max = isFrom ? e.mmToMax || '1' : e.mmFromMax || '1';
-          return max === '1' ? '1' : 'N';
-        }
+        return String(isFrom ? e.chenTo || '1' : e.chenFrom || '1').toLowerCase();
       });
 
       const s0 = sides[0] === '1' ? '1' : 'N';
@@ -79,10 +174,18 @@
 
     function addAttr(relName, attrName, isPk = false, isFk = false) {
       const rel = ensureRelation(relName);
-      // Doppeleinträge vermeiden
-      if (!rel.attrs.find((a) => a.name === attrName)) {
-        rel.attrs.push({ name: attrName, isPk, isFk });
+      const cleanName = stripForeignKeyMarker(attrName);
+      const normalized = normAttr(cleanName);
+      const existing = rel.attrs.find((a) => normAttr(a.name) === normalized);
+
+      if (existing) {
+        existing.isPk = !!existing.isPk || !!isPk;
+        existing.isFk = !!existing.isFk || !!isFk;
+        return;
       }
+
+      // Doppeleinträge vermeiden
+      rel.attrs.push({ name: cleanName, isPk, isFk });
     }
 
     // 1. Jede Entität → eigene Relation
@@ -116,11 +219,11 @@
           const entity = getNode(entityId);
           if (!entity) return;
           const pk = getPkAttr(entityId);
-          if (pk) addAttr(rel.name, pk, true, true); // zusammengesetzter PK = FK*
+          if (pk) addAttr(rel.name, pk, true, true); // zusammengesetzter PS = FS
         });
         relAttrs.forEach((a) => addAttr(rel.name, a.name, false, false));
       } else if (type === '1:N') {
-        // FK der 1-Seite in die N-Seite
+        // FS der 1-Seite in die N-Seite
         // Herausfinden welche Seite die „1"-Seite ist
         let oneSide = null;
         let nSide = null;
@@ -128,12 +231,7 @@
         entityEdges.forEach((e) => {
           const entityId = e.fromId === rel.id ? e.toId : e.fromId;
           const entity = getNode(entityId);
-          let max;
-          if (state.notation === 'chen') {
-            max = String((e.fromId === rel.id ? e.chenTo : e.chenFrom) || '1').toLowerCase();
-          } else {
-            max = (e.fromId === rel.id ? e.mmToMax : e.mmFromMax) || '1';
-          }
+          const max = String((e.fromId === rel.id ? e.chenTo : e.chenFrom) || '1').toLowerCase();
           if (max === '1') oneSide = entity;
           else nSide = entity;
         });
@@ -147,25 +245,20 @@
 
         const onePk = getPkAttr(oneSide.id);
         if (onePk) {
-          // FK in N-Seite eintragen (FK markiert, kein PK)
-          addAttr(nSide.name, onePk + '*', false, true);
+          // FS in N-Seite eintragen (FS markiert, kein PS)
+          addAttr(nSide.name, onePk, false, true);
         }
         // Eigene Beziehungsattribute in N-Seite
         relAttrs.forEach((a) => addAttr(nSide.name, a.name, false, false));
       } else if (type === '1:1') {
-        // FK auf der Seite mit min=0 (wenn Min-Max) oder einfach Seite 0→Seite 1 (Chen)
+        // FS auf der Seite mit min=0 (wenn Min-Max) oder einfach Seite 0→Seite 1 (Chen)
         let targetEntity = null;
         let sourceEntity = null;
 
         entityEdges.forEach((e) => {
           const entityId = e.fromId === rel.id ? e.toId : e.fromId;
           const entity = getNode(entityId);
-          let min;
-          if (state.notation === 'minmax') {
-            min = parseInt(e.fromId === rel.id ? (e.mmToMin ?? '1') : (e.mmFromMin ?? '1'));
-          } else {
-            min = 0; // Chen 1:1 → feste Reihenfolge
-          }
+          const min = 0; // Chen 1:1 → feste Reihenfolge
           if (min === 0 && !targetEntity) targetEntity = entity;
           else if (!sourceEntity) sourceEntity = entity;
         });
@@ -178,22 +271,26 @@
 
         const srcPk = getPkAttr(sourceEntity.id);
         if (srcPk) {
-          addAttr(targetEntity.name, srcPk + '*', false, true);
+          addAttr(targetEntity.name, srcPk, false, true);
         }
         relAttrs.forEach((a) => addAttr(targetEntity.name, a.name, false, false));
       }
     });
 
-    return Array.from(relMap.values());
+    const relations = Array.from(relMap.values());
+    relations.forEach((rel) => sortAttrsPrimaryFirst(rel.attrs));
+    return relations;
   }
 
   // ======================================================================
   // SCHÜLER-FORMULAR
   // ======================================================================
 
-  let _studentRelations = []; // [{ id, name, attrs:[{ id, name, isPk }] }]
+  let _studentRelations = []; // [{ id, name, attrs:[{ id, name, isPk, isFk }], isEditing }]
   let _solution = [];
   let _nextId = 1;
+  let _syncDebounceTimer = null;
+  const SYNC_DEBOUNCE_MS = 180;
 
   function newRelId() {
     return 'r' + _nextId++;
@@ -211,17 +308,30 @@
     }
   }
 
+  function requestSyncFromDiagramDebounced() {
+    if (_syncDebounceTimer) {
+      clearTimeout(_syncDebounceTimer);
+    }
+    _syncDebounceTimer = setTimeout(() => {
+      _syncDebounceTimer = null;
+      syncFromDiagram();
+    }, SYNC_DEBOUNCE_MS);
+  }
+
   function reset() {
     _studentRelations = [];
     _solution = [];
     document.getElementById('feedback-area').innerHTML = '';
-    document.getElementById('solution-area').style.display = 'none';
+    document.getElementById('solution-display').style.display = 'none';
+    document.getElementById('btn-hide-solution').style.display = 'none';
+    document.getElementById('btn-show-solution').style.display = '';
     renderStudentForm();
     renderSolution();
   }
 
   // ---- Render: Schüler-Eingabe ----
   function renderStudentForm() {
+    ensureStudentIds();
     const container = document.getElementById('student-relations-list');
     container.innerHTML = '';
     _studentRelations.forEach((rel) => {
@@ -230,6 +340,7 @@
   }
 
   function buildRelationCard(rel) {
+    const isEditing = rel.isEditing !== false;
     const card = document.createElement('div');
     card.className = 'relation-card';
     card.dataset.id = rel.id;
@@ -245,6 +356,7 @@
     nameInput.value = rel.name;
     nameInput.addEventListener('input', (e) => {
       rel.name = e.target.value;
+      clearInlineError(rel);
     });
 
     const delBtn = document.createElement('button');
@@ -256,9 +368,51 @@
       renderStudentForm();
     });
 
-    header.appendChild(nameInput);
-    header.appendChild(delBtn);
+    const modeBtn = document.createElement('button');
+    modeBtn.className = 'btn-toggle-relation-mode';
+    modeBtn.textContent = isEditing ? '✔' : '✎';
+    modeBtn.title = isEditing ? 'Bearbeitung abschließen' : 'Bearbeiten';
+    modeBtn.addEventListener('click', () => {
+      if (isEditing) {
+        removeEmptyAttrs(rel);
+        const error = validateRelationInline(rel);
+        if (error) {
+          rel.inlineError = error;
+          rel.isEditing = true;
+          renderStudentForm();
+          return;
+        }
+        sortAttrsPrimaryFirst(rel.attrs);
+        clearInlineError(rel);
+      }
+      rel.isEditing = !isEditing;
+      renderStudentForm();
+    });
+
+    if (isEditing) {
+      header.appendChild(nameInput);
+    } else {
+      header.appendChild(buildRelationPreview(rel, true));
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'relation-card-actions';
+    actions.appendChild(modeBtn);
+    actions.appendChild(delBtn);
+
+    header.appendChild(actions);
     card.appendChild(header);
+
+    if (rel.inlineError) {
+      const inlineError = document.createElement('div');
+      inlineError.className = 'relation-inline-error';
+      inlineError.textContent = rel.inlineError;
+      card.appendChild(inlineError);
+    }
+
+    if (!isEditing) {
+      return card;
+    }
 
     // Attribute
     const attrsDiv = document.createElement('div');
@@ -273,16 +427,68 @@
     addAttrBtn.className = 'btn-add-attr';
     addAttrBtn.textContent = '+ Attribut';
     addAttrBtn.addEventListener('click', () => {
-      const newAttr = { id: newAttrId(), name: '', isPk: false };
+      const newAttr = { id: newAttrId(), name: '', isPk: false, isFk: false };
       rel.attrs.push(newAttr);
-      const row = buildAttrRow(rel, newAttr);
-      attrsDiv.insertBefore(row, addAttrBtn);
-      row.querySelector('.attr-input').focus();
+      clearInlineError(rel);
+      renderStudentForm();
+      const targetInput = document.querySelector(
+        `.relation-card[data-id="${rel.id}"] .attr-row[data-id="${newAttr.id}"] .attr-input`,
+      );
+      if (targetInput) targetInput.focus();
     });
 
     attrsDiv.appendChild(addAttrBtn);
     card.appendChild(attrsDiv);
     return card;
+  }
+
+  function buildRelationPreview(rel, compact = false) {
+    const wrapper = document.createElement('div');
+    wrapper.className = compact ? 'relation-preview relation-preview-inline' : 'relation-preview';
+
+    const formatted = document.createElement('div');
+    formatted.className = compact
+      ? 'solution-relation relation-preview-output relation-preview-output-inline'
+      : 'solution-relation relation-preview-output';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'solution-relation-name';
+    nameSpan.textContent = rel.name || 'Relation';
+    formatted.appendChild(nameSpan);
+
+    formatted.appendChild(document.createTextNode(' ( '));
+
+    const attrSpan = document.createElement('span');
+    attrSpan.className = 'solution-attr-list';
+
+    const attrs = [...rel.attrs];
+    const parts = attrs
+      .filter((a) => (a.name || '').trim())
+      .map((a) => {
+        const sp = document.createElement('span');
+        if (a.isPk && a.isFk) sp.className = 'solution-attr fkpk';
+        else if (a.isPk) sp.className = 'solution-attr pk';
+        else if (a.isFk) sp.className = 'solution-attr fk';
+        else sp.className = 'solution-attr';
+
+        let display = stripForeignKeyMarker(a.name);
+        if (a.isFk) display += FK_SUFFIX;
+        sp.textContent = display;
+        return sp;
+      });
+
+    parts.forEach((p, i) => {
+      attrSpan.appendChild(p);
+      if (i < parts.length - 1) {
+        attrSpan.appendChild(document.createTextNode(', '));
+      }
+    });
+
+    formatted.appendChild(attrSpan);
+    formatted.appendChild(document.createTextNode(' )'));
+    wrapper.appendChild(formatted);
+
+    return wrapper;
   }
 
   function buildAttrRow(rel, attr) {
@@ -293,11 +499,21 @@
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.className = 'attr-input';
-    inp.placeholder = 'Attributname (FK mit *)';
+    inp.placeholder = 'Attributname';
     inp.value = attr.name;
-    inp.title = 'Fremdschlüssel mit * markieren, z.B. KundeNr*';
     inp.addEventListener('input', (e) => {
       attr.name = e.target.value;
+      clearInlineError(rel);
+    });
+    inp.addEventListener('change', (e) => {
+      attr.name = e.target.value.trim();
+      clearInlineError(rel);
+      renderStudentForm();
+    });
+    inp.addEventListener('blur', (e) => {
+      attr.name = e.target.value.trim();
+      clearInlineError(rel);
+      renderStudentForm();
     });
 
     const pkCb = document.createElement('input');
@@ -308,12 +524,35 @@
     pkCb.title = 'Primärschlüssel';
     pkCb.addEventListener('change', (e) => {
       attr.isPk = e.target.checked;
+      clearInlineError(rel);
+      renderStudentForm();
     });
 
     const pkLbl = document.createElement('label');
     pkLbl.className = 'attr-pk-label';
     pkLbl.htmlFor = pkCb.id;
-    pkLbl.textContent = 'PK';
+    pkLbl.textContent = 'PS';
+
+    const fkCb = document.createElement('input');
+    fkCb.type = 'checkbox';
+    fkCb.className = 'attr-fk-checkbox';
+    fkCb.checked = !!attr.isFk;
+    fkCb.id = 'fk-cb-' + attr.id;
+    fkCb.title = 'Fremdschlüssel';
+    fkCb.addEventListener('change', (e) => {
+      attr.isFk = e.target.checked;
+      clearInlineError(rel);
+      renderStudentForm();
+    });
+
+    const fkLbl = document.createElement('label');
+    fkLbl.className = 'attr-fk-label';
+    fkLbl.htmlFor = fkCb.id;
+    fkLbl.textContent = 'FS';
+
+    inp.id = 'attr-input-' + attr.id;
+    pkCb.addEventListener('click', (e) => e.stopPropagation());
+    fkCb.addEventListener('click', (e) => e.stopPropagation());
 
     const delAttrBtn = document.createElement('button');
     delAttrBtn.className = 'btn-del-attr';
@@ -321,12 +560,15 @@
     delAttrBtn.title = 'Attribut löschen';
     delAttrBtn.addEventListener('click', () => {
       rel.attrs = rel.attrs.filter((a) => a.id !== attr.id);
-      row.remove();
+      clearInlineError(rel);
+      renderStudentForm();
     });
 
     row.appendChild(inp);
     row.appendChild(pkCb);
     row.appendChild(pkLbl);
+    row.appendChild(fkCb);
+    row.appendChild(fkLbl);
     row.appendChild(delAttrBtn);
     return row;
   }
@@ -355,28 +597,28 @@
       const attrSpan = document.createElement('span');
       attrSpan.className = 'solution-attr-list';
 
-      const parts = rel.attrs.map((a, i) => {
+      const attrs = sortAttrsPrimaryFirst([...rel.attrs]);
+      const parts = attrs.map((a) => {
         const sp = document.createElement('span');
         if (a.isPk && a.isFk) sp.className = 'solution-attr fkpk';
         else if (a.isPk) sp.className = 'solution-attr pk';
         else if (a.isFk) sp.className = 'solution-attr fk';
         else sp.className = 'solution-attr';
 
-        let display = a.name;
-        if (a.isFk && !a.name.endsWith('*')) display += '*';
-        sp.textContent = display + (i < rel.attrs.length - 1 ? ', ' : '');
+        let display = stripForeignKeyMarker(a.name);
+        if (a.isFk) display += FK_SUFFIX;
+        sp.textContent = display;
         return sp;
       });
 
-      parts.forEach((p) => attrSpan.appendChild(p));
+      parts.forEach((p, i) => {
+        attrSpan.appendChild(p);
+        if (i < parts.length - 1) {
+          attrSpan.appendChild(document.createTextNode(', '));
+        }
+      });
       div.appendChild(attrSpan);
       div.appendChild(document.createTextNode(' )'));
-
-      // Legende
-      const legend = document.createElement('div');
-      legend.style.cssText = 'font-size:0.75rem;color:#94a3b8;margin-top:4px;font-family:sans-serif';
-      legend.innerHTML = '<u>unterstrichen</u> = PK &nbsp;|&nbsp; <span style="color:#2563eb">blau</span> = FK';
-      div.appendChild(legend);
 
       container.appendChild(div);
     });
@@ -385,15 +627,6 @@
   // ======================================================================
   // PRÜFUNG
   // ======================================================================
-
-  function normalize(s) {
-    return (s || '').trim().toLowerCase().replace(/\s+/g, '');
-  }
-
-  // Normalisiert Attributnamen: entfernt abschliessendes * für FK-Vergleich
-  function normAttr(s) {
-    return normalize(s).replace(/\*$/, '');
-  }
 
   function checkInput() {
     if (_solution.length === 0) {
@@ -425,7 +658,7 @@
       }
     });
 
-    // 3. Attribute & PK je Relation prüfen
+    // 3. Attribute & PS je Relation prüfen
     _solution.forEach((solRel) => {
       const studRel = _studentRelations.find((r) => normalize(r.name) === normalize(solRel.name));
       if (!studRel) return; // bereits als fehlend markiert
@@ -447,14 +680,14 @@
         }
       });
 
-      // PK-Prüfung
+      // PS-Prüfung
       const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
 
       solPks.forEach((pk) => {
         if (!studPks.includes(pk)) {
           errors.push(
-            `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> sollte als Primärschlüssel markiert sein.`,
+            `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> sollte als Primärschlüssel (PS) markiert sein.`,
           );
         }
       });
@@ -462,19 +695,19 @@
       studPks.forEach((pk) => {
         if (!solPks.includes(pk)) {
           warnings.push(
-            `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> ist kein erwarteter Primärschlüssel.`,
+            `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`,
           );
         }
       });
 
-      // FK-Prüfung (Attribut endet mit *)
+      // FS-Prüfung (über isFk-Checkbox)
       const solFks = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
-      const studFks = studRel.attrs.filter((a) => a.name.endsWith('*')).map((a) => normAttr(a.name));
+      const studFks = studRel.attrs.filter((a) => !!a.isFk).map((a) => normAttr(a.name));
 
       solFks.forEach((fk) => {
         if (!studFks.includes(fk)) {
           warnings.push(
-            `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> sollte als Fremdschlüssel (mit *) markiert sein.`,
+            `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
           );
         }
       });
@@ -506,7 +739,13 @@
 
   function showFeedback(type, html) {
     const area = document.getElementById('feedback-area');
-    area.innerHTML = `<div class="feedback-box ${type}">${html}</div>`;
+    area.innerHTML = `<div class="feedback-box ${type}"><button id="feedback-close" class="feedback-close" type="button" aria-label="Hinweis schließen">✕</button>${html}</div>`;
+    const closeBtn = document.getElementById('feedback-close');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        area.innerHTML = '';
+      });
+    }
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -516,7 +755,7 @@
 
   function initEvents() {
     document.getElementById('btn-add-relation').addEventListener('click', () => {
-      const rel = { id: newRelId(), name: '', attrs: [] };
+      const rel = { id: newRelId(), name: '', attrs: [], isEditing: true };
       _studentRelations.push(rel);
       const card = buildRelationCard(rel);
       document.getElementById('student-relations-list').appendChild(card);
@@ -524,22 +763,52 @@
     });
 
     document.getElementById('btn-check').addEventListener('click', () => {
+      removeCompletelyEmptyRelations();
+
+      const hasInlineErrors = validateAllRelationsInline();
+      if (hasInlineErrors) {
+        _studentRelations.forEach((rel) => {
+          rel.isEditing = !!rel.inlineError;
+        });
+        renderStudentForm();
+        document.getElementById('feedback-area').innerHTML = '';
+        return;
+      }
+
+      _studentRelations.forEach((rel) => {
+        removeEmptyAttrs(rel);
+        sortAttrsPrimaryFirst(rel.attrs);
+        rel.isEditing = false;
+      });
+      renderStudentForm();
       checkInput();
     });
 
     document.getElementById('btn-show-solution').addEventListener('click', () => {
       _solution = generateSolution(window.AppState.state);
       renderSolution();
-      const solArea = document.getElementById('solution-area');
-      solArea.style.display = '';
-      solArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const solDisplay = document.getElementById('solution-display');
+      const showBtn = document.getElementById('btn-show-solution');
+      const hideBtn = document.getElementById('btn-hide-solution');
+      solDisplay.style.display = '';
+      if (showBtn) showBtn.style.display = 'none';
+      if (hideBtn) hideBtn.style.display = '';
+      solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    document.getElementById('btn-hide-solution').addEventListener('click', () => {
+      const solDisplay = document.getElementById('solution-display');
+      const showBtn = document.getElementById('btn-show-solution');
+      const hideBtn = document.getElementById('btn-hide-solution');
+      solDisplay.style.display = 'none';
+      if (showBtn) showBtn.style.display = '';
+      if (hideBtn) hideBtn.style.display = 'none';
     });
 
     document.getElementById('btn-reset-relmodel').addEventListener('click', () => {
       if (!confirm('Alle eingegebenen Relationen zurücksetzen?')) return;
       _studentRelations = [];
       document.getElementById('feedback-area').innerHTML = '';
-      document.getElementById('solution-area').style.display = 'none';
       renderStudentForm();
       renderSolution();
     });
@@ -555,6 +824,7 @@
   // Globale Exports
   window.RelModel = {
     syncFromDiagram,
+    requestSyncFromDiagramDebounced,
     reset,
     generateSolution,
   };
