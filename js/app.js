@@ -100,12 +100,16 @@ function renderRelatedInfo(node) {
   const relationshipsRow = document.getElementById('prop-relationships-row');
   const relationshipsList = document.getElementById('prop-relationships-list');
 
+  const relLabelEl = document.getElementById('prop-relationships-label');
   row.style.display = '';
   relationshipsRow.style.display = 'none';
 
   let items = [];
+  let mainListType = '';
+
   if (node.type === 'entity') {
     label.textContent = 'Zugehörige Attribute:';
+    mainListType = 'attribute';
     items = getConnectedNodes(node.id, 'attribute')
       .map(({ node: relatedNode }) => relatedNode)
       .sort(compareAttributesPrimaryFirst)
@@ -126,10 +130,13 @@ function renderRelatedInfo(node) {
       })
       .sort(compareRelatedItemsByLabel);
 
+    if (relLabelEl) relLabelEl.textContent = 'Zugehörige Beziehungen:';
     relationshipsRow.style.display = '';
     renderRelatedItems(relationshipsList, relationshipItems, 'relationship');
+
   } else if (node.type === 'relationship') {
     label.textContent = 'Verbundene Entitätsklassen:';
+    mainListType = 'entity';
     items = getConnectedNodes(node.id, 'relationship')
       .map(({ edge, node: relatedNode }) => {
         const cardinality = edge.fromId === node.id ? edge.chenTo || '1' : edge.chenFrom || '1';
@@ -140,22 +147,35 @@ function renderRelatedInfo(node) {
         };
       })
       .sort(compareRelatedItemsByLabel);
-  } else {
-    label.textContent = 'Zugehöriges Element:';
-    items = getConnectedNodes(node.id, 'attribute')
-      .map(({ node: relatedNode }) => ({
+
+    const attrItems = getConnectedNodes(node.id, 'attribute')
+      .map(({ node: relatedNode }) => relatedNode)
+      .sort(compareAttributesPrimaryFirst)
+      .map((relatedNode) => ({
         nodeId: relatedNode.id,
         nodeType: relatedNode.type,
-        label: relatedNode.name || (relatedNode.type === 'relationship' ? 'Beziehung' : 'Entitätsklasse'),
-      }))
-      .sort(compareRelatedItemsByLabel);
+        label: `${relatedNode.name || 'Attribut'}${relatedNode.isPrimaryKey ? ' (PS)' : ''}`,
+      }));
+
+    if (relLabelEl) relLabelEl.textContent = 'Verbundene Attribute:';
+    relationshipsRow.style.display = '';
+    renderRelatedItems(relationshipsList, attrItems, 'attribute');
+
+  } else {
+    // Attribut-Knoten — Elternknoten bestimmen
+    const parents = getConnectedNodes(node.id, 'attribute');
+    const parentNode = parents.length > 0 ? parents[0].node : null;
+    const parentType = parentNode?.type || 'entity';
+    label.textContent = parentType === 'relationship' ? 'Zugehörige Beziehung:' : 'Zugehörige Entitätsklasse:';
+    mainListType = parentType;
+    items = parents.map(({ node: relatedNode }) => ({
+      nodeId: relatedNode.id,
+      nodeType: relatedNode.type,
+      label: relatedNode.name || (relatedNode.type === 'relationship' ? 'Beziehung' : 'Entitätsklasse'),
+    }));
   }
 
-  const listType =
-    node.type === 'entity' ? 'attribute' :
-    node.type === 'relationship' ? 'entity' :
-    '';
-  renderRelatedItems(list, items, listType);
+  renderRelatedItems(list, items, mainListType);
 }
 
 function inferEdgeType(edge) {
