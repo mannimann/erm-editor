@@ -374,6 +374,43 @@
     return assignments;
   }
 
+  // Returns all relationship-edges that connect `relationshipId` to `entityId`.
+  function getSelfPairEdges(relationshipId, entityId) {
+    return S().edges.filter((e) => {
+      if (!isRelationshipEdge(e)) return false;
+      if (e.fromId !== relationshipId && e.toId !== relationshipId) return false;
+      const other = e.fromId === relationshipId ? e.toId : e.fromId;
+      return other === entityId;
+    });
+  }
+
+  // Returns -1/+1 side for a self-pair edge based on assigned relationship corners.
+  function selfPairOffset(edge, relationshipNode, relationshipCornerAssignments) {
+    const relationshipId = relationshipNode.id;
+    const entityId = edge.fromId === relationshipId ? edge.toId : edge.fromId;
+    const pair = getSelfPairEdges(relationshipId, entityId);
+    if (pair.length !== 2) return 0;
+
+    const thisCorner = relationshipCornerAssignments.get(`${edge.id}:${relationshipId}`);
+    const otherEdge = pair[0].id === edge.id ? pair[1] : pair[0];
+    const otherCorner = relationshipCornerAssignments.get(`${otherEdge.id}:${relationshipId}`);
+
+    if (thisCorner && otherCorner) {
+      const relCenter = getNodeCenter(relationshipNode);
+      const dx = Math.abs(thisCorner.x - otherCorner.x);
+      const dy = Math.abs(thisCorner.y - otherCorner.y);
+
+      if (dy >= dx) {
+        return thisCorner.y <= relCenter.y ? -1 : 1;
+      }
+      return thisCorner.x <= relCenter.x ? -1 : 1;
+    }
+
+    // Fallback: deterministic by id if corner-assignment is unavailable.
+    const sorted = pair.slice().sort((a, b) => a.id.localeCompare(b.id));
+    return sorted[0].id === edge.id ? -1 : 1;
+  }
+
   function getEdgeEndpoint(node, targetX, targetY) {
     const c = getNodeCenter(node);
     const dx = targetX - c.x;
@@ -623,16 +660,44 @@
     const toNode = byId(edge.toId);
     if (!fromNode || !toNode) return;
 
+    // Detect self-pair (same entity connected twice to one relationship)
+    const relNodeForPair = fromNode.type === 'relationship' ? fromNode : toNode.type === 'relationship' ? toNode : null;
+    const entNodeForPair =
+      relNodeForPair && fromNode.type === 'entity'
+        ? fromNode
+        : relNodeForPair && toNode.type === 'entity'
+          ? toNode
+          : null;
+    const pairSide =
+      relNodeForPair && entNodeForPair && isRelationshipEdge(edge)
+        ? selfPairOffset(edge, relNodeForPair, relationshipCornerAssignments)
+        : 0;
+    const SELF_PAIR_AIM = 16;
+
     const fc = getNodeCenter(fromNode);
     const tc = getNodeCenter(toNode);
     const fp =
       fromNode.type === 'relationship'
         ? relationshipCornerAssignments.get(`${edge.id}:${fromNode.id}`) || getEdgeEndpoint(fromNode, tc.x, tc.y)
         : getEdgeEndpoint(fromNode, tc.x, tc.y);
+
+    let toTargetX = fc.x;
+    let toTargetY = fc.y;
+    if (pairSide !== 0 && toNode.type === 'entity' && fromNode.type === 'relationship') {
+      const toCenter = getNodeCenter(toNode);
+      const vx = toCenter.x - fp.x;
+      const vy = toCenter.y - fp.y;
+      const vLen = Math.sqrt(vx * vx + vy * vy) || 1;
+      const perpX = -vy / vLen;
+      const perpY = vx / vLen;
+      toTargetX = fp.x + perpX * pairSide * SELF_PAIR_AIM;
+      toTargetY = fp.y + perpY * pairSide * SELF_PAIR_AIM;
+    }
+
     const tp =
       toNode.type === 'relationship'
         ? relationshipCornerAssignments.get(`${edge.id}:${toNode.id}`) || getEdgeEndpoint(toNode, fc.x, fc.y)
-        : getEdgeEndpoint(toNode, fc.x, fc.y);
+        : getEdgeEndpoint(toNode, toTargetX, toTargetY);
 
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     line.setAttribute('x1', fp.x);
@@ -659,6 +724,8 @@
       const OFFSET = 30;
       const LABEL_OFFSET = 16;
       const ENTITY_CLEARANCE = 24;
+      const VERTICAL_ALIGN_TOLERANCE = 28;
+      const UPPER_LOWER_DOMINANCE_RATIO = 0.6;
       const dx = tp.x - fp.x;
       const dy = tp.y - fp.y;
       const len = Math.sqrt(dx * dx + dy * dy) || 1;
@@ -672,10 +739,34 @@
       const direction = entityIsTarget ? -1 : 1;
       const baseLabelX = anchorX + ux * OFFSET * direction;
       const baseLabelY = anchorY + uy * OFFSET * direction;
+      const relCenterForPlacement = relNodeForPair ? getNodeCenter(relNodeForPair) : null;
+      const entCenterForPlacement = entNodeForPair ? getNodeCenter(entNodeForPair) : null;
+      const relToEntDx =
+        relCenterForPlacement && entCenterForPlacement ? entCenterForPlacement.x - relCenterForPlacement.x : 0;
+      const relToEntDy =
+        relCenterForPlacement && entCenterForPlacement ? entCenterForPlacement.y - relCenterForPlacement.y : 0;
+      const isVerticalSelfPair =
+        pairSide !== 0 &&
+        relCenterForPlacement &&
+        entCenterForPlacement &&
+        (Math.abs(relToEntDx) <= VERTICAL_ALIGN_TOLERANCE ||
+          Math.abs(relToEntDy) >= Math.abs(relToEntDx) * UPPER_LOWER_DOMINANCE_RATIO);
 
       let normalX = -uy;
       let normalY = ux;
-      if (normalY > 0) {
+
+      // If entity is directly above/below relationship, place labels outside left/right of the two lines.
+      if (isVerticalSelfPair) {
+        normalX = pairSide;
+        normalY = 0;
+      }
+
+      // Default label side: upper/left. Self-pair second edge gets flipped.
+      if (!isVerticalSelfPair && normalY > 0) {
+        normalX *= -1;
+        normalY *= -1;
+      }
+      if (!isVerticalSelfPair && pairSide > 0) {
         normalX *= -1;
         normalY *= -1;
       }
