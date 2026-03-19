@@ -6,6 +6,7 @@
 // ---- Globaler App-Zustand ----
 const state = {
   notation: 'chen',
+  snapToGrid: true,
   nodes: [], // { id, type, x, y, name, isPrimaryKey, width, height }
   edges: [], // { id, fromId, toId, edgeType, chenFrom, chenTo }
   nextId: 1,
@@ -386,7 +387,13 @@ function exportJSON() {
   }
 
   const data = JSON.stringify(
-    { notation: state.notation, nodes: state.nodes, edges: state.edges, nextId: state.nextId },
+    {
+      notation: state.notation,
+      snapToGrid: !!state.snapToGrid,
+      nodes: state.nodes,
+      edges: state.edges,
+      nextId: state.nextId,
+    },
     null,
     2,
   );
@@ -416,11 +423,13 @@ function importJSON(file) {
           ...data.edges.map((ed) => parseInt(ed.id.slice(1)) || 0),
         ) + 1;
       state.notation = 'chen';
+      state.snapToGrid = !!data.snapToGrid;
       state.edges.forEach((edge) => {
         edge.edgeType = inferEdgeType(edge);
       });
       clearSelection();
       if (window.Diagram) window.Diagram.renderAll();
+      if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
       if (window.RelModel) window.RelModel.syncFromDiagram();
     } catch (err) {
       alert('Fehler beim Importieren: ' + err.message);

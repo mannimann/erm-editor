@@ -11,6 +11,21 @@
     <header id="app-header">
       <div id="header-left">
         <span id="app-title">📊 ER-Diagramm Editor</span>
+        <div id="header-layout-controls">
+          <label class="header-switch" for="toggle-snap-grid" title="Ausrichten an Raster ein- oder ausschalten">
+            <input id="toggle-snap-grid" type="checkbox" />
+            <span class="header-switch-track" aria-hidden="true"></span>
+            <span class="header-switch-label">Am Raster ausrichten</span>
+          </label>
+          <button
+            id="btn-auto-layout"
+            class="header-btn header-layout-btn"
+            type="button"
+            title="Diagramm automatisch anordnen"
+          >
+            🧭 Auto-Layout
+          </button>
+        </div>
       </div>
       <div id="header-right">
         <button id="btn-import" class="header-btn" title="Diagramm aus JSON-Datei laden">⬆ Importieren</button>
@@ -134,7 +149,7 @@
               <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e8e8e8" stroke-width="0.5" />
             </pattern>
           </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
+          <rect id="canvas-grid-bg" width="100%" height="100%" fill="url(#grid)" />
           <!-- Elemente werden hier per JS eingefügt -->
           <g id="edges-layer"></g>
           <g id="nodes-layer"></g>

@@ -10,6 +10,7 @@
   const NODE_ATTR_RY = 26;
   const NODE_REL_W = 130;
   const NODE_REL_H = 60;
+  const GRID_SIZE = 20;
 
   function S() {
     return window.AppState.state;
@@ -55,6 +56,9 @@
   const btnZoom100 = document.getElementById('btn-zoom-100');
   const btnCenter = document.getElementById('btn-center');
   const zoomLevel = document.getElementById('zoom-level');
+  const gridBackground = document.getElementById('canvas-grid-bg');
+  const snapGridToggle = document.getElementById('toggle-snap-grid');
+  const autoLayoutButton = document.getElementById('btn-auto-layout');
 
   let dragging = null;
   let panning = null;
@@ -69,6 +73,43 @@
   const ZOOM_MIN = 0.35;
   const ZOOM_MAX = 3;
   const ZOOM_STEP = 1.15;
+
+  function isSnapToGridEnabled() {
+    return !!S().snapToGrid;
+  }
+
+  function snapValue(value) {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  }
+
+  function getNodeSize(type) {
+    if (type === 'entity') return { w: NODE_ENTITY_W, h: NODE_ENTITY_H };
+    if (type === 'attribute') return { w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 };
+    return { w: NODE_REL_W, h: NODE_REL_H };
+  }
+
+  function maybeSnapPosition(type, x, y) {
+    if (!isSnapToGridEnabled()) return { x, y };
+    const size = getNodeSize(type);
+    const centerX = x + size.w / 2;
+    const centerY = y + size.h / 2;
+    const snappedCenterX = snapValue(centerX);
+    const snappedCenterY = snapValue(centerY);
+    return {
+      x: snappedCenterX - size.w / 2,
+      y: snappedCenterY - size.h / 2,
+    };
+  }
+
+  function setSnapToGrid(enabled) {
+    S().snapToGrid = !!enabled;
+    if (snapGridToggle && snapGridToggle.checked !== S().snapToGrid) {
+      snapGridToggle.checked = S().snapToGrid;
+    }
+    if (gridBackground) {
+      gridBackground.setAttribute('fill', S().snapToGrid ? 'url(#grid)' : '#ffffff');
+    }
+  }
 
   function applyViewTransform() {
     const transform = `matrix(${viewState.scale} 0 0 ${viewState.scale} ${viewState.x} ${viewState.y})`;
@@ -431,7 +472,14 @@
       const angle = Math.atan2(dy * rx, dx * ry);
       return { x: c.x + rx * Math.cos(angle), y: c.y + ry * Math.sin(angle) };
     }
-    return getNearestRelationshipCorner(node, targetX, targetY);
+    if (node.type === 'relationship') {
+      const hw = NODE_REL_W / 2;
+      const hh = NODE_REL_H / 2;
+      const denom = Math.abs(ux) / hw + Math.abs(uy) / hh || 1;
+      const t = 1 / denom;
+      return { x: c.x + ux * t, y: c.y + uy * t };
+    }
+    return { x: c.x, y: c.y };
   }
 
   function edgeLabel(edge, side) {
@@ -516,7 +564,302 @@
   }
 
   function clampPosition(type, x, y) {
-    return { x, y };
+    const snapped = maybeSnapPosition(type, x, y);
+    return { x: snapped.x, y: snapped.y };
+  }
+
+  function findNonOverlappingPlacement(type, preferredX, preferredY, occupiedBounds, padding = 18) {
+    const angles = 16;
+    for (let ring = 0; ring < 26; ring += 1) {
+      const radius = ring * 26;
+      for (let step = 0; step < angles; step += 1) {
+        const angle = (step / angles) * Math.PI * 2;
+        const candidate = clampPosition(
+          type,
+          preferredX + Math.cos(angle) * radius,
+          preferredY + Math.sin(angle) * radius,
+        );
+        const candidateBounds = getNodeBounds({ type, x: candidate.x, y: candidate.y });
+        const isFree = !occupiedBounds.some((bounds) => boxesOverlap(candidateBounds, bounds, padding));
+        if (isFree) return { position: candidate, bounds: candidateBounds };
+      }
+    }
+
+    const fallback = clampPosition(type, preferredX, preferredY);
+    return {
+      position: fallback,
+      bounds: getNodeBounds({ type, x: fallback.x, y: fallback.y }),
+    };
+  }
+
+  function findConstrainedPlacement(type, preferredX, preferredY, occupiedBounds, padding = 18, validator = null) {
+    const angles = 24;
+    for (let ring = 0; ring < 34; ring += 1) {
+      const radius = ring * 24;
+      for (let step = 0; step < angles; step += 1) {
+        const angle = (step / angles) * Math.PI * 2;
+        const candidate = clampPosition(
+          type,
+          preferredX + Math.cos(angle) * radius,
+          preferredY + Math.sin(angle) * radius,
+        );
+        if (validator && !validator(candidate)) continue;
+        const candidateBounds = getNodeBounds({ type, x: candidate.x, y: candidate.y });
+        const isFree = !occupiedBounds.some((bounds) => boxesOverlap(candidateBounds, bounds, padding));
+        if (isFree) return { position: candidate, bounds: candidateBounds };
+      }
+    }
+
+    return null;
+  }
+
+  function autoArrangeDiagram() {
+    // Aktiviere Snap-to-Grid automatisch
+    setSnapToGrid(true);
+
+    const nodes = S().nodes;
+    if (!nodes.length) return;
+
+    const entities = nodes.filter((node) => node.type === 'entity');
+    const relationships = nodes.filter((node) => node.type === 'relationship');
+    const attributes = nodes.filter((node) => node.type === 'attribute');
+
+    const attributeCountByParent = new Map();
+    S().edges.forEach((edge) => {
+      if (edge.edgeType !== 'attribute') return;
+      const fromNode = byId(edge.fromId);
+      const toNode = byId(edge.toId);
+      if (!fromNode || !toNode) return;
+      const parentNode = fromNode.type === 'attribute' ? toNode : toNode.type === 'attribute' ? fromNode : null;
+      if (!parentNode) return;
+      attributeCountByParent.set(parentNode.id, (attributeCountByParent.get(parentNode.id) || 0) + 1);
+    });
+    const maxAttributesPerParent =
+      attributeCountByParent.size > 0 ? Math.max(...Array.from(attributeCountByParent.values())) : 0;
+    const attrDensityBoost = Math.min(140, Math.max(0, maxAttributesPerParent - 4) * 18);
+
+    const occupiedBounds = [];
+    const entityCols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, entities.length))));
+    const entityGapX = 420 + attrDensityBoost;
+    const entityGapY = 280 + Math.round(attrDensityBoost * 0.7);
+    const startX = 120;
+    const startY = 100;
+    const reserveNode = (node, padding = 18) => {
+      const candidateBounds = getNodeBounds(node);
+      const overlaps = occupiedBounds.some((bounds) => boxesOverlap(candidateBounds, bounds, padding));
+      if (!overlaps) {
+        occupiedBounds.push(candidateBounds);
+        return;
+      }
+
+      const moved = findNonOverlappingPlacement(node.type, node.x, node.y, occupiedBounds, padding);
+      node.x = moved.position.x;
+      node.y = moved.position.y;
+      occupiedBounds.push(moved.bounds);
+    };
+    const tryPlaceNodeAt = (type, x, y, padding = 18, validator = null) => {
+      const candidate = clampPosition(type, x, y);
+      if (validator && !validator(candidate)) return null;
+      const candidateBounds = getNodeBounds({ type, x: candidate.x, y: candidate.y });
+      const isFree = !occupiedBounds.some((bounds) => boxesOverlap(candidateBounds, bounds, padding));
+      if (!isFree) return null;
+      occupiedBounds.push(candidateBounds);
+      return candidate;
+    };
+    const placeNode = (node, preferredX, preferredY, padding = 18) => {
+      const placed = findNonOverlappingPlacement(node.type, preferredX, preferredY, occupiedBounds, padding);
+      node.x = placed.position.x;
+      node.y = placed.position.y;
+      occupiedBounds.push(placed.bounds);
+    };
+
+    // Phase 1: place entities
+    entities
+      .slice()
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de', { sensitivity: 'base' }))
+      .forEach((entity, index) => {
+        const row = Math.floor(index / entityCols);
+        const col = index % entityCols;
+        placeNode(entity, startX + col * entityGapX, startY + row * entityGapY, 20);
+      });
+
+    const relFallbackY = startY + Math.max(1, Math.ceil(entities.length / entityCols)) * entityGapY + 140;
+    const pairPlacementCount = new Map();
+
+    // Phase 2: place relationships between entities
+    relationships.forEach((relationship, index) => {
+      const connectedEntityEdges = getRelationshipEntityEdges(relationship.id);
+      const connectedEntities = connectedEntityEdges
+        .map((edge) => byId(edge.fromId === relationship.id ? edge.toId : edge.fromId))
+        .filter((node) => !!node && node.type === 'entity');
+
+      if (connectedEntities.length >= 2) {
+        const first = connectedEntities[0];
+        const second = connectedEntities[1];
+        const firstCenter = getNodeCenter(first);
+        const secondCenter = getNodeCenter(second);
+
+        const pairKey = [first.id, second.id].sort().join('|');
+        const pairIndex = pairPlacementCount.get(pairKey) || 0;
+        pairPlacementCount.set(pairKey, pairIndex + 1);
+
+        // Platziere Beziehungen moeglichst auf der geraden Verbindungslinie.
+        const vx = secondCenter.x - firstCenter.x;
+        const vy = secondCenter.y - firstCenter.y;
+        const dist = Math.sqrt(vx * vx + vy * vy) || 1;
+        const ux = vx / dist;
+        const uy = vy / dist;
+
+        const lineStep = 48;
+        const rawOffset = pairIndex * lineStep;
+        const maxOffset = Math.max(0, dist / 2 - Math.max(NODE_REL_W, NODE_REL_H));
+        const clampedOffset = Math.min(rawOffset, maxOffset);
+        const side = pairIndex % 2 === 0 ? 1 : -1;
+
+        const relCenterX = (firstCenter.x + secondCenter.x) / 2 + ux * clampedOffset * side;
+        const relCenterY = (firstCenter.y + secondCenter.y) / 2 + uy * clampedOffset * side;
+
+        // Berechne obere linke Ecke aus dem Mittelpunkt
+        const relPos = clampPosition(relationship.type, relCenterX - NODE_REL_W / 2, relCenterY - NODE_REL_H / 2);
+        relationship.x = relPos.x;
+        relationship.y = relPos.y;
+        reserveNode(relationship, 24);
+        return;
+      }
+
+      if (connectedEntities.length === 1) {
+        const entityCenter = getNodeCenter(connectedEntities[0]);
+        const orbit = 165 + index * 6;
+        const angle = (-Math.PI / 2 + (index % 6) * (Math.PI / 3)) % (Math.PI * 2);
+        const relPos = clampPosition(
+          relationship.type,
+          entityCenter.x + Math.cos(angle) * orbit - NODE_REL_W / 2,
+          entityCenter.y + Math.sin(angle) * orbit - NODE_REL_H / 2,
+        );
+        relationship.x = relPos.x;
+        relationship.y = relPos.y;
+        reserveNode(relationship, 24);
+        return;
+      }
+
+      const row = Math.floor(index / entityCols);
+      const col = index % entityCols;
+      const relPos = clampPosition(relationship.type, startX + col * entityGapX, relFallbackY + row * entityGapY);
+      relationship.x = relPos.x;
+      relationship.y = relPos.y;
+      reserveNode(relationship, 24);
+    });
+
+    const attrsByParent = new Map();
+    const orphanAttributes = [];
+    attributes.forEach((attr) => {
+      const parentEdge = S().edges.find(
+        (edge) => edge.edgeType === 'attribute' && (edge.fromId === attr.id || edge.toId === attr.id),
+      );
+      if (!parentEdge) {
+        orphanAttributes.push(attr);
+        return;
+      }
+      const parentId = parentEdge.fromId === attr.id ? parentEdge.toId : parentEdge.fromId;
+      const parentNode = byId(parentId);
+      if (!parentNode || (parentNode.type !== 'entity' && parentNode.type !== 'relationship')) {
+        orphanAttributes.push(attr);
+        return;
+      }
+      if (!attrsByParent.has(parentId)) attrsByParent.set(parentId, []);
+      attrsByParent.get(parentId).push(attr);
+    });
+
+    // Phase 3: place attributes last
+    attrsByParent.forEach((attrs, parentId) => {
+      const parentNode = byId(parentId);
+      if (!parentNode) return;
+      const center = getNodeCenter(parentNode);
+      const parentCandidates = nodes.filter((n) => n.type === parentNode.type);
+      const isClosestToOwnParent = (candidatePos) => {
+        const candidateCenter = {
+          x: candidatePos.x + NODE_ATTR_RX,
+          y: candidatePos.y + NODE_ATTR_RY,
+        };
+        const ownCenter = getNodeCenter(parentNode);
+        const ownDistSq = (candidateCenter.x - ownCenter.x) ** 2 + (candidateCenter.y - ownCenter.y) ** 2;
+
+        for (let i = 0; i < parentCandidates.length; i += 1) {
+          const otherParent = parentCandidates[i];
+          if (!otherParent || otherParent.id === parentNode.id) continue;
+          const otherCenter = getNodeCenter(otherParent);
+          const otherDistSq = (candidateCenter.x - otherCenter.x) ** 2 + (candidateCenter.y - otherCenter.y) ** 2;
+          if (otherDistSq + 64 < ownDistSq) return false;
+        }
+        return true;
+      };
+      const baseRadius = parentNode.type === 'relationship' ? 120 : 112;
+      const radius = baseRadius + Math.max(0, attrs.length - 6) * 10;
+      const radiusOffsets = [0, 12, 24, 36, 52, 70, 90, 112];
+      const angleOffsets = [0, 0.2, -0.2, 0.38, -0.38, 0.56, -0.56];
+      attrs
+        .slice()
+        .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de', { sensitivity: 'base' }))
+        .forEach((attr, index) => {
+          const baseAngle = -Math.PI / 2 + (index / Math.max(1, attrs.length)) * Math.PI * 2;
+          let placed = false;
+
+          // Prefer close positions around the parent before allowing farther fallback.
+          for (let r = 0; r < radiusOffsets.length && !placed; r += 1) {
+            for (let a = 0; a < angleOffsets.length; a += 1) {
+              const angle = baseAngle + angleOffsets[a];
+              const rCandidate = radius + radiusOffsets[r];
+              const x = center.x + Math.cos(angle) * rCandidate - NODE_ATTR_RX;
+              const y = center.y + Math.sin(angle) * rCandidate - NODE_ATTR_RY;
+              const pos = tryPlaceNodeAt(attr.type, x, y, 12, isClosestToOwnParent);
+              if (!pos) continue;
+              attr.x = pos.x;
+              attr.y = pos.y;
+              placed = true;
+              break;
+            }
+          }
+
+          if (!placed) {
+            const fallbackX = center.x + Math.cos(baseAngle) * (radius + 84) - NODE_ATTR_RX;
+            const fallbackY = center.y + Math.sin(baseAngle) * (radius + 84) - NODE_ATTR_RY;
+            const constrained = findConstrainedPlacement(
+              attr.type,
+              fallbackX,
+              fallbackY,
+              occupiedBounds,
+              12,
+              isClosestToOwnParent,
+            );
+            if (constrained) {
+              attr.x = constrained.position.x;
+              attr.y = constrained.position.y;
+              occupiedBounds.push(constrained.bounds);
+              placed = true;
+            }
+
+            // Absolute fallback: keep layout running but stay as close to the own parent as possible.
+            if (!placed) {
+              const forced = clampPosition(attr.type, fallbackX, fallbackY);
+              attr.x = forced.x;
+              attr.y = forced.y;
+              reserveNode(attr, 12);
+            }
+          }
+        });
+    });
+
+    if (orphanAttributes.length > 0) {
+      const orphanY = relFallbackY + entityGapY * 1.4;
+      orphanAttributes.forEach((attr, index) => {
+        const row = Math.floor(index / entityCols);
+        const col = index % entityCols;
+        placeNode(attr, startX + col * entityGapX, orphanY + row * entityGapY - 18, 12);
+      });
+    }
+
+    renderAll();
+    requestRelModelSync();
   }
 
   function positionIsFree(type, x, y) {
@@ -677,7 +1020,7 @@
     const fc = getNodeCenter(fromNode);
     const tc = getNodeCenter(toNode);
     const fp =
-      fromNode.type === 'relationship'
+      isRelationshipEdge(edge) && fromNode.type === 'relationship'
         ? relationshipCornerAssignments.get(`${edge.id}:${fromNode.id}`) || getEdgeEndpoint(fromNode, tc.x, tc.y)
         : getEdgeEndpoint(fromNode, tc.x, tc.y);
 
@@ -695,7 +1038,7 @@
     }
 
     const tp =
-      toNode.type === 'relationship'
+      isRelationshipEdge(edge) && toNode.type === 'relationship'
         ? relationshipCornerAssignments.get(`${edge.id}:${toNode.id}`) || getEdgeEndpoint(toNode, fc.x, fc.y)
         : getEdgeEndpoint(toNode, toTargetX, toTargetY);
 
@@ -833,11 +1176,12 @@
   }
 
   function addNode(type, x, y) {
+    const snapped = clampPosition(type, x, y);
     const node = {
       id: genId(),
       type,
-      x,
-      y,
+      x: snapped.x,
+      y: snapped.y,
       name: type === 'entity' ? 'Entitätsklasse' : type === 'attribute' ? 'Attribut' : 'Beziehung',
       isPrimaryKey: false,
     };
@@ -919,7 +1263,7 @@
   }
 
   function bindToolbarActions() {
-    document.querySelectorAll('.tool-btn').forEach((btn) => {
+    document.querySelectorAll('.tool-btn[data-tool]').forEach((btn) => {
       btn.addEventListener('click', () => {
         hideContextMenu();
         const tool = btn.dataset.tool;
@@ -928,6 +1272,25 @@
         setSelectModeVisual();
       });
     });
+  }
+
+  function bindLayoutControls() {
+    if (snapGridToggle) {
+      snapGridToggle.checked = isSnapToGridEnabled();
+      snapGridToggle.addEventListener('change', () => {
+        setSnapToGrid(snapGridToggle.checked);
+      });
+    }
+
+    if (autoLayoutButton) {
+      autoLayoutButton.addEventListener('click', () => {
+        hideContextMenu();
+        autoArrangeDiagram();
+        centerView();
+      });
+    }
+
+    setSnapToGrid(isSnapToGridEnabled());
   }
 
   function getRelationshipEntityEdges(relationshipId) {
@@ -1172,10 +1535,11 @@
     }
     const newX = svgPt.x - dragging.offsetX;
     const newY = svgPt.y - dragging.offsetY;
-    const dx = newX - node.x;
-    const dy = newY - node.y;
-    node.x = newX;
-    node.y = newY;
+    const snapped = clampPosition(node.type, newX, newY);
+    const dx = snapped.x - node.x;
+    const dy = snapped.y - node.y;
+    node.x = snapped.x;
+    node.y = snapped.y;
     if ((node.type === 'entity' || node.type === 'relationship') && dragging.linkedAttributeIds.length) {
       dragging.linkedAttributeIds.forEach((attrId) => {
         const attrNode = byId(attrId);
@@ -1419,6 +1783,7 @@
   }
 
   bindToolbarActions();
+  bindLayoutControls();
   bindViewportControls();
   setSelectModeVisual();
   applyViewTransform();
@@ -1430,5 +1795,7 @@
     clearSelection: deselectAll,
     deleteNode,
     deleteEdge,
+    autoLayout: autoArrangeDiagram,
+    setSnapToGrid,
   };
 })();
