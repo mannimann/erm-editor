@@ -133,7 +133,6 @@ function renderRelatedInfo(node) {
     if (relLabelEl) relLabelEl.textContent = 'Zugehörige Beziehungen:';
     relationshipsRow.style.display = '';
     renderRelatedItems(relationshipsList, relationshipItems, 'relationship');
-
   } else if (node.type === 'relationship') {
     label.textContent = 'Verbundene Entitätsklassen:';
     mainListType = 'entity';
@@ -160,7 +159,6 @@ function renderRelatedInfo(node) {
     if (relLabelEl) relLabelEl.textContent = 'Verbundene Attribute:';
     relationshipsRow.style.display = '';
     renderRelatedItems(relationshipsList, attrItems, 'attribute');
-
   } else {
     // Attribut-Knoten — Elternknoten bestimmen
     const parents = getConnectedNodes(node.id, 'attribute');
@@ -192,13 +190,25 @@ function inferEdgeType(edge) {
 
 // ---- Tabs ----
 function initTabs() {
-  const diagramBtn = document.querySelector('.tab-btn[data-tab="diagram"]');
+  const questsToggleBtn = document.getElementById('btn-quests-toggle');
+  const questsMenu = document.getElementById('quests-menu');
+  const questsDropdown = questsToggleBtn?.closest('.tab-dropdown');
   const relmodelBtn = document.getElementById('btn-relmodel-toggle');
   const relmodelDrawer = document.getElementById('relmodel-drawer');
   const relmodelResizer = document.getElementById('relmodel-resizer');
   const relmodelBackdrop = document.getElementById('relmodel-backdrop');
   const mainLayout = document.getElementById('main-layout');
-  if (!diagramBtn || !relmodelBtn || !relmodelDrawer || !relmodelResizer || !relmodelBackdrop || !mainLayout) return;
+  if (
+    !questsToggleBtn ||
+    !questsMenu ||
+    !questsDropdown ||
+    !relmodelBtn ||
+    !relmodelDrawer ||
+    !relmodelResizer ||
+    !relmodelBackdrop ||
+    !mainLayout
+  )
+    return;
 
   let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
   const mobileMedia = window.matchMedia('(max-width: 860px)');
@@ -211,6 +221,12 @@ function initTabs() {
   const syncBackdrop = () => {
     const shouldShow = mobileMedia.matches && !relmodelDrawer.classList.contains('collapsed');
     relmodelBackdrop.classList.toggle('visible', shouldShow);
+  };
+
+  const setQuestsMenuOpen = (open) => {
+    questsDropdown.classList.toggle('open', open);
+    questsMenu.hidden = !open;
+    questsToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
   const setDrawerState = (open) => {
@@ -240,19 +256,21 @@ function initTabs() {
     relmodelDrawer.style.width = `${nextWidth}px`;
   };
 
-  diagramBtn.classList.add('active');
   setDrawerState(false);
+  setQuestsMenuOpen(false);
 
-  relmodelBtn.addEventListener('click', () => {
-    setDrawerState(relmodelDrawer.classList.contains('collapsed'));
+  questsToggleBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setQuestsMenuOpen(questsMenu.hidden);
   });
 
-  diagramBtn.addEventListener('click', () => {
-    if (mobileMedia.matches) {
-      setDrawerState(false);
-      return;
-    }
-    setDrawerState(true);
+  questsMenu.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+
+  relmodelBtn.addEventListener('click', () => {
+    setQuestsMenuOpen(false);
+    setDrawerState(relmodelDrawer.classList.contains('collapsed'));
   });
 
   relmodelResizer.addEventListener('mousedown', (event) => {
@@ -278,11 +296,18 @@ function initTabs() {
   });
 
   mobileMedia.addEventListener('change', () => {
+    setQuestsMenuOpen(false);
     if (!mobileMedia.matches) {
       setDrawerState(true);
       return;
     }
     syncBackdrop();
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!questsDropdown.contains(event.target)) {
+      setQuestsMenuOpen(false);
+    }
   });
 }
 
@@ -323,7 +348,9 @@ function clearSelection() {
 
 function initPropertiesPanel() {
   // Name-Input
-  document.getElementById('prop-name').addEventListener('input', (e) => {
+  const propNameInput = document.getElementById('prop-name');
+
+  propNameInput.addEventListener('input', (e) => {
     if (!_selectedNodeId) return;
     const node = getNodeById(_selectedNodeId);
     if (!node) return;
@@ -331,6 +358,12 @@ function initPropertiesPanel() {
     if (window.Diagram) window.Diagram.renderAll();
     if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
     selectNode(_selectedNodeId);
+  });
+
+  propNameInput.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    e.currentTarget.blur();
   });
 
   // PK-Toggle

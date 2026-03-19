@@ -134,10 +134,16 @@ body.is-resizing-drawer {
   background: #1e293b;
   border-bottom: 2px solid #3b82f6;
   flex-shrink: 0;
+  position: relative;
 }
 
 .tabs-spacer {
   flex: 1;
+}
+
+.tab-dropdown {
+  position: relative;
+  display: flex;
 }
 
 .tab-btn {
@@ -160,6 +166,86 @@ body.is-resizing-drawer {
 .tab-btn.active {
   color: #fff;
   border-bottom-color: #3b82f6;
+}
+
+.tab-btn-static {
+  cursor: default;
+  user-select: none;
+}
+
+.tab-btn-static:hover {
+  color: #fff;
+}
+
+.tab-btn-dropdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-dropdown-chevron {
+  display: inline-block;
+  font-style: normal;
+  font-size: 0.75rem;
+  opacity: 0.7;
+  transition:
+    transform 0.2s ease,
+    opacity 0.15s;
+}
+
+.tab-dropdown.open .tab-dropdown-chevron {
+  transform: rotate(90deg);
+  opacity: 1;
+}
+
+.tab-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 250px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background: rgba(15, 23, 42, 0.98);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.32);
+  z-index: 40;
+}
+
+.tab-dropdown-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #e2e8f0;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.tab-dropdown-item:hover {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(96, 165, 250, 0.28);
+  color: #ffffff;
+}
+
+.tab-dropdown-item-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.tab-dropdown-item-subtitle {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .tab-btn-right {
@@ -1314,6 +1400,12 @@ body.is-resizing-drawer {
 
   #tabs {
     gap: 0;
+  }
+
+  .tab-dropdown-menu {
+    left: 8px;
+    right: auto;
+    min-width: min(280px, calc(100vw - 24px));
   }
 
   #relmodel-drawer {

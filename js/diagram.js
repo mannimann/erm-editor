@@ -267,13 +267,46 @@
           const otherNode = byId(otherId);
           if (!otherNode) return null;
           const c = getNodeCenter(otherNode);
-          return { edge, cx: c.x, cy: c.y, angle: Math.atan2(c.y - relCenter.y, c.x - relCenter.x) };
+          return { edge, otherId, cx: c.x, cy: c.y, angle: Math.atan2(c.y - relCenter.y, c.x - relCenter.x) };
         })
         .filter(Boolean)
         .sort((a, b) => a.angle - b.angle);
 
       const n = edgeData.length;
       if (n === 0) return;
+
+      if (n === 2 && edgeData[0].otherId === edgeData[1].otherId) {
+        const targetX = edgeData[0].cx;
+        const targetY = edgeData[0].cy;
+        const corners = getRelationshipCorners(relationshipNode);
+        const nearestCorner = getNearestRelationshipCorner(relationshipNode, targetX, targetY);
+        const relDx = targetX - relCenter.x;
+        const relDy = targetY - relCenter.y;
+        const useVerticalPair = Math.abs(relDx) >= Math.abs(relDy);
+        const preferredPair = useVerticalPair
+          ? corners.filter((corner) => Math.abs(corner.y - relCenter.y) > Math.abs(corner.x - relCenter.x))
+          : corners.filter((corner) => Math.abs(corner.x - relCenter.x) > Math.abs(corner.y - relCenter.y));
+        const fallbackPair = corners
+          .filter((corner) => corner !== nearestCorner)
+          .sort((a, b) => {
+            const distA = (targetX - a.x) ** 2 + (targetY - a.y) ** 2;
+            const distB = (targetX - b.x) ** 2 + (targetY - b.y) ** 2;
+            return distA - distB;
+          })
+          .slice(0, 2);
+        const pair = preferredPair.length === 2 ? preferredPair : fallbackPair;
+
+        pair
+          .slice()
+          .sort((a, b) => {
+            if (useVerticalPair) return a.y - b.y;
+            return a.x - b.x;
+          })
+          .forEach((corner, index) => {
+            assignments.set(`${edgeData[index].edge.id}:${relationshipNode.id}`, { x: corner.x, y: corner.y });
+          });
+        return;
+      }
 
       // Generate all combinations of n corners from 4
       const subsets = [];
@@ -857,15 +890,6 @@
   }
 
   function createRelationshipEdge(relationshipId, entityId, cardinality) {
-    const existing = findEdge(relationshipId, entityId, 'relationship');
-    if (existing) {
-      existing.fromId = relationshipId;
-      existing.toId = entityId;
-      existing.chenFrom = '1';
-      existing.chenTo = (cardinality || '1').toLowerCase();
-      return existing.id;
-    }
-
     const edge = {
       id: genId(),
       fromId: relationshipId,
@@ -915,11 +939,6 @@
       const entityId1 = modalEntity1.value;
       const entityId2 = modalEntity2.value;
       const [leftCardinality, rightCardinality] = getCardinalityParts(modalCardinality.value);
-
-      if (entityId1 && entityId2 && entityId1 === entityId2) {
-        alert('Bitte zwei unterschiedliche Entitätsklassen auswählen.');
-        return;
-      }
 
       S().edges = S().edges.filter((edge) => {
         if (!isRelationshipEdge(edge)) return true;

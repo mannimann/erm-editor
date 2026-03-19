@@ -23,7 +23,28 @@
 
     <!-- ===== TABS ===== -->
     <div id="tabs">
-      <button class="tab-btn active" data-tab="diagram">🔷 ER-Diagramm</button>
+      <div class="tab-btn active tab-btn-static" aria-current="page">🔷 ER-Diagramm</div>
+      <div class="tab-dropdown">
+        <button
+          id="btn-quests-toggle"
+          class="tab-btn tab-btn-dropdown"
+          type="button"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          ⚔️ Quests <span class="tab-dropdown-chevron">&#x276F;</span>
+        </button>
+        <div id="quests-menu" class="tab-dropdown-menu" aria-label="Quests" hidden>
+          <button class="tab-dropdown-item" type="button">
+            <span class="tab-dropdown-item-title">ERM-Quest starten</span>
+            <span class="tab-dropdown-item-subtitle">Coming Soon</span>
+          </button>
+          <button class="tab-dropdown-item" type="button">
+            <span class="tab-dropdown-item-title">Relationenmodell-Quest starten</span>
+            <span class="tab-dropdown-item-subtitle">Coming Soon</span>
+          </button>
+        </div>
+      </div>
       <div class="tabs-spacer"></div>
       <button id="btn-relmodel-toggle" class="tab-btn tab-btn-right" data-tab="relmodel">
         🗃 Relationenmodell <span class="relmodel-toggle-chevron">&#x276F;</span>
