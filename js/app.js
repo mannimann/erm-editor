@@ -7,10 +7,13 @@
 const state = {
   notation: 'chen',
   snapToGrid: true,
+  diagramTitle: 'er-diagramm',
   nodes: [], // { id, type, x, y, name, isPrimaryKey, width, height }
   edges: [], // { id, fromId, toId, edgeType, chenFrom, chenTo }
   nextId: 1,
 };
+
+const PERSIST_KEY = 'erm-editor-state-v1';
 
 function genId() {
   return 's' + state.nextId++;
@@ -48,6 +51,94 @@ function compareRelatedItemsByLabel(a, b) {
 
 function hasExportableDiagram() {
   return state.nodes.length > 0;
+}
+
+function normalizeEntityName(name) {
+  return String(name || '')
+    .trim()
+    .toLocaleLowerCase('de');
+}
+
+function isEntityNameTaken(name, excludeId = null) {
+  const normalized = normalizeEntityName(name);
+  if (!normalized) return false;
+  return state.nodes.some(
+    (node) => node.type === 'entity' && node.id !== excludeId && normalizeEntityName(node.name) === normalized,
+  );
+}
+
+function getUniqueEntityName(baseName, excludeId = null) {
+  const cleanedBase = String(baseName || '').trim() || 'Entitätsklasse';
+  if (!isEntityNameTaken(cleanedBase, excludeId)) return cleanedBase;
+  let index = 2;
+  while (isEntityNameTaken(`${cleanedBase} ${index}`, excludeId)) index += 1;
+  return `${cleanedBase} ${index}`;
+}
+
+function getExportBaseName() {
+  const rawTitle = String(state.diagramTitle || '').trim();
+  const safe = (rawTitle || 'er-diagramm')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, '_')
+    .replace(/\.+$/g, '')
+    .slice(0, 80);
+  return safe || 'er-diagramm';
+}
+
+function buildPersistPayload() {
+  return {
+    notation: state.notation,
+    snapToGrid: !!state.snapToGrid,
+    diagramTitle: state.diagramTitle,
+    nodes: state.nodes,
+    edges: state.edges,
+    nextId: state.nextId,
+  };
+}
+
+function persistStateNow() {
+  try {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(buildPersistPayload()));
+  } catch (_err) {
+    // Ignore quota/storage errors silently.
+  }
+}
+
+let _persistTimer = null;
+function persistStateDebounced(delay = 260) {
+  if (_persistTimer) clearTimeout(_persistTimer);
+  _persistTimer = setTimeout(() => {
+    _persistTimer = null;
+    persistStateNow();
+  }, delay);
+}
+
+function loadPersistedState() {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) return false;
+
+    state.nodes = data.nodes;
+    state.edges = data.edges;
+    state.nextId =
+      data.nextId ||
+      Math.max(
+        0,
+        ...data.nodes.map((n) => parseInt(String(n.id || '').slice(1), 10) || 0),
+        ...data.edges.map((ed) => parseInt(String(ed.id || '').slice(1), 10) || 0),
+      ) + 1;
+    state.notation = 'chen';
+    state.snapToGrid = !!data.snapToGrid;
+    state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
+    state.edges.forEach((edge) => {
+      edge.edgeType = inferEdgeType(edge);
+    });
+    return true;
+  } catch (_err) {
+    return false;
+  }
 }
 
 function renderRelatedItems(listElement, items, listNodeType = '') {
@@ -212,6 +303,7 @@ function initTabs() {
     return;
 
   let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
+  let isDrawerOpen = false;
   const mobileMedia = window.matchMedia('(max-width: 860px)');
 
   const clampDrawerWidth = (value) => {
@@ -231,6 +323,7 @@ function initTabs() {
   };
 
   const setDrawerState = (open) => {
+    isDrawerOpen = !!open;
     relmodelDrawer.classList.toggle('collapsed', !open);
     relmodelResizer.classList.toggle('collapsed', !open);
     relmodelBtn.classList.toggle('active', open);
@@ -298,11 +391,7 @@ function initTabs() {
 
   mobileMedia.addEventListener('change', () => {
     setQuestsMenuOpen(false);
-    if (!mobileMedia.matches) {
-      setDrawerState(true);
-      return;
-    }
-    syncBackdrop();
+    setDrawerState(isDrawerOpen);
   });
 
   document.addEventListener('click', (event) => {
@@ -355,9 +444,41 @@ function initPropertiesPanel() {
     if (!_selectedNodeId) return;
     const node = getNodeById(_selectedNodeId);
     if (!node) return;
+
+    e.target.setCustomValidity('');
     node.name = e.target.value;
     if (window.Diagram) window.Diagram.renderAll();
     if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
+    persistStateDebounced();
+  });
+
+  propNameInput.addEventListener('blur', (e) => {
+    if (!_selectedNodeId) return;
+    const node = getNodeById(_selectedNodeId);
+    if (!node) return;
+
+    const raw = String(e.target.value || '').trim();
+
+    if (node.type === 'entity') {
+      const requestedName = raw || 'Entitätsklasse';
+      if (isEntityNameTaken(requestedName, node.id)) {
+        const uniqueName = getUniqueEntityName(requestedName, node.id);
+        e.target.setCustomValidity('Der Name der Entitätsklasse ist bereits vergeben. Name wurde angepasst.');
+        e.target.reportValidity();
+        node.name = uniqueName;
+        e.target.value = uniqueName;
+      } else {
+        node.name = requestedName;
+        e.target.value = requestedName;
+      }
+      e.target.setCustomValidity('');
+    } else {
+      node.name = raw || node.name;
+    }
+
+    if (window.Diagram) window.Diagram.renderAll();
+    if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
+    persistStateDebounced();
     selectNode(_selectedNodeId);
   });
 
@@ -375,6 +496,7 @@ function initPropertiesPanel() {
     node.isPrimaryKey = e.target.checked;
     if (window.Diagram) window.Diagram.renderAll();
     if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
+    persistStateDebounced();
     selectNode(_selectedNodeId);
   });
 }
@@ -386,22 +508,12 @@ function exportJSON() {
     return;
   }
 
-  const data = JSON.stringify(
-    {
-      notation: state.notation,
-      snapToGrid: !!state.snapToGrid,
-      nodes: state.nodes,
-      edges: state.edges,
-      nextId: state.nextId,
-    },
-    null,
-    2,
-  );
+  const data = JSON.stringify(buildPersistPayload(), null, 2);
   const blob = new Blob([data], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'er-diagramm.json';
+  a.download = `${getExportBaseName()}.erm-editor.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
@@ -424,13 +536,17 @@ function importJSON(file) {
         ) + 1;
       state.notation = 'chen';
       state.snapToGrid = !!data.snapToGrid;
+      state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
       state.edges.forEach((edge) => {
         edge.edgeType = inferEdgeType(edge);
       });
+      const titleInput = document.getElementById('erm-title-input');
+      if (titleInput) titleInput.value = state.diagramTitle || '';
       clearSelection();
       if (window.Diagram) window.Diagram.renderAll();
       if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
       if (window.RelModel) window.RelModel.syncFromDiagram();
+      persistStateDebounced();
     } catch (err) {
       alert('Fehler beim Importieren: ' + err.message);
     }
@@ -493,8 +609,10 @@ function exportPNG() {
 
   const clonedEdgesLayer = clone.querySelector('#edges-layer');
   const clonedNodesLayer = clone.querySelector('#nodes-layer');
+  const clonedGridBg = clone.querySelector('#canvas-grid-bg');
   if (clonedEdgesLayer) clonedEdgesLayer.setAttribute('transform', '');
   if (clonedNodesLayer) clonedNodesLayer.setAttribute('transform', '');
+  if (clonedGridBg) clonedGridBg.setAttribute('fill', '#ffffff');
 
   const exportStyle = document.createElementNS('http://www.w3.org/2000/svg', 'style');
   exportStyle.textContent = `
@@ -526,7 +644,7 @@ function exportPNG() {
       const pngUrl = URL.createObjectURL(pngBlob);
       const a = document.createElement('a');
       a.href = pngUrl;
-      a.download = 'er-diagramm.png';
+      a.download = `${getExportBaseName()}.erm-editor.png`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(pngUrl), 3000);
     }, 'image/png');
@@ -547,11 +665,13 @@ function clearAll() {
   clearSelection();
   if (window.Diagram) window.Diagram.renderAll();
   if (window.RelModel) window.RelModel.reset();
+  persistStateDebounced();
 }
 
 // ---- Bootstrap ----
 document.addEventListener('DOMContentLoaded', () => {
   state.notation = 'chen';
+  const hadPersistedData = loadPersistedState();
   initTabs();
   initPropertiesPanel();
 
@@ -589,6 +709,41 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-export-png').addEventListener('click', exportPNG);
   document.getElementById('btn-clear').addEventListener('click', clearAll);
 
+  const titleInput = document.getElementById('erm-title-input');
+  if (titleInput) {
+    let titleValueBeforeEdit = state.diagramTitle || '';
+    titleInput.value = state.diagramTitle || '';
+    titleInput.addEventListener('focus', () => {
+      titleValueBeforeEdit = state.diagramTitle || '';
+    });
+    titleInput.addEventListener('input', (e) => {
+      state.diagramTitle = e.target.value;
+      persistStateDebounced();
+    });
+    titleInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        titleInput.value = titleValueBeforeEdit;
+        state.diagramTitle = titleValueBeforeEdit;
+        persistStateDebounced();
+        titleInput.blur();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        titleInput.blur();
+      }
+    });
+  }
+
+  if (hadPersistedData) {
+    if (window.Diagram) window.Diagram.renderAll();
+    if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
+    if (window.RelModel) window.RelModel.syncFromDiagram();
+  }
+
   document.getElementById('btn-import').addEventListener('click', () => {
     document.getElementById('file-input').click();
   });
@@ -601,5 +756,13 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ---- Globale Exports ----
-window.AppState = { state, genId, getNodeById, getEdgeById };
+window.AppState = {
+  state,
+  genId,
+  getNodeById,
+  getEdgeById,
+  isEntityNameTaken,
+  persistNow: persistStateNow,
+  persistDebounced: persistStateDebounced,
+};
 window.AppSelect = { selectNode, clearSelection };

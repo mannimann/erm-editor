@@ -17,6 +17,7 @@
   }
 
   function requestRelModelSync(debounced = true) {
+    if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
     if (!window.RelModel) return;
     if (debounced && typeof window.RelModel.requestSyncFromDiagramDebounced === 'function') {
       window.RelModel.requestSyncFromDiagramDebounced();
@@ -242,6 +243,27 @@
       default:
         return { x: node.x, y: node.y };
     }
+  }
+
+  function normalizeEntityName(name) {
+    return String(name || '')
+      .trim()
+      .toLocaleLowerCase('de');
+  }
+
+  function isEntityNameTaken(name, excludeId = null) {
+    const normalized = normalizeEntityName(name);
+    if (!normalized) return false;
+    return S().nodes.some(
+      (node) => node.type === 'entity' && node.id !== excludeId && normalizeEntityName(node.name) === normalized,
+    );
+  }
+
+  function getUniqueEntityName(baseName = 'Entitätsklasse') {
+    if (!isEntityNameTaken(baseName)) return baseName;
+    let idx = 2;
+    while (isEntityNameTaken(`${baseName} ${idx}`)) idx += 1;
+    return `${baseName} ${idx}`;
   }
 
   function getRelationshipCorners(node) {
@@ -909,6 +931,7 @@
     const relationshipCornerAssignments = buildRelationshipCornerAssignments();
     S().edges.forEach((edge) => renderEdge(edge, relationshipCornerAssignments));
     S().nodes.forEach(renderNode);
+    if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
   }
 
   function applySelectedStyle(shape, strokeColor) {
@@ -1094,24 +1117,31 @@
         entCenterForPlacement &&
         (Math.abs(relToEntDx) <= VERTICAL_ALIGN_TOLERANCE ||
           Math.abs(relToEntDy) >= Math.abs(relToEntDx) * UPPER_LOWER_DOMINANCE_RATIO);
+      const isVerticalLine = Math.abs(dx) <= 8;
 
       let normalX = -uy;
       let normalY = ux;
 
-      // If entity is directly above/below relationship, place labels outside left/right of the two lines.
-      if (isVerticalSelfPair) {
-        normalX = pairSide;
+      // Senkrechte Linien: Kardinalitaet immer rechts von der Linie.
+      if (isVerticalLine) {
+        normalX = 1;
         normalY = 0;
-      }
+      } else {
+        // If entity is directly above/below relationship, place labels outside left/right of the two lines.
+        if (isVerticalSelfPair) {
+          normalX = pairSide;
+          normalY = 0;
+        }
 
-      // Default label side: upper/left. Self-pair second edge gets flipped.
-      if (!isVerticalSelfPair && normalY > 0) {
-        normalX *= -1;
-        normalY *= -1;
-      }
-      if (!isVerticalSelfPair && pairSide > 0) {
-        normalX *= -1;
-        normalY *= -1;
+        // Default label side: upper/left. Self-pair second edge gets flipped.
+        if (!isVerticalSelfPair && normalY > 0) {
+          normalX *= -1;
+          normalY *= -1;
+        }
+        if (!isVerticalSelfPair && pairSide > 0) {
+          normalX *= -1;
+          normalY *= -1;
+        }
       }
 
       const preferredPoint = {
@@ -1145,17 +1175,15 @@
 
   function getSpawnPosition(type) {
     const box = svg.getBoundingClientRect();
-    const worldLeft = -viewState.x / viewState.scale;
-    const worldTop = -viewState.y / viewState.scale;
-    const preferredX = worldLeft + (type === 'entity' ? box.width * 0.2 : box.width * 0.55) / viewState.scale;
-    const preferredY = worldTop + (box.height * 0.18) / viewState.scale;
+    const worldCenterX = (-viewState.x + box.width / 2) / viewState.scale;
+    const worldCenterY = (-viewState.y + box.height / 2) / viewState.scale;
     const dims =
       type === 'entity'
         ? { w: NODE_ENTITY_W, h: NODE_ENTITY_H }
         : type === 'attribute'
           ? { w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 }
           : { w: NODE_REL_W, h: NODE_REL_H };
-    return findFreePosition(type, preferredX - dims.w / 2, preferredY - dims.h / 2);
+    return findFreePosition(type, worldCenterX - dims.w / 2, worldCenterY - dims.h / 2);
   }
 
   function getAttributeSpawnPosition(entityNode) {
@@ -1177,12 +1205,14 @@
 
   function addNode(type, x, y) {
     const snapped = clampPosition(type, x, y);
+    const nodeName =
+      type === 'entity' ? getUniqueEntityName('Entitätsklasse') : type === 'attribute' ? 'Attribut' : 'Beziehung';
     const node = {
       id: genId(),
       type,
       x: snapped.x,
       y: snapped.y,
-      name: type === 'entity' ? 'Entitätsklasse' : type === 'attribute' ? 'Attribut' : 'Beziehung',
+      name: nodeName,
       isPrimaryKey: false,
     };
     S().nodes.push(node);
@@ -1766,6 +1796,17 @@
 
     const commit = () => {
       const val = input.value.trim();
+
+      if (node.type === 'entity' && val && isEntityNameTaken(val, node.id)) {
+        input.setCustomValidity('Der Name der Entitätsklasse ist bereits vergeben.');
+        input.reportValidity();
+        input.focus();
+        input.select();
+        return;
+      }
+
+      input.setCustomValidity('');
+
       node.name = val || node.name;
       if (nodesLayer.contains(fo)) nodesLayer.removeChild(fo);
       document.getElementById('prop-name').value = node.name;
@@ -1797,5 +1838,6 @@
     deleteEdge,
     autoLayout: autoArrangeDiagram,
     setSnapToGrid,
+    isEntityNameTaken,
   };
 })();
