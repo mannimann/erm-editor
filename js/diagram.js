@@ -70,6 +70,7 @@
   let ctxTarget = null;
   let activeModalCleanup = null;
   const viewState = { x: 0, y: 0, scale: 1 };
+  let questValidateTimeout = null; // Debounce timer for quest validation
 
   const ZOOM_MIN = 0.35;
   const ZOOM_MAX = 3;
@@ -976,6 +977,15 @@
     S().edges.forEach((edge) => renderEdge(edge, relationshipCornerAssignments));
     S().nodes.forEach(renderNode);
     if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
+
+    // Debounced Quest Validation – nur wenn Panel aktiv
+    if (questValidateTimeout) clearTimeout(questValidateTimeout);
+    questValidateTimeout = setTimeout(() => {
+      if (window.Quest?.state?.questsPanelVisible) {
+        window.Quest.validateCurrentQuest();
+      }
+      questValidateTimeout = null;
+    }, 600);
   }
 
   function applySelectedStyle(shape, strokeColor) {

@@ -50,13 +50,13 @@
           ⚔️ Quests <span class="tab-dropdown-chevron">&#x276F;</span>
         </button>
         <div id="quests-menu" class="tab-dropdown-menu" aria-label="Quests" hidden>
-          <button class="tab-dropdown-item" type="button">
-            <span class="tab-dropdown-item-title">ERM-Quest starten</span>
-            <span class="tab-dropdown-item-subtitle">Coming Soon</span>
+          <button class="tab-dropdown-item" type="button" id="btn-start-grundlagen" data-quest-series="grundlagen">
+            <span class="tab-dropdown-item-title">📚 ERM-Grundlagen-Quest</span>
+            <span class="tab-dropdown-item-subtitle">12 Aufgaben</span>
           </button>
-          <button class="tab-dropdown-item" type="button">
-            <span class="tab-dropdown-item-title">Relationenmodell-Quest starten</span>
-            <span class="tab-dropdown-item-subtitle">Coming Soon</span>
+          <button class="tab-dropdown-item" type="button" id="btn-start-experten" data-quest-series="experten">
+            <span class="tab-dropdown-item-title">⚡ ERM-Experten-Quests</span>
+            <span class="tab-dropdown-item-subtitle">8 Szenarien (nach Grundlagen)</span>
           </button>
         </div>
       </div>
@@ -329,9 +329,72 @@
       </div>
     </div>
 
+    <!-- ===== QUEST-PANEL (bottom, initially hidden) ===== -->
+    <div id="quest-panel" class="quest-panel">
+      <div class="quest-header">
+        <div class="quest-title-row">
+          <h3 id="quest-title" class="quest-title">Quest 1 von 12</h3>
+          <span id="quest-progress" class="quest-progress">1 / 12</span>
+          <button id="btn-quest-reset" class="quest-reset-btn" type="button" title="Quest-Reihe zurücksetzen">
+            Zurücksetzen
+          </button>
+          <button id="btn-quest-close" class="quest-close-btn" type="button" title="Quest-Panel schließen">✕</button>
+        </div>
+        <div class="quest-progress-bar">
+          <div id="quest-progress-fill" class="quest-progress-fill"></div>
+        </div>
+        <div id="quest-circles" class="quest-circles"></div>
+      </div>
+
+      <div id="quest-content" class="quest-content"></div>
+
+      <div id="quest-feedback" class="quest-feedback"></div>
+    </div>
+
+    <!-- ===== ERFOLGS-MODAL (einzelne Quest) ===== -->
+    <div id="quest-success-modal" style="display: none">
+      <div class="quest-success-card">
+        <div class="quest-success-icon">✓</div>
+        <h2 class="quest-success-title">Aufgabe geschafft!</h2>
+        <p class="quest-success-message"></p>
+        <div class="quest-success-bar-track">
+          <div class="quest-success-bar-fill"></div>
+        </div>
+        <button class="quest-success-ok-btn" type="button">OK</button>
+      </div>
+    </div>
+
+    <!-- ===== GLÜCKWUNSCH-POPUP ===== -->
+    <div id="quest-congratulations-modal" class="quest-congratulations-modal" style="display: none"></div>
+
+    <!-- ===== APP-DIALOG (ersetzt alert/confirm) ===== -->
+    <div id="app-modal-backdrop" class="app-modal-backdrop" style="display: none" role="dialog" aria-modal="true">
+      <div class="app-modal-card">
+        <div class="app-modal-header">
+          <h3 id="app-modal-title">Hinweis</h3>
+        </div>
+        <div class="app-modal-body">
+          <p id="app-modal-message"></p>
+        </div>
+        <div class="app-modal-actions">
+          <button
+            id="app-modal-extra"
+            class="app-modal-btn app-modal-btn-secondary"
+            type="button"
+            style="display: none"
+          >
+            Hinweise
+          </button>
+          <button id="app-modal-cancel" class="app-modal-btn app-modal-btn-secondary" type="button">Abbrechen</button>
+          <button id="app-modal-confirm" class="app-modal-btn app-modal-btn-primary" type="button">OK</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/app.js"></script>
     <script src="js/diagram.js"></script>
     <script src="js/relmodel.js"></script>
+    <script src="js/quest.js"></script>
   </body>
 </html>

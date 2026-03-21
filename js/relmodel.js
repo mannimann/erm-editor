@@ -1003,8 +1003,12 @@
       if (hideBtn) hideBtn.style.display = 'none';
     });
 
-    document.getElementById('btn-reset-relmodel').addEventListener('click', () => {
-      if (!confirm('Alle eingegebenen Relationen zurücksetzen?')) return;
+    document.getElementById('btn-reset-relmodel').addEventListener('click', async () => {
+      const confirmed = await (window.App?.showConfirmModal?.(
+        'Alle eingegebenen Relationen zurücksetzen?',
+        'Relationen zurücksetzen',
+      ) ?? Promise.resolve(confirm('Alle eingegebenen Relationen zurücksetzen?')));
+      if (!confirmed) return;
       _studentRelations = [];
       document.getElementById('feedback-area').innerHTML = '';
       renderStudentForm();

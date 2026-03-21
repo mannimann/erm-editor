@@ -374,6 +374,21 @@ function initTabs() {
     questsToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
+  const syncQuestPanelRight = () => {
+    const questPanel = document.getElementById('quest-panel');
+    if (!questPanel) return;
+    if (mobileMedia.matches) {
+      questPanel.style.right = '';
+      return;
+    }
+    if (isDrawerOpen) {
+      const drawerWidth = relmodelDrawer.getBoundingClientRect().width || lastOpenWidth;
+      questPanel.style.right = `${drawerWidth}px`;
+    } else {
+      questPanel.style.right = '0';
+    }
+  };
+
   const setDrawerState = (open) => {
     isDrawerOpen = !!open;
     relmodelDrawer.classList.toggle('collapsed', !open);
@@ -386,6 +401,7 @@ function initTabs() {
     }
 
     syncBackdrop();
+    syncQuestPanelRight();
   };
 
   const stopResize = () => {
@@ -400,6 +416,7 @@ function initTabs() {
     const nextWidth = clampDrawerWidth(layoutRect.right - event.clientX);
     lastOpenWidth = nextWidth;
     relmodelDrawer.style.width = `${nextWidth}px`;
+    syncQuestPanelRight();
   };
 
   setDrawerState(false);
@@ -435,6 +452,7 @@ function initTabs() {
       relmodelDrawer.style.width = `${lastOpenWidth}px`;
     }
     syncBackdrop();
+    syncQuestPanelRight();
   });
 
   relmodelBackdrop.addEventListener('click', () => {
@@ -600,7 +618,7 @@ function initPropertiesPanel() {
 // ---- JSON Export ----
 function exportJSON() {
   if (!hasExportableDiagram()) {
-    alert('Ein leeres ER-Diagramm kann nicht exportiert werden.');
+    window.App?.showAlertModal?.('Ein leeres ER-Diagramm kann nicht exportiert werden.', 'Export nicht möglich');
     return;
   }
 
@@ -645,7 +663,7 @@ function importJSON(file) {
       if (window.RelModel) window.RelModel.syncFromDiagram();
       persistStateDebounced();
     } catch (err) {
-      alert('Fehler beim Importieren: ' + err.message);
+      window.App?.showAlertModal?.(`Fehler beim Importieren: ${err.message}`, 'Import fehlgeschlagen');
     }
   };
   reader.readAsText(file);
@@ -658,7 +676,7 @@ function exportPNG() {
   const exportFontFamily = getComputedStyle(document.body).fontFamily || "system-ui, 'Segoe UI', sans-serif";
 
   if (!hasExportableDiagram()) {
-    alert('Es sind keine Elemente zum Exportieren vorhanden.');
+    window.App?.showAlertModal?.('Es sind keine Elemente zum Exportieren vorhanden.', 'Export nicht möglich');
     return;
   }
 
@@ -769,14 +787,27 @@ function exportPNG() {
   };
   img.onerror = () => {
     URL.revokeObjectURL(url);
-    alert('PNG-Export fehlgeschlagen. Bitte versuche es erneut.');
+    window.App?.showAlertModal?.('PNG-Export fehlgeschlagen. Bitte versuche es erneut.', 'Export fehlgeschlagen');
   };
   img.src = url;
 }
 
 // ---- Neu / Löschen ----
-function clearAll() {
-  if (!confirm('Alle Elemente löschen und neu beginnen?')) return;
+async function clearAll() {
+  const confirmed = await (window.App?.showConfirmModal?.('Alle Elemente löschen und neu beginnen?', 'Bestätigen') ??
+    Promise.resolve(confirm('Alle Elemente löschen und neu beginnen?')));
+  if (!confirmed) return;
+  state.nodes = [];
+  state.edges = [];
+  state.nextId = 1;
+  clearSelection();
+  if (window.Diagram) window.Diagram.renderAll();
+  if (window.RelModel) window.RelModel.reset();
+  persistStateDebounced();
+  window.Quest?.hidePanel();
+}
+
+function clearDiagramSilent() {
   state.nodes = [];
   state.edges = [];
   state.nextId = 1;
@@ -854,6 +885,13 @@ document.addEventListener('DOMContentLoaded', () => {
         titleInput.blur();
       }
     });
+
+    const erCanvas = document.getElementById('er-canvas');
+    if (erCanvas) {
+      erCanvas.addEventListener('pointerdown', () => {
+        titleInput.blur();
+      });
+    }
   }
 
   if (hadPersistedData) {
@@ -872,7 +910,477 @@ document.addEventListener('DOMContentLoaded', () => {
       e.target.value = '';
     }
   });
+
+  // ---- Quest-Menu Event Listeners ----
+  const grundlagenBtn = document.querySelector('[data-quest-series="grundlagen"]');
+  const expertenBtn = document.querySelector('[data-quest-series="experten"]');
+
+  async function startQuestWithConfirm(mode) {
+    if (!window.Quest) return;
+    if (state.nodes.length > 0) {
+      const decision = await window.App?.showAppModal?.({
+        title: 'Quest starten',
+        message: 'Soll das aktuelle ER-Modell gelöscht werden?',
+        mode: 'confirm',
+        confirmLabel: 'Mit Löschen starten',
+        cancelLabel: 'Abbrechen',
+        extraLabel: 'Ohne Löschen starten',
+        extraVariant: 'primary',
+        buttonOrder: ['cancel', 'extra', 'confirm'],
+      });
+
+      if (decision === false) return;
+      if (decision === true) {
+        clearDiagramSilent();
+      }
+    }
+    window.Quest.startQuestSeries(mode);
+  }
+
+  if (grundlagenBtn) {
+    grundlagenBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      startQuestWithConfirm('grundlagen');
+    });
+  }
+
+  if (expertenBtn) {
+    expertenBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      startQuestWithConfirm('experten');
+    });
+  }
+
+  // Quest-Close Button
+  const questCloseBtn = document.querySelector('.quest-close-btn');
+  if (questCloseBtn) {
+    questCloseBtn.addEventListener('click', () => {
+      if (window.Quest && window.Quest.hidePanel) {
+        window.Quest.hidePanel();
+      }
+    });
+  }
+
+  // Quest-Reset Button
+  const questResetBtn = document.getElementById('btn-quest-reset');
+  if (questResetBtn) {
+    questResetBtn.addEventListener('click', async () => {
+      if (!window.Quest || !window.Quest.resetCurrentSeriesProgress) return;
+      const confirmed = await window.App?.showConfirmModal?.(
+        'Soll der Fortschritt der aktuellen Quest-Reihe zurückgesetzt werden?',
+        'Quest-Reihe zurücksetzen',
+      );
+      if (confirmed) {
+        window.Quest.resetCurrentSeriesProgress();
+      }
+    });
+  }
+
+  // Quest Circle Click Handlers – Bestätigung nur bei noch nicht abgeschlossenen Aufgaben
+  const questPanel = document.getElementById('quest-panel');
+  if (questPanel) {
+    questPanel.addEventListener('click', async (e) => {
+      const manualCheckBtn = e.target.closest('#btn-quest-check-manual');
+      if (manualCheckBtn && window.Quest?.validateCurrentQuest) {
+        e.preventDefault();
+        window.Quest.validateCurrentQuest(true);
+        return;
+      }
+
+      const circle = e.target.closest('.quest-circle');
+      if (!circle || !window.Quest) return;
+      const questNum = parseInt(circle.getAttribute('data-quest-number'), 10);
+      const currentQuestNum = Number(window.Quest.state.currentQuestNumber);
+      if (isNaN(questNum) || isNaN(currentQuestNum) || questNum === currentQuestNum) return;
+
+      const isCompleted = window.Quest.state.completedQuests.includes(questNum);
+      if (!isCompleted) {
+        const solvedNumbers = window.Quest.state.completedQuests
+          .map((n) => Number(n))
+          .filter((n) => Number.isFinite(n));
+        const lastSolvedQuest = solvedNumbers.length > 0 ? Math.max(...solvedNumbers) : 0;
+        const skippedCount = Math.max(0, questNum - lastSolvedQuest - 1);
+        if (skippedCount > 0) {
+          const confirmed = await window.App?.showConfirmModal?.(
+            `Zu Aufgabe ${questNum} springen? Dabei werden ${skippedCount} Aufgabe(n) übersprungen.`,
+            'Aufgabe wechseln',
+          );
+          if (!confirmed) return;
+        }
+      }
+
+      window.Quest.jumpToQuest(questNum);
+      window.Quest.renderPanel();
+    });
+  }
 });
+
+// ---- Quest Panel Rendering ----
+window.App = {
+  updateQuestPanel(quest, questState) {
+    if (!quest) return;
+
+    const panel = document.getElementById('quest-panel');
+    if (!panel) return;
+
+    // Update Title & Progress
+    const titleEl = panel.querySelector('#quest-title');
+    const progressEl = panel.querySelector('#quest-progress');
+    const total = questState.questMode === 'grundlagen' ? 12 : 8;
+    if (titleEl) titleEl.textContent = `${quest.number}. ${quest.title}`;
+    if (progressEl) progressEl.textContent = `${quest.number} / ${total}`;
+
+    // Update Progress Bar
+    const progressFill = panel.querySelector('#quest-progress-fill');
+    if (progressFill) progressFill.style.width = (quest.number / total) * 100 + '%';
+
+    // Update Progress Circles – alle klickbar
+    const circlesContainer = panel.querySelector('#quest-circles');
+    if (circlesContainer) {
+      circlesContainer.innerHTML = '';
+      const completedSet = new Set((questState.completedQuests || []).map((n) => Number(n)));
+      const nextPending = Array.from({ length: total }, (_, idx) => idx + 1).find((n) => !completedSet.has(n)) || null;
+      for (let i = 1; i <= total; i++) {
+        const circle = document.createElement('div');
+        circle.className = 'quest-circle';
+        circle.setAttribute('data-quest-number', i);
+        circle.textContent = i;
+        if (i === quest.number) circle.classList.add('current');
+        else if (questState.completedQuests.includes(i)) circle.classList.add('completed');
+        else if (nextPending !== null && i === nextPending) circle.classList.add('up-next');
+        circlesContainer.appendChild(circle);
+      }
+    }
+
+    // Update Content (nur Aufgabentext, kein Feedback)
+    const content = document.getElementById('quest-content');
+    if (content) {
+      content.innerHTML = '';
+
+      if (quest.theory) {
+        const conceptDiv = document.createElement('div');
+        conceptDiv.className = 'quest-concept';
+        conceptDiv.innerHTML = quest.theory;
+        content.appendChild(conceptDiv);
+      }
+
+      const taskSection = document.createElement('div');
+      taskSection.className = 'quest-section quest-task';
+      const taskHeader = document.createElement('h4');
+      taskHeader.textContent = questState.questMode === 'grundlagen' ? '🎯 Aufgabe' : '🎯 Szenario';
+      taskSection.appendChild(taskHeader);
+      const taskContent = document.createElement('div');
+      const rawTaskHtml = questState.questMode === 'grundlagen' ? quest.objective : quest.szenario;
+      taskContent.innerHTML =
+        questState.questMode === 'grundlagen'
+          ? String(rawTaskHtml || '').replace(/^\s*<p>\s*Aufgabe\s*:\s*<\/p>\s*/i, '')
+          : rawTaskHtml;
+      taskSection.appendChild(taskContent);
+      content.appendChild(taskSection);
+
+      const actions = document.createElement('div');
+      actions.className = 'quest-actions quest-actions-visible';
+
+      const checkBtn = document.createElement('button');
+      checkBtn.id = 'btn-quest-check-manual';
+      checkBtn.type = 'button';
+      checkBtn.className = 'quest-btn quest-btn-check';
+      checkBtn.textContent = quest.number === total ? 'Abschließen' : 'Überprüfen';
+
+      actions.appendChild(checkBtn);
+      content.appendChild(actions);
+    }
+
+    // Untere Feedback-Leiste ist deaktiviert.
+    const feedback = document.getElementById('quest-feedback');
+    if (feedback) {
+      feedback.textContent = '';
+      feedback.className = 'quest-feedback';
+    }
+  },
+
+  showQuestFeedback(message, type = 'progress') {
+    const feedback = document.getElementById('quest-feedback');
+    if (feedback) {
+      // Leiste bleibt bewusst leer/unsichtbar.
+      void message;
+      void type;
+      feedback.textContent = '';
+      feedback.className = `quest-feedback ${type}`;
+    }
+  },
+
+  showQuestSuccessModal(questNumber, onComplete) {
+    const modal = document.getElementById('quest-success-modal');
+    if (!modal) {
+      onComplete?.();
+      return;
+    }
+
+    const msgEl = modal.querySelector('.quest-success-message');
+    const barFill = modal.querySelector('.quest-success-bar-fill');
+    let okBtn = modal.querySelector('.quest-success-ok-btn');
+
+    if (msgEl) msgEl.textContent = `Aufgabe ${questNumber} erfolgreich gelöst!`;
+
+    modal.style.display = 'flex';
+    this.spawnQuestConfetti(modal.querySelector('.quest-success-card'));
+
+    // Balken zurücksetzen und Animation starten
+    if (barFill) {
+      barFill.style.transition = 'none';
+      barFill.style.width = '0%';
+      barFill.offsetHeight; // reflow
+      barFill.style.transition = 'width 3s linear';
+      barFill.style.width = '100%';
+    }
+
+    // Alten Listener entfernen (verhindert mehrfaches Feuern)
+    const newBtn = okBtn.cloneNode(true);
+    okBtn.parentNode.replaceChild(newBtn, okBtn);
+
+    let timer;
+    const close = () => {
+      clearTimeout(timer);
+      modal.style.display = 'none';
+      onComplete?.();
+    };
+
+    timer = setTimeout(close, 3000);
+    newBtn.addEventListener('click', close);
+  },
+
+  spawnQuestConfetti(containerEl) {
+    if (!containerEl) return;
+
+    const oldLayer = containerEl.querySelector('.quest-confetti-layer');
+    if (oldLayer) oldLayer.remove();
+
+    const layer = document.createElement('div');
+    layer.className = 'quest-confetti-layer';
+
+    const colors = ['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#f472b6', '#fde047'];
+    const pieces = 28;
+
+    for (let i = 0; i < pieces; i += 1) {
+      const piece = document.createElement('span');
+      piece.className = 'quest-confetti-piece';
+      piece.style.setProperty('--x', `${Math.random() * 100}%`);
+      piece.style.setProperty('--drift', `${Math.random() * 80 - 40}px`);
+      piece.style.setProperty('--rot', `${Math.random() * 900 - 450}deg`);
+      piece.style.setProperty('--delay', `${Math.random() * 260}ms`);
+      piece.style.setProperty('--dur', `${1300 + Math.random() * 1100}ms`);
+      piece.style.setProperty('--size', `${4 + Math.random() * 6}px`);
+      piece.style.background = colors[i % colors.length];
+      layer.appendChild(piece);
+    }
+
+    containerEl.appendChild(layer);
+    setTimeout(() => {
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, 2800);
+  },
+
+  playFullscreenConfetti(durationMs = 4200) {
+    const existing = document.querySelector('.quest-confetti-fullscreen');
+    if (existing) existing.remove();
+
+    const layer = document.createElement('div');
+    layer.className = 'quest-confetti-fullscreen';
+
+    const colors = ['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#f472b6', '#fde047'];
+    const pieces = 130;
+
+    for (let i = 0; i < pieces; i += 1) {
+      const piece = document.createElement('span');
+      piece.className = 'quest-confetti-piece quest-confetti-piece-screen';
+      piece.style.setProperty('--x', `${Math.random() * 100}%`);
+      piece.style.setProperty('--drift', `${Math.random() * 160 - 80}px`);
+      piece.style.setProperty('--rot', `${Math.random() * 1300 - 650}deg`);
+      piece.style.setProperty('--delay', `${Math.random() * 420}ms`);
+      piece.style.setProperty('--dur', `${2600 + Math.random() * 2200}ms`);
+      piece.style.setProperty('--size', `${6 + Math.random() * 10}px`);
+      piece.style.background = colors[i % colors.length];
+      layer.appendChild(piece);
+    }
+
+    document.body.appendChild(layer);
+    setTimeout(() => {
+      if (layer.parentNode) layer.parentNode.removeChild(layer);
+    }, durationMs);
+  },
+
+  showAppModal({
+    title = 'Hinweis',
+    message = '',
+    confirmLabel = 'OK',
+    cancelLabel = 'Abbrechen',
+    mode = 'alert',
+    autoCloseMs = 0,
+    extraLabel = '',
+    extraVariant = 'secondary',
+    buttonOrder = ['extra', 'cancel', 'confirm'],
+    onExtra = null,
+  }) {
+    const backdrop = document.getElementById('app-modal-backdrop');
+    const titleEl = document.getElementById('app-modal-title');
+    const messageEl = document.getElementById('app-modal-message');
+    const confirmBtn = document.getElementById('app-modal-confirm');
+    const cancelBtn = document.getElementById('app-modal-cancel');
+    const extraBtn = document.getElementById('app-modal-extra');
+
+    if (!backdrop || !titleEl || !messageEl || !confirmBtn || !cancelBtn || !extraBtn) {
+      return Promise.resolve(mode === 'confirm' ? false : true);
+    }
+
+    if (this._dialogState?.resolver) {
+      this._dialogState.resolver(false);
+    }
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    confirmBtn.textContent = confirmLabel;
+    cancelBtn.textContent = cancelLabel;
+    confirmBtn.className = 'app-modal-btn app-modal-btn-primary';
+    cancelBtn.className = 'app-modal-btn app-modal-btn-secondary';
+    extraBtn.className =
+      extraVariant === 'primary' ? 'app-modal-btn app-modal-btn-primary' : 'app-modal-btn app-modal-btn-secondary';
+    cancelBtn.style.display = mode === 'confirm' ? '' : 'none';
+    extraBtn.textContent = extraLabel || 'Hinweise';
+    extraBtn.style.display = extraLabel ? '' : 'none';
+
+    const orderMap = {
+      confirm: buttonOrder.indexOf('confirm'),
+      cancel: buttonOrder.indexOf('cancel'),
+      extra: buttonOrder.indexOf('extra'),
+    };
+    confirmBtn.style.order = String(orderMap.confirm >= 0 ? orderMap.confirm : 2);
+    cancelBtn.style.order = String(orderMap.cancel >= 0 ? orderMap.cancel : 1);
+    extraBtn.style.order = String(orderMap.extra >= 0 ? orderMap.extra : 0);
+
+    backdrop.style.display = 'flex';
+    backdrop.dataset.mode = mode;
+
+    return new Promise((resolve) => {
+      const close = (result) => {
+        if (this._dialogState?.timer) {
+          clearTimeout(this._dialogState.timer);
+        }
+        backdrop.style.display = 'none';
+        delete backdrop.dataset.mode;
+        this._dialogState = null;
+        resolve(result);
+      };
+
+      this._dialogState = { close, resolver: resolve, timer: null };
+
+      confirmBtn.onclick = () => close(true);
+      cancelBtn.onclick = () => close(false);
+      extraBtn.onclick = () => {
+        if (typeof onExtra === 'function') {
+          onExtra({ titleEl, messageEl, confirmBtn, cancelBtn, extraBtn, close });
+          return;
+        }
+        close('extra');
+      };
+      backdrop.onclick = (event) => {
+        if (event.target !== backdrop) return;
+        close(mode === 'confirm' ? false : true);
+      };
+
+      if (autoCloseMs > 0 && mode !== 'confirm') {
+        this._dialogState.timer = setTimeout(() => close(true), autoCloseMs);
+      }
+
+      confirmBtn.focus();
+    });
+  },
+
+  showValidationFailedModal(baseMessage, hintMessage) {
+    const hintText = String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
+    return this.showAppModal({
+      title: 'Überprüfung',
+      message: baseMessage || 'Noch nicht korrekt. Versuche es erneut.',
+      mode: 'alert',
+      confirmLabel: 'Schließen',
+      autoCloseMs: 0,
+      extraLabel: 'Hinweise',
+      onExtra: ({ messageEl, extraBtn }) => {
+        messageEl.textContent = hintText;
+        extraBtn.style.display = 'none';
+      },
+    });
+  },
+
+  showAlertModal(message, title = 'Hinweis') {
+    return this.showAppModal({
+      title,
+      message,
+      mode: 'alert',
+      confirmLabel: 'OK',
+      autoCloseMs: 3000,
+    });
+  },
+
+  showConfirmModal(message, title = 'Bitte bestätigen') {
+    return this.showAppModal({
+      title,
+      message,
+      mode: 'confirm',
+      confirmLabel: 'Ja',
+      cancelLabel: 'Abbrechen',
+    });
+  },
+
+  showCongratulationsModal(title, message, buttons = []) {
+    const modal = document.querySelector('.quest-congratulations-modal');
+    if (modal) {
+      if (this._congratsTimer) {
+        clearTimeout(this._congratsTimer);
+        this._congratsTimer = null;
+      }
+
+      const content = modal.querySelector('.quest-congratulations-content');
+      if (content) {
+        const h2 = content.querySelector('h2');
+        const p = content.querySelector('p');
+        const btnContainer = content.querySelector('.quest-congratulations-buttons');
+
+        if (h2) h2.textContent = title;
+        if (p) p.textContent = message;
+
+        if (btnContainer) {
+          btnContainer.innerHTML = '';
+          buttons.forEach((btn) => {
+            const button = document.createElement('button');
+            button.className = btn.addClass || 'quest-btn-next';
+            button.textContent = btn.label;
+            button.onclick = btn.onClick;
+            btnContainer.appendChild(button);
+          });
+        }
+      }
+
+      modal.classList.add('visible');
+      this.spawnQuestConfetti(content || modal);
+      this._congratsTimer = setTimeout(() => {
+        modal.classList.remove('visible');
+        this._congratsTimer = null;
+      }, 3000);
+    }
+  },
+
+  hideCongratulationsModal() {
+    const modal = document.querySelector('.quest-congratulations-modal');
+    if (this._congratsTimer) {
+      clearTimeout(this._congratsTimer);
+      this._congratsTimer = null;
+    }
+    if (modal) {
+      modal.classList.remove('visible');
+    }
+  },
+};
 
 // ---- Globale Exports ----
 window.AppState = {
@@ -891,3 +1399,17 @@ window.AppState = {
   persistDebounced: persistStateDebounced,
 };
 window.AppSelect = { selectNode, clearSelection };
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const backdrop = document.getElementById('app-modal-backdrop');
+  if (!backdrop || backdrop.style.display === 'none') return;
+  const mode = backdrop.dataset.mode;
+  const cancelBtn = document.getElementById('app-modal-cancel');
+  const confirmBtn = document.getElementById('app-modal-confirm');
+  if (mode === 'confirm') {
+    cancelBtn?.click();
+  } else {
+    confirmBtn?.click();
+  }
+});
