@@ -75,6 +75,58 @@ function getUniqueEntityName(baseName, excludeId = null) {
   return `${cleanedBase} ${index}`;
 }
 
+function normalizeAttributeName(name) {
+  return String(name || '')
+    .trim()
+    .toLocaleLowerCase('de');
+}
+
+function getOwningNodeForAttribute(attributeId) {
+  const edge = state.edges.find((candidateEdge) => {
+    if (candidateEdge.fromId !== attributeId && candidateEdge.toId !== attributeId) return false;
+    if (inferEdgeType(candidateEdge) !== 'attribute') return false;
+    const otherId = candidateEdge.fromId === attributeId ? candidateEdge.toId : candidateEdge.fromId;
+    const otherNode = getNodeById(otherId);
+    return otherNode?.type === 'entity' || otherNode?.type === 'relationship';
+  });
+  if (!edge) return null;
+  const otherId = edge.fromId === attributeId ? edge.toId : edge.fromId;
+  const otherNode = getNodeById(otherId);
+  return otherNode?.type === 'entity' || otherNode?.type === 'relationship' ? otherNode : null;
+}
+
+function isOwnerAttributeNameTaken(ownerId, name, excludeAttributeId = null) {
+  const normalized = normalizeAttributeName(name);
+  if (!ownerId || !normalized) return false;
+
+  return getConnectedNodes(ownerId, 'attribute').some(({ node }) => {
+    if (!node || node.type !== 'attribute') return false;
+    if (node.id === excludeAttributeId) return false;
+    return normalizeAttributeName(node.name) === normalized;
+  });
+}
+
+function getUniqueOwnerAttributeName(ownerId, baseName, excludeAttributeId = null) {
+  const cleanedBase = String(baseName || '').trim() || 'Attribut';
+  if (!isOwnerAttributeNameTaken(ownerId, cleanedBase, excludeAttributeId)) return cleanedBase;
+  let index = 2;
+  while (isOwnerAttributeNameTaken(ownerId, `${cleanedBase} ${index}`, excludeAttributeId)) index += 1;
+  return `${cleanedBase} ${index}`;
+}
+
+function getOwningEntityForAttribute(attributeId) {
+  const owner = getOwningNodeForAttribute(attributeId);
+  return owner?.type === 'entity' ? owner : null;
+}
+
+function isEntityAttributeNameTaken(entityId, name, excludeAttributeId = null) {
+  return isOwnerAttributeNameTaken(entityId, name, excludeAttributeId);
+}
+
+function getUniqueEntityAttributeName(entityId, baseName, excludeAttributeId = null) {
+  return getUniqueOwnerAttributeName(entityId, baseName, excludeAttributeId);
+}
+
 function getExportBaseName() {
   const rawTitle = String(state.diagramTitle || '').trim();
   const safe = (rawTitle || 'er-diagramm')
@@ -439,6 +491,14 @@ function clearSelection() {
 function initPropertiesPanel() {
   // Name-Input
   const propNameInput = document.getElementById('prop-name');
+  let propNameValueBeforeEdit = '';
+
+  propNameInput.addEventListener('focus', () => {
+    if (!_selectedNodeId) return;
+    const node = getNodeById(_selectedNodeId);
+    if (!node) return;
+    propNameValueBeforeEdit = node.name || '';
+  });
 
   propNameInput.addEventListener('input', (e) => {
     if (!_selectedNodeId) return;
@@ -472,6 +532,23 @@ function initPropertiesPanel() {
         e.target.value = requestedName;
       }
       e.target.setCustomValidity('');
+    } else if (node.type === 'attribute') {
+      const owningNode = getOwningNodeForAttribute(node.id);
+      const requestedName = raw || node.name || 'Attribut';
+      if (owningNode && isOwnerAttributeNameTaken(owningNode.id, requestedName, node.id)) {
+        const uniqueName = getUniqueOwnerAttributeName(owningNode.id, requestedName, node.id);
+        const ownerLabel = owningNode.type === 'relationship' ? 'Beziehung' : 'Entitätsklasse';
+        e.target.setCustomValidity(
+          `Der Attributname ist in dieser ${ownerLabel} bereits vergeben. Name wurde angepasst.`,
+        );
+        e.target.reportValidity();
+        node.name = uniqueName;
+        e.target.value = uniqueName;
+      } else {
+        node.name = requestedName;
+        e.target.value = requestedName;
+      }
+      e.target.setCustomValidity('');
     } else {
       node.name = raw || node.name;
     }
@@ -483,9 +560,28 @@ function initPropertiesPanel() {
   });
 
   propNameInput.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    e.currentTarget.blur();
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!_selectedNodeId) return;
+      const node = getNodeById(_selectedNodeId);
+      if (!node) return;
+
+      node.name = propNameValueBeforeEdit;
+      e.currentTarget.value = propNameValueBeforeEdit;
+      e.currentTarget.setCustomValidity('');
+      if (window.Diagram) window.Diagram.renderAll();
+      if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
+      persistStateDebounced();
+      selectNode(_selectedNodeId);
+      e.currentTarget.blur();
+      return;
+    }
+
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.currentTarget.blur();
+    }
   });
 
   // PK-Toggle
@@ -545,6 +641,7 @@ function importJSON(file) {
       clearSelection();
       if (window.Diagram) window.Diagram.renderAll();
       if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
+      if (window.Diagram?.centerView) window.Diagram.centerView();
       if (window.RelModel) window.RelModel.syncFromDiagram();
       persistStateDebounced();
     } catch (err) {
@@ -613,6 +710,27 @@ function exportPNG() {
   if (clonedEdgesLayer) clonedEdgesLayer.setAttribute('transform', '');
   if (clonedNodesLayer) clonedNodesLayer.setAttribute('transform', '');
   if (clonedGridBg) clonedGridBg.setAttribute('fill', '#ffffff');
+
+  // Selektions-Highlight nur im Editor anzeigen, nicht im Export.
+  clone.querySelectorAll('.node').forEach((nodeGroup) => {
+    const shape = nodeGroup.querySelector('rect, ellipse, polygon');
+    if (!shape) return;
+
+    if (nodeGroup.classList.contains('node-entity')) {
+      shape.setAttribute('fill', '#dbeafe');
+      shape.setAttribute('stroke', '#2563eb');
+    } else if (nodeGroup.classList.contains('node-attribute')) {
+      shape.setAttribute('fill', '#fef3c7');
+      shape.setAttribute('stroke', '#d97706');
+    } else if (nodeGroup.classList.contains('node-relationship')) {
+      shape.setAttribute('fill', '#dcfce7');
+      shape.setAttribute('stroke', '#16a34a');
+    }
+
+    shape.setAttribute('stroke-width', '2');
+    shape.style.filter = '';
+    shape.removeAttribute('filter');
+  });
 
   const exportStyle = document.createElementNS('http://www.w3.org/2000/svg', 'style');
   exportStyle.textContent = `
@@ -741,6 +859,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (hadPersistedData) {
     if (window.Diagram) window.Diagram.renderAll();
     if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
+    if (window.Diagram?.centerView) window.Diagram.centerView();
     if (window.RelModel) window.RelModel.syncFromDiagram();
   }
 
@@ -762,6 +881,12 @@ window.AppState = {
   getNodeById,
   getEdgeById,
   isEntityNameTaken,
+  getOwningNodeForAttribute,
+  isOwnerAttributeNameTaken,
+  getUniqueOwnerAttributeName,
+  getOwningEntityForAttribute,
+  isEntityAttributeNameTaken,
+  getUniqueEntityAttributeName,
   persistNow: persistStateNow,
   persistDebounced: persistStateDebounced,
 };

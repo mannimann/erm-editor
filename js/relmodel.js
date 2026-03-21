@@ -27,8 +27,22 @@
     return hasForeignKeyMarker(name) ? `${base}${FK_SUFFIX}` : base;
   }
 
+  function normalizeAttrToken(name) {
+    return stripForeignKeyMarker(name)
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '')
+      .trim();
+  }
+
+  function normalizeRelationToken(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '')
+      .trim();
+  }
+
   function normAttr(name) {
-    return normalize(stripForeignKeyMarker(name));
+    return normalizeAttrToken(name);
   }
 
   function sortAttrsPrimaryFirst(attrs) {
@@ -164,36 +178,208 @@
       return attrs.length > 0 ? attrs[0].name : null;
     }
 
-    // Ergebnis-Relationen (als Map: name → { name, attrs })
+    // Ergebnis-Relationen (als Map: key → { name, attrs })
     const relMap = new Map();
 
-    function ensureRelation(name) {
-      if (!relMap.has(name)) relMap.set(name, { name, attrs: [] });
-      return relMap.get(name);
+    function ensureRelation(key, name) {
+      if (!relMap.has(key)) relMap.set(key, { name, attrs: [] });
+      return relMap.get(key);
     }
 
-    function addAttr(relName, attrName, isPk = false, isFk = false) {
-      const rel = ensureRelation(relName);
+    function ensureEntityRelation(name) {
+      const key = `entity:${normalizeRelationToken(name)}`;
+      return ensureRelation(key, name);
+    }
+
+    function ensureManyToManyRelation(relNode) {
+      const key = `mn:${relNode.id}`;
+      const rel = ensureRelation(key, relNode.name || 'Beziehung');
+      rel._kind = 'mn';
+      rel._baseName = relNode.name || 'Beziehung';
+      return rel;
+    }
+
+    function getDirectedEntityNamesForRelationship(relNode, entityEdges) {
+      const incoming = [];
+      const outgoing = [];
+
+      entityEdges.forEach((e) => {
+        const entityId = e.fromId === relNode.id ? e.toId : e.fromId;
+        const entity = getNode(entityId);
+        if (!entity || entity.type !== 'entity') return;
+
+        if (e.toId === relNode.id) incoming.push(entity.name || 'Entität');
+        else outgoing.push(entity.name || 'Entität');
+      });
+
+      const ordered = [...incoming, ...outgoing].filter((name) => !!String(name || '').trim());
+      if (ordered.length >= 2) return [ordered[0], ordered[1]];
+
+      const fallback = entityEdges
+        .map((e) => {
+          const entityId = e.fromId === relNode.id ? e.toId : e.fromId;
+          const entity = getNode(entityId);
+          return entity && entity.type === 'entity' ? entity.name || 'Entität' : '';
+        })
+        .filter((name) => !!String(name || '').trim());
+
+      if (fallback.length >= 2) return [fallback[0], fallback[1]];
+      return [fallback[0] || 'Entität', fallback[1] || 'Entität'];
+    }
+
+    function resolveManyToManyRelationNameConflicts(relations) {
+      const mnRelations = relations.filter((rel) => rel._kind === 'mn');
+      if (!mnRelations.length) return;
+
+      const groups = new Map();
+      mnRelations.forEach((rel) => {
+        const key = normalizeRelationToken(rel._baseName || rel.name);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(rel);
+      });
+
+      const duplicateRelations = new Set();
+      groups.forEach((group) => {
+        if (group.length >= 2) group.forEach((rel) => duplicateRelations.add(rel));
+      });
+
+      const usedNames = new Set(
+        relations
+          .filter((rel) => !duplicateRelations.has(rel))
+          .map((rel) => normalizeRelationToken(rel.name))
+          .filter((name) => !!name),
+      );
+
+      groups.forEach((group) => {
+        if (group.length < 2) return;
+
+        group.forEach((rel) => {
+          const pair = Array.isArray(rel._edgeEntityNames) ? rel._edgeEntityNames : ['Entität', 'Entität'];
+          const baseRelName = String(rel._baseName || rel.name || 'Beziehung').trim() || 'Beziehung';
+          const candidateBase = `${pair[0]}-${baseRelName}-${pair[1]}`;
+          let candidate = candidateBase;
+          let suffix = 2;
+
+          while (usedNames.has(normalizeRelationToken(candidate))) {
+            candidate = `${candidateBase}${suffix}`;
+            suffix += 1;
+          }
+
+          rel.name = candidate;
+          usedNames.add(normalizeRelationToken(candidate));
+        });
+      });
+    }
+
+    function buildFkCandidateName(entityName, baseName) {
+      const cleanEntity = String(entityName || '').trim();
+      const cleanBase = stripForeignKeyMarker(baseName);
+      if (!cleanEntity) return cleanBase;
+      return `${cleanEntity}-${cleanBase}`;
+    }
+
+    function buildRelationshipAttrCandidateName(relationshipName, baseName) {
+      const cleanRelationship = String(relationshipName || '').trim() || 'Beziehung';
+      const cleanBase = stripForeignKeyMarker(baseName);
+      return `${cleanRelationship}-${cleanBase}`;
+    }
+
+    function getUniqueAttrName(rel, proposedName, ignoreAttr = null) {
+      const cleanBase = stripForeignKeyMarker(proposedName);
+      let candidate = cleanBase;
+      let suffix = 2;
+      while (rel.attrs.some((a) => a !== ignoreAttr && normAttr(a.name) === normAttr(candidate))) {
+        candidate = `${cleanBase}-${suffix}`;
+        suffix += 1;
+      }
+      return candidate;
+    }
+
+    function resolveForeignKeyConflicts(rel) {
+      const attrs = rel.attrs || [];
+      const baseGroups = new Map();
+
+      attrs.forEach((attr) => {
+        if (!attr.isFk) return;
+        const key = normAttr(attr._fkBaseName || attr.name);
+        if (!key) return;
+        if (!baseGroups.has(key)) baseGroups.set(key, []);
+        baseGroups.get(key).push(attr);
+      });
+
+      baseGroups.forEach((fkAttrs, key) => {
+        const nonFkConflict = attrs.some((a) => !a.isFk && normAttr(a.name) === key);
+        const distinctSources = new Set(
+          fkAttrs.map((a) => normalize(a._fkSourceEntity || '')).filter((source) => !!source),
+        );
+        const mustPrefixAll = nonFkConflict || distinctSources.size >= 2 || fkAttrs.length >= 2;
+        if (!mustPrefixAll) return;
+
+        fkAttrs.forEach((attr) => {
+          const baseName = attr._fkBaseName || attr.name;
+          const prefixed = buildFkCandidateName(attr._fkSourceEntity, baseName);
+          attr.name = getUniqueAttrName(rel, prefixed, attr);
+        });
+      });
+    }
+
+    function addAttr(rel, attrName, isPk = false, isFk = false, sourceEntityName = '') {
       const cleanName = stripForeignKeyMarker(attrName);
       const normalized = normAttr(cleanName);
-      const existing = rel.attrs.find((a) => normAttr(a.name) === normalized);
+      const existing = rel.attrs.find((a) => {
+        if (normAttr(a.name) !== normalized) return false;
+        if (isFk && a.isFk) {
+          const existingSource = normalize(a._fkSourceEntity || '');
+          const currentSource = normalize(sourceEntityName || '');
+          if (existingSource && currentSource && existingSource !== currentSource) return false;
+        }
+        if (isFk && !a.isFk) return false;
+        return true;
+      });
 
       if (existing) {
         existing.isPk = !!existing.isPk || !!isPk;
         existing.isFk = !!existing.isFk || !!isFk;
+        if (isFk && sourceEntityName && !existing._fkSourceEntity) {
+          existing._fkSourceEntity = sourceEntityName;
+        }
+        if (isFk && !existing._fkBaseName) {
+          existing._fkBaseName = cleanName;
+        }
         return;
       }
 
       // Doppeleinträge vermeiden
-      rel.attrs.push({ name: cleanName, isPk, isFk });
+      rel.attrs.push({
+        name: cleanName,
+        isPk,
+        isFk,
+        _fkSourceEntity: isFk ? String(sourceEntityName || '').trim() : '',
+        _fkBaseName: isFk ? cleanName : '',
+      });
+    }
+
+    function addRelationshipAttr(rel, relationshipName, attrName) {
+      const cleanName = stripForeignKeyMarker(attrName);
+      if (!cleanName) return;
+
+      const hasCollision = rel.attrs.some((a) => normAttr(a.name) === normAttr(cleanName));
+      if (!hasCollision) {
+        addAttr(rel, cleanName, false, false);
+        return;
+      }
+
+      const prefixed = buildRelationshipAttrCandidateName(relationshipName, cleanName);
+      const uniqueName = getUniqueAttrName(rel, prefixed);
+      addAttr(rel, uniqueName, false, false);
     }
 
     // 1. Jede Entität → eigene Relation
     entities.forEach((entity) => {
-      ensureRelation(entity.name);
+      const entityRel = ensureEntityRelation(entity.name);
       const attrs = getAttrs(entity.id);
       attrs.forEach((attr) => {
-        addAttr(entity.name, attr.name, !!attr.isPrimaryKey, false);
+        addAttr(entityRel, attr.name, !!attr.isPrimaryKey, false);
       });
     });
 
@@ -212,16 +398,17 @@
       const relAttrs = getAttrs(rel.id); // eigene Attribute der Beziehung
 
       if (type === 'M:N') {
-        // Neue Relation mit dem Beziehungsnamen
-        ensureRelation(rel.name);
+        // Eigene Relation pro M:N-Beziehung
+        const mnRel = ensureManyToManyRelation(rel);
+        mnRel._edgeEntityNames = getDirectedEntityNamesForRelationship(rel, entityEdges);
         entityEdges.forEach((e) => {
           const entityId = e.fromId === rel.id ? e.toId : e.fromId;
           const entity = getNode(entityId);
           if (!entity) return;
           const pk = getPkAttr(entityId);
-          if (pk) addAttr(rel.name, pk, true, true); // zusammengesetzter PS = FS
+          if (pk) addAttr(mnRel, pk, true, true, entity.name); // zusammengesetzter PS = FS
         });
-        relAttrs.forEach((a) => addAttr(rel.name, a.name, false, false));
+        relAttrs.forEach((a) => addRelationshipAttr(mnRel, rel.name, a.name));
       } else if (type === '1:N') {
         // FS der 1-Seite in die N-Seite
         // Herausfinden welche Seite die „1"-Seite ist
@@ -246,10 +433,10 @@
         const onePk = getPkAttr(oneSide.id);
         if (onePk) {
           // FS in N-Seite eintragen (FS markiert, kein PS)
-          addAttr(nSide.name, onePk, false, true);
+          addAttr(ensureEntityRelation(nSide.name), onePk, false, true, oneSide.name);
         }
         // Eigene Beziehungsattribute in N-Seite
-        relAttrs.forEach((a) => addAttr(nSide.name, a.name, false, false));
+        relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(nSide.name), rel.name, a.name));
       } else if (type === '1:1') {
         // FS auf der Seite mit min=0 (wenn Min-Max) oder einfach Seite 0→Seite 1 (Chen)
         let targetEntity = null;
@@ -271,14 +458,23 @@
 
         const srcPk = getPkAttr(sourceEntity.id);
         if (srcPk) {
-          addAttr(targetEntity.name, srcPk, false, true);
+          addAttr(ensureEntityRelation(targetEntity.name), srcPk, false, true, sourceEntity.name);
         }
-        relAttrs.forEach((a) => addAttr(targetEntity.name, a.name, false, false));
+        relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(targetEntity.name), rel.name, a.name));
       }
     });
 
     const relations = Array.from(relMap.values());
-    relations.forEach((rel) => sortAttrsPrimaryFirst(rel.attrs));
+    resolveManyToManyRelationNameConflicts(relations);
+    relations.forEach((rel) => {
+      resolveForeignKeyConflicts(rel);
+      sortAttrsPrimaryFirst(rel.attrs);
+      rel.attrs = rel.attrs.map((attr) => ({
+        name: attr.name,
+        isPk: !!attr.isPk,
+        isFk: !!attr.isFk,
+      }));
+    });
     return relations;
   }
 
@@ -641,8 +837,8 @@
     const warnings = [];
 
     // Alle Relation-Namen der Lösung (normalisiert)
-    const solutionNames = _solution.map((r) => normalize(r.name));
-    const studentNames = _studentRelations.map((r) => normalize(r.name));
+    const solutionNames = _solution.map((r) => normalizeRelationToken(r.name));
+    const studentNames = _studentRelations.map((r) => normalizeRelationToken(r.name));
 
     // 1. Fehlende Relationen
     solutionNames.forEach((sn) => {
@@ -660,7 +856,9 @@
 
     // 3. Attribute & PS je Relation prüfen
     _solution.forEach((solRel) => {
-      const studRel = _studentRelations.find((r) => normalize(r.name) === normalize(solRel.name));
+      const studRel = _studentRelations.find(
+        (r) => normalizeRelationToken(r.name) === normalizeRelationToken(solRel.name),
+      );
       if (!studRel) return; // bereits als fehlend markiert
 
       const solAttrs = solRel.attrs.map((a) => normAttr(a.name));

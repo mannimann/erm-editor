@@ -259,11 +259,55 @@
     );
   }
 
-  function getUniqueEntityName(baseName = 'Entitätsklasse') {
-    if (!isEntityNameTaken(baseName)) return baseName;
+  function getUniqueEntityName(baseName = 'Entitätsklasse', excludeId = null) {
+    if (!isEntityNameTaken(baseName, excludeId)) return baseName;
     let idx = 2;
-    while (isEntityNameTaken(`${baseName} ${idx}`)) idx += 1;
+    while (isEntityNameTaken(`${baseName} ${idx}`, excludeId)) idx += 1;
     return `${baseName} ${idx}`;
+  }
+
+  function normalizeAttributeName(name) {
+    return String(name || '')
+      .trim()
+      .toLocaleLowerCase('de');
+  }
+
+  function getOwningNodeForAttribute(attributeId) {
+    const edge = S().edges.find((candidateEdge) => {
+      if (candidateEdge.fromId !== attributeId && candidateEdge.toId !== attributeId) return false;
+      if (candidateEdge.edgeType && candidateEdge.edgeType !== 'attribute') return false;
+      const otherId = candidateEdge.fromId === attributeId ? candidateEdge.toId : candidateEdge.fromId;
+      const otherNode = byId(otherId);
+      return otherNode?.type === 'entity' || otherNode?.type === 'relationship';
+    });
+    if (!edge) return null;
+
+    const otherId = edge.fromId === attributeId ? edge.toId : edge.fromId;
+    const otherNode = byId(otherId);
+    return otherNode?.type === 'entity' || otherNode?.type === 'relationship' ? otherNode : null;
+  }
+
+  function isOwnerAttributeNameTaken(ownerId, name, excludeAttributeId = null) {
+    const normalized = normalizeAttributeName(name);
+    if (!ownerId || !normalized) return false;
+
+    return S().edges.some((edge) => {
+      if (edge.edgeType && edge.edgeType !== 'attribute') return false;
+      if (edge.fromId !== ownerId && edge.toId !== ownerId) return false;
+      const otherId = edge.fromId === ownerId ? edge.toId : edge.fromId;
+      const otherNode = byId(otherId);
+      if (!otherNode || otherNode.type !== 'attribute') return false;
+      if (otherNode.id === excludeAttributeId) return false;
+      return normalizeAttributeName(otherNode.name) === normalized;
+    });
+  }
+
+  function getUniqueOwnerAttributeName(ownerId, baseName, excludeAttributeId = null) {
+    const cleanedBase = String(baseName || '').trim() || 'Attribut';
+    if (!isOwnerAttributeNameTaken(ownerId, cleanedBase, excludeAttributeId)) return cleanedBase;
+    let index = 2;
+    while (isOwnerAttributeNameTaken(ownerId, `${cleanedBase} ${index}`, excludeAttributeId)) index += 1;
+    return `${cleanedBase} ${index}`;
   }
 
   function getRelationshipCorners(node) {
@@ -1259,6 +1303,7 @@
     if (!entityNode || entityNode.type !== 'entity') return;
     const p = getAttributeSpawnPosition(entityNode);
     const attrNode = addNode('attribute', p.x, p.y);
+    attrNode.name = getUniqueOwnerAttributeName(entityNode.id, attrNode.name || 'Attribut', attrNode.id);
     createEdge(entityNode.id, attrNode.id, 'attribute');
   }
 
@@ -1284,6 +1329,7 @@
     if (!relationshipNode || relationshipNode.type !== 'relationship') return;
     const p = getAttributeSpawnPositionForNode(relationshipNode);
     const attrNode = addNode('attribute', p.x, p.y);
+    attrNode.name = getUniqueOwnerAttributeName(relationshipNode.id, attrNode.name || 'Attribut', attrNode.id);
     createEdge(relationshipNode.id, attrNode.id, 'attribute');
   }
 
@@ -1760,6 +1806,9 @@
 
   function startInlineEdit(node) {
     selectNodeFn(node.id);
+    const originalName = node.name || '';
+    let finished = false;
+    let finishAction = 'commit';
     let cx;
     let cy;
     let fw;
@@ -1794,31 +1843,83 @@
     input.focus();
     input.select();
 
-    const commit = () => {
-      const val = input.value.trim();
+    const onOutsidePointerDown = (e) => {
+      if (finished) return;
+      if (e.target === input) return;
+      finishAction = 'commit';
+      input.blur();
+    };
+    document.addEventListener('pointerdown', onOutsidePointerDown, true);
 
-      if (node.type === 'entity' && val && isEntityNameTaken(val, node.id)) {
-        input.setCustomValidity('Der Name der Entitätsklasse ist bereits vergeben.');
-        input.reportValidity();
-        input.focus();
-        input.select();
-        return;
-      }
-
-      input.setCustomValidity('');
-
-      node.name = val || node.name;
+    const cleanup = () => {
+      document.removeEventListener('pointerdown', onOutsidePointerDown, true);
       if (nodesLayer.contains(fo)) nodesLayer.removeChild(fo);
       document.getElementById('prop-name').value = node.name;
       renderAll();
       requestRelModelSync();
     };
 
-    input.addEventListener('blur', commit);
+    const commit = () => {
+      if (finished) return;
+      const val = input.value.trim();
+      let nextName = val || node.name;
+
+      if (node.type === 'entity' && val && isEntityNameTaken(val, node.id)) {
+        const uniqueName = getUniqueEntityName(val, node.id);
+        input.setCustomValidity('Der Name der Entitätsklasse ist bereits vergeben. Name wurde angepasst.');
+        input.reportValidity();
+        nextName = uniqueName;
+        input.value = uniqueName;
+      }
+
+      if (node.type === 'attribute' && val) {
+        const owningNode = getOwningNodeForAttribute(node.id);
+        if (owningNode && isOwnerAttributeNameTaken(owningNode.id, val, node.id)) {
+          const uniqueName = getUniqueOwnerAttributeName(owningNode.id, val, node.id);
+          const ownerLabel = owningNode.type === 'relationship' ? 'Beziehung' : 'Entitätsklasse';
+          input.setCustomValidity(
+            `Der Attributname ist in dieser ${ownerLabel} bereits vergeben. Name wurde angepasst.`,
+          );
+          input.reportValidity();
+          nextName = uniqueName;
+          input.value = uniqueName;
+        }
+      }
+
+      input.setCustomValidity('');
+
+      node.name = nextName || node.name;
+      finished = true;
+      cleanup();
+    };
+
+    const cancel = () => {
+      if (finished) return;
+      node.name = originalName;
+      finished = true;
+      cleanup();
+    };
+
+    input.addEventListener('blur', () => {
+      if (finishAction === 'cancel') {
+        cancel();
+        return;
+      }
+      commit();
+    });
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === 'Escape') {
+      if (e.key === 'Enter') {
         e.preventDefault();
-        commit();
+        e.stopPropagation();
+        finishAction = 'commit';
+        input.blur();
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        finishAction = 'cancel';
+        input.blur();
       }
     });
   }
@@ -1836,6 +1937,7 @@
     clearSelection: deselectAll,
     deleteNode,
     deleteEdge,
+    centerView,
     autoLayout: autoArrangeDiagram,
     setSnapToGrid,
     isEntityNameTaken,
