@@ -33,15 +33,19 @@
 
   function getAttributeByName(parentId, name) {
     const normalized = normalizeAttributeName(name);
-    const attr = S().nodes?.find((n) => n.type === 'attribute' && normalizeAttributeName(n.name) === normalized);
-    if (!attr) return null;
+    const attrs =
+      S().nodes?.filter((n) => n.type === 'attribute' && normalizeAttributeName(n.name) === normalized) || [];
+    if (attrs.length === 0) return null;
 
-    const hasParentEdge = S().edges?.some(
-      (e) =>
-        ((e.fromId === parentId && e.toId === attr.id) || (e.fromId === attr.id && e.toId === parentId)) &&
-        e.edgeType === 'attribute',
+    return (
+      attrs.find((attr) =>
+        S().edges?.some(
+          (e) =>
+            ((e.fromId === parentId && e.toId === attr.id) || (e.fromId === attr.id && e.toId === parentId)) &&
+            e.edgeType === 'attribute',
+        ),
+      ) || null
     );
-    return hasParentEdge ? attr : null;
   }
 
   function getRelationshipByName(name) {
@@ -95,33 +99,14 @@
     {
       id: 2,
       number: 2,
-      title: 'Primärschlüssel setzen',
-      theory: `<p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die einen Datensatz oder eine Entität eindeutig kennzeichnen. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
-          <li>Erstelle ein Attribut "SchülerNr" bei der Entitätsklasse "Schüler"</li>
-          <li>Markiere "SchülerNr" als Primärschlüssel (Checkbox)</li>
-        </ol>`,
-      validator: function () {
-        const schueler = getEntityByName('Schüler');
-        if (!schueler) return { passed: false, error: 'Entitätsklasse "Schüler" existiert nicht' };
-        const attr = getAttributeByName(schueler.id, 'SchülerNr');
-        if (!attr) return { passed: false, error: 'Attribut "SchülerNr" fehlt' };
-        if (!attr.isPrimaryKey) return { passed: false, error: '"SchülerNr" muss als Primärschlüssel markiert sein' };
-        return { passed: true };
-      },
-    },
-    {
-      id: 3,
-      number: 3,
       title: 'Attribute hinzufügen',
-      theory: `<p><strong>Attribut:</strong> Eine Eigenschaft einer Entitätsklasse. Beispiele: Name, Email, Geburtsdatum. Normale Attribute sind NICHT der Primärschlüssel.</p>`,
+      theory: `<p><strong>Attribut:</strong> Eine Eigenschaft einer Entitätsklasse. Beispiele: Name, Email, Geburtsdatum.</p>`,
       objective: `<p>Füge zur Entitätsklasse "Schüler" zwei weitere Attribute hinzu:</p>
         <ol>
           <li>Attribut "Vorname"</li>
           <li>Attribut "Nachname"</li>
         </ol>
-        <p><strong>Wichtig:</strong> Diese sind NICHT der Primärschlüssel!</p>`,
+        <p><strong>Hinweis:</strong> Markiere sie NICHT als Primärschlüssel.</p>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
         if (!schueler) return { passed: false, error: 'Entitätsklasse "Schüler" existiert nicht' };
@@ -129,6 +114,25 @@
         const nachname = getAttributeByName(schueler.id, 'Nachname');
         if (!vorname) return { passed: false, error: 'Attribut "Vorname" fehlt' };
         if (!nachname) return { passed: false, error: 'Attribut "Nachname" fehlt' };
+        return { passed: true };
+      },
+    },
+    {
+      id: 3,
+      number: 3,
+      title: 'Primärschlüssel setzen',
+      theory: `<p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die einen Datensatz oder eine Entität eindeutig kennzeichnen. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
+      objective: `<p>Aufgabe:</p>
+        <ol>
+          <li>Erstelle ein Attribut "SchülerNr" bei der Entitätsklasse "Schüler"</li>
+          <li>Markiere "SchülerNr" als Primärschlüssel</li>
+        </ol>`,
+      validator: function () {
+        const schueler = getEntityByName('Schüler');
+        if (!schueler) return { passed: false, error: 'Entitätsklasse "Schüler" existiert nicht' };
+        const attr = getAttributeByName(schueler.id, 'SchülerNr');
+        if (!attr) return { passed: false, error: 'Attribut "SchülerNr" fehlt' };
+        if (!attr.isPrimaryKey) return { passed: false, error: '"SchülerNr" muss als Primärschlüssel markiert sein' };
         return { passed: true };
       },
     },
