@@ -8,7 +8,7 @@ const state = {
   notation: 'chen',
   snapToGrid: true,
   diagramTitle: 'er-diagramm',
-  nodes: [], // { id, type, x, y, name, isPrimaryKey, width, height }
+  nodes: [], // { id, type, x, y, name, isPrimaryKey }
   edges: [], // { id, fromId, toId, edgeType, chenFrom, chenTo }
   nextId: 1,
 };
@@ -983,6 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const manualCheckBtn = e.target.closest('#btn-quest-check-manual');
       if (manualCheckBtn && window.Quest?.validateCurrentQuest) {
         e.preventDefault();
+        if (window.App?.isQuestCheckSuppressed?.()) return;
         window.Quest.validateCurrentQuest(true);
         return;
       }
@@ -1017,6 +1018,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ---- Quest Panel Rendering ----
 window.App = {
+  _suppressQuestCheckUntil: 0,
+
+  isQuestCheckSuppressed() {
+    return Date.now() < this._suppressQuestCheckUntil;
+  },
+
+  suppressQuestCheck(ms = 350) {
+    this._suppressQuestCheckUntil = Date.now() + ms;
+  },
+
   updateQuestPanel(quest, questState) {
     if (!quest) return;
 
@@ -1120,10 +1131,17 @@ window.App = {
     const msgEl = modal.querySelector('.quest-success-message');
     const barFill = modal.querySelector('.quest-success-bar-fill');
     let okBtn = modal.querySelector('.quest-success-ok-btn');
+    const previousActiveElement = document.activeElement;
 
     if (msgEl) msgEl.textContent = `Aufgabe ${questNumber} erfolgreich gelöst!`;
 
+    // Fokus vom Hintergrund lösen, damit Enter nicht an darunterliegende Buttons weitergereicht wird.
+    if (previousActiveElement && typeof previousActiveElement.blur === 'function') {
+      previousActiveElement.blur();
+    }
+
     modal.style.display = 'flex';
+    modal.setAttribute('tabindex', '-1');
     this.spawnQuestConfetti(modal.querySelector('.quest-success-card'));
 
     // Balken zurücksetzen und Animation starten
@@ -1140,14 +1158,35 @@ window.App = {
     okBtn.parentNode.replaceChild(newBtn, okBtn);
 
     let timer;
+    let closed = false;
+    const onKeyDown = (event) => {
+      if (event.key !== 'Enter' && event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    };
+
     const close = () => {
+      if (closed) return;
+      closed = true;
       clearTimeout(timer);
+      modal.removeEventListener('keydown', onKeyDown, true);
       modal.style.display = 'none';
+      this.suppressQuestCheck(350);
+
+      // Nach dem Schließen den Check-Button explizit unscharf halten.
+      requestAnimationFrame(() => {
+        const checkBtn = document.getElementById('btn-quest-check-manual');
+        if (checkBtn && typeof checkBtn.blur === 'function') checkBtn.blur();
+      });
+
       onComplete?.();
     };
 
+    modal.addEventListener('keydown', onKeyDown, true);
     timer = setTimeout(close, 3000);
     newBtn.addEventListener('click', close);
+    newBtn.focus();
   },
 
   spawnQuestConfetti(containerEl) {
@@ -1397,6 +1436,15 @@ window.AppState = {
   getUniqueEntityAttributeName,
   persistNow: persistStateNow,
   persistDebounced: persistStateDebounced,
+};
+window.AppUtils = {
+  normalizeEntityName,
+  normalizeAttributeName,
+  isEntityNameTaken,
+  getUniqueEntityName,
+  getOwningNodeForAttribute,
+  isOwnerAttributeNameTaken,
+  getUniqueOwnerAttributeName,
 };
 window.AppSelect = { selectNode, clearSelection };
 

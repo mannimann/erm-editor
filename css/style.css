@@ -149,33 +149,6 @@ body.is-resizing-drawer {
   gap: 8px;
 }
 
-.notation-label {
-  font-size: 0.85rem;
-  color: #94a3b8;
-}
-
-.notation-btn {
-  background: #334155;
-  color: #cbd5e1;
-  border: 1px solid #475569;
-  border-radius: var(--radius);
-  padding: 4px 12px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition:
-    background 0.15s,
-    color 0.15s;
-}
-.notation-btn:hover {
-  background: #475569;
-  color: #f1f5f9;
-}
-.notation-btn.active {
-  background: #3b82f6;
-  color: #fff;
-  border-color: #2563eb;
-}
-
 #header-right {
   display: flex;
   align-items: center;
@@ -566,16 +539,6 @@ body.is-resizing-drawer {
   padding: 4px 6px;
   font-size: 0.85rem;
   cursor: pointer;
-}
-.prop-select-small {
-  background: #334155;
-  border: 1px solid #475569;
-  border-radius: 4px;
-  color: #f1f5f9;
-  padding: 3px 5px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  width: 50px;
 }
 .prop-value {
   font-size: 0.85rem;

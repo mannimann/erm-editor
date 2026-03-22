@@ -13,17 +13,13 @@
   function normalizeEntityName(name) {
     return String(name || '')
       .trim()
-      .toLowerCase();
+      .toLocaleLowerCase('de');
   }
 
   function normalizeAttributeName(name) {
     return String(name || '')
       .trim()
-      .toLowerCase();
-  }
-
-  function getNodeById(id) {
-    return window.AppState?.getNodeById(id);
+      .toLocaleLowerCase('de');
   }
 
   function getEntityByName(name) {
@@ -82,7 +78,7 @@
     return S().nodes?.filter((n) => n.type === 'entity')?.length || 0;
   }
 
-  // ---- Quest-Datenbank: GRUNDLAGEN (12 Quests) ----
+  // ---- Quest-Datenbank: GRUNDLAGEN (13 Quests) ----
   const grundlagenQuests = [
     {
       id: 1,
@@ -356,56 +352,41 @@
     {
       id: 12,
       number: 12,
-      title: 'Fächer und Räume verwalten',
-      theory: `<p><strong>Erweiterung des Modells:</strong> Brauchen wir noch weitere Entitätsklassen? Ja! Schulen verwalten auch Fächer und Unterrichtsräume. Diese Entitäten helfen dabei, noch realistischere Szenarien zu modellieren.</p>`,
+      title: 'Selbstbeziehung',
+      theory: `<p><strong>Selbstbeziehung:</strong> Eine Entitätsklasse kann auch mit sich selbst in Beziehung stehen! Beide Seiten der Beziehung zeigen dann auf dieselbe Entitätsklasse.</p>
+        <p><strong>Beispiel:</strong> Ein Schüler kann mit mehreren anderen Schülern befreundet sein – und ein anderer Schüler kann ebenfalls mit vielen befreundet sein. Das ist eine n:m-Selbstbeziehung innerhalb von "Schüler".</p>`,
       objective: `<p>Aufgabe:</p>
         <ol>
-          <li>Erstelle zwei neue Entitätsklassen:  
-            <ul>
-              <li>"Fach" mit Primärschlüssel "FachID" und Attribut "Fachname"</li>
-              <li>"Raum" mit Primärschlüssel "RaumID" und Attribut "RaumNummer"</li>
-            </ul>
-          </li>
-          <li>Erstelle zwei neue Beziehungen:
-            <ul>
-              <li>"wird unterrichtet in" zwischen Fach und Raum (kardinal. 1:1)</li>
-              <li>"behandelt" zwischen Klasse und Fach (kardinal. n:m)</li>
-            </ul>
-          </li>
+          <li>Erstelle eine <strong>Selbstbeziehung</strong> bei der Entitätsklasse "Schüler"</li>
+          <li>Name der Beziehung: <strong>"ist befreundet mit"</strong></li>
+          <li>Kardinalität: <strong>n:m</strong> (ein Schüler kann viele Freunde haben)</li>
+          <li>Verbinde die Beziehung auf <strong>beiden Seiten</strong> mit "Schüler"</li>
         </ol>`,
       validator: function () {
-        const fach = getEntityByName('Fach');
-        const raum = getEntityByName('Raum');
-        if (!fach) return { passed: false, error: 'Entitätsklasse "Fach" existiert nicht' };
-        if (!raum) return { passed: false, error: 'Entitätsklasse "Raum" existiert nicht' };
+        const schueler = getEntityByName('Schüler');
+        if (!schueler) return { passed: false, error: 'Entitätsklasse "Schüler" existiert nicht' };
 
-        const fachId = getAttributeByName(fach.id, 'FachID');
-        const fachname = getAttributeByName(fach.id, 'Fachname');
-        if (!fachId) return { passed: false, error: 'Attribut "FachID" fehlt in Fach' };
-        if (!fachname) return { passed: false, error: 'Attribut "Fachname" fehlt in Fach' };
-        if (!fachId.isPrimaryKey) return { passed: false, error: '"FachID" muss Primärschlüssel sein' };
+        const rel = getRelationshipByName('ist befreundet mit');
+        if (!rel) return { passed: false, error: 'Beziehung "ist befreundet mit" nicht gefunden' };
 
-        const raumId = getAttributeByName(raum.id, 'RaumID');
-        const raumNumber = getAttributeByName(raum.id, 'RaumNummer');
-        if (!raumId) return { passed: false, error: 'Attribut "RaumID" fehlt in Raum' };
-        if (!raumNumber) return { passed: false, error: 'Attribut "RaumNummer" fehlt in Raum' };
-        if (!raumId.isPrimaryKey) return { passed: false, error: '"RaumID" muss Primärschlüssel sein' };
+        const edges =
+          S().edges?.filter(
+            (e) =>
+              e.edgeType === 'relationship' &&
+              ((e.fromId === rel.id && e.toId === schueler.id) || (e.fromId === schueler.id && e.toId === rel.id)),
+          ) || [];
 
-        const wirdUnterrichtet = getRelationshipByName('wird unterrichtet in');
-        const behandelt = getRelationshipByName('behandelt');
-        if (!wirdUnterrichtet) return { passed: false, error: 'Beziehung "wird unterrichtet in" fehlt' };
-        if (!behandelt) return { passed: false, error: 'Beziehung "behandelt" fehlt' };
-
-        const fachCard1 = getCardinalityForEntityOnRelationship(wirdUnterrichtet.id, fach.id);
-        const raumCard1 = getCardinalityForEntityOnRelationship(wirdUnterrichtet.id, raum.id);
-        if (fachCard1 !== '1' || raumCard1 !== '1') {
-          return { passed: false, error: 'Kardinalität für "wird unterrichtet in" muss 1:1 sein' };
+        if (edges.length < 2) {
+          return { passed: false, error: '"ist befreundet mit" muss auf beiden Seiten mit "Schüler" verbunden sein' };
         }
 
-        const klasseCard = getCardinalityForEntityOnRelationship(behandelt.id, getEntityByName('Klasse').id);
-        const fachCard2 = getCardinalityForEntityOnRelationship(behandelt.id, fach.id);
-        if (klasseCard !== 'n' || fachCard2 !== 'n') {
-          return { passed: false, error: 'Kardinalität für "behandelt" muss n:m sein' };
+        const cards = edges.map((e) => {
+          if (e.fromId === rel.id) return normalizeCardinality(e.chenTo);
+          return normalizeCardinality(e.chenFrom);
+        });
+
+        if (!cards.includes('n') || cards.filter((c) => c === 'n').length < 2) {
+          return { passed: false, error: 'Kardinalität muss n:m sein (beide Seiten n)' };
         }
 
         return { passed: true };
@@ -416,10 +397,15 @@
       number: 13,
       title: '🎉 Abschluss',
       theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
-        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen, Kardinalitäten und Composite Keys zu modellieren.</p>
-        <p>Der nächste Schritt sind die <strong>Expertenquests</strong>, wo du reale Szenarien aus verschiedenen Bereichen modellierst.</p>`,
-      objective: `<p>🏆 <strong>Du bist bereit für die Expertenquests!</strong></p>
-        <p>Starte die Expertenquests im Menü und werde ein ER-Modellierungs-Experte!</p>`,
+        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen, Kardinalitäten, Verbundschlüssel und Selbstbeziehungen zu modellieren.</p>
+        <p>Bevor du mit den <strong>Expertenquests</strong> weitermachst: Speichere dein fertiges ER-Modell!</p>`,
+      objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
+        <ol>
+          <li>Gib deinem ER-Modell in der Titelleiste einen Namen (z.B. "Schule")</li>
+          <li>Klicke auf <strong>"JSON-Export"</strong> in der Titelleiste oben rechts und speichere die Datei</li>
+          <li>Klicke auf <strong>"PNG-Export"</strong> und speichere das Bild</li>
+        </ol>
+        <p>Danach kannst du die Expertenquests im Menü starten!</p>`,
       validator: function () {
         // Quest 13 ist immer erfolgreich als Abschluss-Screen
         return { passed: true };
@@ -428,9 +414,6 @@
   ];
 
   // ---- Quest-Datenbank: EXPERTEN (8 Quests mit Musterlösungen) ----
-  // Hinweis: maxQuests für Grundlagen ist jetzt 13 (war 12)
-  const maxGrundlagenQuests = 13;
-
   const expertenQuests = [
     {
       id: 1,
@@ -755,6 +738,10 @@
       try {
         const result = quest.validator();
         const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 8;
+
+        if (result.passed && quest.number === maxQuests && !forceRecheck) {
+          return { passed: false };
+        }
 
         if (result.passed) {
           if (quest.number === maxQuests) {

@@ -155,7 +155,26 @@
 
   function getCanvasCenterLocal() {
     const box = svg.getBoundingClientRect();
-    return { x: box.width / 2, y: box.height / 2 };
+    let visibleTop = box.top;
+    let visibleBottom = box.bottom;
+
+    // Wenn das Quest-Panel sichtbar ist, liegt es ueber dem unteren Teil des Canvas.
+    // Die Mitte soll dann auf den verbleibenden sichtbaren Bereich bezogen werden.
+    const questPanel = document.getElementById('quest-panel');
+    if (questPanel && questPanel.classList.contains('visible')) {
+      const panelRect = questPanel.getBoundingClientRect();
+      const overlapTop = Math.max(box.top, panelRect.top);
+      const overlapBottom = Math.min(box.bottom, panelRect.bottom);
+      if (overlapBottom > overlapTop) {
+        visibleBottom = overlapTop;
+      }
+    }
+
+    const visibleCenterY = (visibleTop + visibleBottom) / 2;
+    return {
+      x: box.width / 2,
+      y: visibleCenterY - box.top,
+    };
   }
 
   function setZoom(nextScale, anchorLocalX, anchorLocalY) {
@@ -246,34 +265,39 @@
     }
   }
 
-  function normalizeEntityName(name) {
-    return String(name || '')
+  function isEntityNameTaken(name, excludeId = null) {
+    if (window.AppUtils?.isEntityNameTaken) {
+      return window.AppUtils.isEntityNameTaken(name, excludeId);
+    }
+    const normalized = String(name || '')
       .trim()
       .toLocaleLowerCase('de');
-  }
-
-  function isEntityNameTaken(name, excludeId = null) {
-    const normalized = normalizeEntityName(name);
     if (!normalized) return false;
-    return S().nodes.some(
-      (node) => node.type === 'entity' && node.id !== excludeId && normalizeEntityName(node.name) === normalized,
-    );
+    return S().nodes.some((node) => {
+      return (
+        node.type === 'entity' &&
+        node.id !== excludeId &&
+        String(node.name || '')
+          .trim()
+          .toLocaleLowerCase('de') === normalized
+      );
+    });
   }
 
   function getUniqueEntityName(baseName = 'Entitätsklasse', excludeId = null) {
+    if (window.AppUtils?.getUniqueEntityName) {
+      return window.AppUtils.getUniqueEntityName(baseName, excludeId);
+    }
     if (!isEntityNameTaken(baseName, excludeId)) return baseName;
     let idx = 2;
     while (isEntityNameTaken(`${baseName} ${idx}`, excludeId)) idx += 1;
     return `${baseName} ${idx}`;
   }
 
-  function normalizeAttributeName(name) {
-    return String(name || '')
-      .trim()
-      .toLocaleLowerCase('de');
-  }
-
   function getOwningNodeForAttribute(attributeId) {
+    if (window.AppUtils?.getOwningNodeForAttribute) {
+      return window.AppUtils.getOwningNodeForAttribute(attributeId);
+    }
     const edge = S().edges.find((candidateEdge) => {
       if (candidateEdge.fromId !== attributeId && candidateEdge.toId !== attributeId) return false;
       if (candidateEdge.edgeType && candidateEdge.edgeType !== 'attribute') return false;
@@ -289,7 +313,12 @@
   }
 
   function isOwnerAttributeNameTaken(ownerId, name, excludeAttributeId = null) {
-    const normalized = normalizeAttributeName(name);
+    if (window.AppUtils?.isOwnerAttributeNameTaken) {
+      return window.AppUtils.isOwnerAttributeNameTaken(ownerId, name, excludeAttributeId);
+    }
+    const normalized = String(name || '')
+      .trim()
+      .toLocaleLowerCase('de');
     if (!ownerId || !normalized) return false;
 
     return S().edges.some((edge) => {
@@ -299,11 +328,18 @@
       const otherNode = byId(otherId);
       if (!otherNode || otherNode.type !== 'attribute') return false;
       if (otherNode.id === excludeAttributeId) return false;
-      return normalizeAttributeName(otherNode.name) === normalized;
+      return (
+        String(otherNode.name || '')
+          .trim()
+          .toLocaleLowerCase('de') === normalized
+      );
     });
   }
 
   function getUniqueOwnerAttributeName(ownerId, baseName, excludeAttributeId = null) {
+    if (window.AppUtils?.getUniqueOwnerAttributeName) {
+      return window.AppUtils.getUniqueOwnerAttributeName(ownerId, baseName, excludeAttributeId);
+    }
     const cleanedBase = String(baseName || '').trim() || 'Attribut';
     if (!isOwnerAttributeNameTaken(ownerId, cleanedBase, excludeAttributeId)) return cleanedBase;
     let index = 2;
@@ -1228,9 +1264,9 @@
   }
 
   function getSpawnPosition(type) {
-    const box = svg.getBoundingClientRect();
-    const worldCenterX = (-viewState.x + box.width / 2) / viewState.scale;
-    const worldCenterY = (-viewState.y + box.height / 2) / viewState.scale;
+    const localCenter = getCanvasCenterLocal();
+    const worldCenterX = (-viewState.x + localCenter.x) / viewState.scale;
+    const worldCenterY = (-viewState.y + localCenter.y) / viewState.scale;
     const dims =
       type === 'entity'
         ? { w: NODE_ENTITY_W, h: NODE_ENTITY_H }
