@@ -96,18 +96,18 @@
       id: 2,
       number: 2,
       title: 'Primärschlüssel setzen',
-      theory: `<p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die einen Datensatz oder eine Entität eindeutig kennzeichnen. Kein zwei Schüler haben die gleiche SchuelerID. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
+      theory: `<p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die einen Datensatz oder eine Entität eindeutig kennzeichnen. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
       objective: `<p>Aufgabe:</p>
         <ol>
-          <li>Erstelle ein Attribut "SchülerID" bei der Entitätsklasse "Schüler"</li>
-          <li>Markiere "SchülerID" als Primärschlüssel (Checkbox)</li>
+          <li>Erstelle ein Attribut "SchülerNr" bei der Entitätsklasse "Schüler"</li>
+          <li>Markiere "SchülerNr" als Primärschlüssel (Checkbox)</li>
         </ol>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
         if (!schueler) return { passed: false, error: 'Entitätsklasse "Schüler" existiert nicht' };
-        const attr = getAttributeByName(schueler.id, 'SchülerID');
-        if (!attr) return { passed: false, error: 'Attribut "SchülerID" fehlt' };
-        if (!attr.isPrimaryKey) return { passed: false, error: '"SchülerID" muss als Primärschlüssel markiert sein' };
+        const attr = getAttributeByName(schueler.id, 'SchülerNr');
+        if (!attr) return { passed: false, error: 'Attribut "SchülerNr" fehlt' };
+        if (!attr.isPrimaryKey) return { passed: false, error: '"SchülerNr" muss als Primärschlüssel markiert sein' };
         return { passed: true };
       },
     },
@@ -147,19 +147,30 @@
     {
       id: 5,
       number: 5,
-      title: 'Primärschlüssel für Klasse',
-      theory: `<p><strong>Jede Entitätsklasse sollte einen Primärschlüssel haben.</strong> So können wir jede Klasse eindeutig identifizieren.</p>`,
+      title: 'Verbundschlüssel',
+      theory: `<p><strong>Verbundschlüssel:</strong> Manchmal werden mehrere Attribute kombiniert, um eine Entität eindeutig zu identifizieren. Für Schulklassen verwenden wir Klassenstufe + Parallelklasse (z.B. 5a, 5b, 10c).</p>
+        <p>Diese beiden Attribute zusammen bilden den eindeutigen Identifier einer Klasse.</p>`,
       objective: `<p>Aufgabe:</p>
         <ol>
-          <li>Erstelle ein Attribut "KlassenID" bei der Entitätsklasse "Klasse"</li>
-          <li>Markiere "KlassenID" als Primärschlüssel</li>
+          <li>Erstelle zwei Attribute bei der Entitätsklasse "Klasse":
+            <ul>
+              <li>"Klassenstufe" (z.B. 5, 6, 7, 8...)</li>
+              <li>"Parallelklasse" (z.B. a, b, c...)</li>
+            </ul>
+          </li>
+          <li>Markiere BEIDE als Primärschlüssel</li>
         </ol>`,
       validator: function () {
         const klasse = getEntityByName('Klasse');
         if (!klasse) return { passed: false, error: 'Entitätsklasse "Klasse" existiert nicht' };
-        const attr = getAttributeByName(klasse.id, 'KlassenID');
-        if (!attr) return { passed: false, error: 'Attribut "KlassenID" fehlt' };
-        if (!attr.isPrimaryKey) return { passed: false, error: '"KlassenID" muss als Primärschlüssel markiert sein' };
+        const klassenstufe = getAttributeByName(klasse.id, 'Klassenstufe');
+        const parallelklasse = getAttributeByName(klasse.id, 'Parallelklasse');
+        if (!klassenstufe) return { passed: false, error: 'Attribut "Klassenstufe" fehlt' };
+        if (!parallelklasse) return { passed: false, error: 'Attribut "Parallelklasse" fehlt' };
+        if (!klassenstufe.isPrimaryKey)
+          return { passed: false, error: '"Klassenstufe" muss als Primärschlüssel markiert sein' };
+        if (!parallelklasse.isPrimaryKey)
+          return { passed: false, error: '"Parallelklasse" muss als Primärschlüssel markiert sein' };
         return { passed: true };
       },
     },
@@ -219,18 +230,29 @@
       id: 8,
       number: 8,
       title: 'Primärschlüssel für Lehrer',
-      theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen sollten einen Primärschlüssel haben.</p>`,
+      theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen müssen einen Primärschlüssel haben. Für Lehrer verwenden wir ein kurzes Kürzel als Kennzeichnung.</p>`,
       objective: `<p>Aufgabe:</p>
         <ol>
-          <li>Erstelle ein Attribut "LehrerID" bei der Entitätsklasse "Lehrer"</li>
-          <li>Markiere "LehrerID" als Primärschlüssel</li>
+          <li>Erstelle drei Attribute bei der Entitätsklasse "Lehrer":
+            <ul>
+              <li>"Lehrer-Kürzel" (Primärschlüssel, z.B. MUS, MAN, BER)</li>
+              <li>"Vorname"</li>
+              <li>"Nachname"</li>
+            </ul>
+          </li>
+          <li>Markiere nur "Lehrer-Kürzel" als Primärschlüssel</li>
         </ol>`,
       validator: function () {
         const lehrer = getEntityByName('Lehrer');
         if (!lehrer) return { passed: false, error: 'Entitätsklasse "Lehrer" existiert nicht' };
-        const attr = getAttributeByName(lehrer.id, 'LehrerID');
-        if (!attr) return { passed: false, error: 'Attribut "LehrerID" fehlt' };
-        if (!attr.isPrimaryKey) return { passed: false, error: '"LehrerID" muss als Primärschlüssel markiert sein' };
+        const attr = getAttributeByName(lehrer.id, 'Lehrer-Kürzel');
+        const vorname = getAttributeByName(lehrer.id, 'Vorname');
+        const nachname = getAttributeByName(lehrer.id, 'Nachname');
+        if (!attr) return { passed: false, error: 'Attribut "Lehrer-Kürzel" fehlt' };
+        if (!vorname) return { passed: false, error: 'Attribut "Vorname" fehlt' };
+        if (!nachname) return { passed: false, error: 'Attribut "Nachname" fehlt' };
+        if (!attr.isPrimaryKey)
+          return { passed: false, error: '"Lehrer-Kürzel" muss als Primärschlüssel markiert sein' };
         return { passed: true };
       },
     },
@@ -250,6 +272,7 @@
           <li>Name der Beziehung: <strong>"unterrichtet"</strong></li>
           <li>Kardinalität: <strong>n:m</strong> (ein Lehrer unterrichtet viele Klassen, eine Klasse hat Unterricht bei vielen Lehrern)</li>
           <li>Lehrer auf der linken Seite, Klasse auf der rechten</li>
+          <li>Die Beziehung verbindet Lehrer mit dem Lehrer-Kürzel zu Klasse</li>
         </ol>`,
       validator: function () {
         const lehrer = getEntityByName('Lehrer');
@@ -329,20 +352,81 @@
     {
       id: 12,
       number: 12,
+      title: 'Fächer und Räume verwalten',
+      theory: `<p><strong>Erweiterung des Modells:</strong> Brauchen wir noch weitere Entitätsklassen? Ja! Schulen verwalten auch Fächer und Unterrichtsräume. Diese Entitäten helfen dabei, noch realistischere Szenarien zu modellieren.</p>`,
+      objective: `<p>Aufgabe:</p>
+        <ol>
+          <li>Erstelle zwei neue Entitätsklassen:  
+            <ul>
+              <li>"Fach" mit Primärschlüssel "FachID" und Attribut "Fachname"</li>
+              <li>"Raum" mit Primärschlüssel "RaumID" und Attribut "RaumNummer"</li>
+            </ul>
+          </li>
+          <li>Erstelle zwei neue Beziehungen:
+            <ul>
+              <li>"wird unterrichtet in" zwischen Fach und Raum (kardinal. 1:1)</li>
+              <li>"behandelt" zwischen Klasse und Fach (kardinal. n:m)</li>
+            </ul>
+          </li>
+        </ol>`,
+      validator: function () {
+        const fach = getEntityByName('Fach');
+        const raum = getEntityByName('Raum');
+        if (!fach) return { passed: false, error: 'Entitätsklasse "Fach" existiert nicht' };
+        if (!raum) return { passed: false, error: 'Entitätsklasse "Raum" existiert nicht' };
+
+        const fachId = getAttributeByName(fach.id, 'FachID');
+        const fachname = getAttributeByName(fach.id, 'Fachname');
+        if (!fachId) return { passed: false, error: 'Attribut "FachID" fehlt in Fach' };
+        if (!fachname) return { passed: false, error: 'Attribut "Fachname" fehlt in Fach' };
+        if (!fachId.isPrimaryKey) return { passed: false, error: '"FachID" muss Primärschlüssel sein' };
+
+        const raumId = getAttributeByName(raum.id, 'RaumID');
+        const raumNumber = getAttributeByName(raum.id, 'RaumNummer');
+        if (!raumId) return { passed: false, error: 'Attribut "RaumID" fehlt in Raum' };
+        if (!raumNumber) return { passed: false, error: 'Attribut "RaumNummer" fehlt in Raum' };
+        if (!raumId.isPrimaryKey) return { passed: false, error: '"RaumID" muss Primärschlüssel sein' };
+
+        const wirdUnterrichtet = getRelationshipByName('wird unterrichtet in');
+        const behandelt = getRelationshipByName('behandelt');
+        if (!wirdUnterrichtet) return { passed: false, error: 'Beziehung "wird unterrichtet in" fehlt' };
+        if (!behandelt) return { passed: false, error: 'Beziehung "behandelt" fehlt' };
+
+        const fachCard1 = getCardinalityForEntityOnRelationship(wirdUnterrichtet.id, fach.id);
+        const raumCard1 = getCardinalityForEntityOnRelationship(wirdUnterrichtet.id, raum.id);
+        if (fachCard1 !== '1' || raumCard1 !== '1') {
+          return { passed: false, error: 'Kardinalität für "wird unterrichtet in" muss 1:1 sein' };
+        }
+
+        const klasseCard = getCardinalityForEntityOnRelationship(behandelt.id, getEntityByName('Klasse').id);
+        const fachCard2 = getCardinalityForEntityOnRelationship(behandelt.id, fach.id);
+        if (klasseCard !== 'n' || fachCard2 !== 'n') {
+          return { passed: false, error: 'Kardinalität für "behandelt" muss n:m sein' };
+        }
+
+        return { passed: true };
+      },
+    },
+    {
+      id: 13,
+      number: 13,
       title: '🎉 Abschluss',
       theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
-        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen und Kardinalitäten zu modellieren.</p>
+        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen, Kardinalitäten und Composite Keys zu modellieren.</p>
         <p>Der nächste Schritt sind die <strong>Expertenquests</strong>, wo du reale Szenarien aus verschiedenen Bereichen modellierst.</p>`,
       objective: `<p>🏆 <strong>Du bist bereit für die Expertenquests!</strong></p>
         <p>Starte die Expertenquests im Menü und werde ein ER-Modellierungs-Experte!</p>`,
       validator: function () {
-        // Quest 12 ist immer erfolgreich als Abschluss-Screen
+        // Quest 13 ist immer erfolgreich als Abschluss-Screen
         return { passed: true };
       },
     },
   ];
 
   // ---- Quest-Datenbank: EXPERTEN (8 Quests mit Musterlösungen) ----
+  // Hinweis: maxQuests für Grundlagen ist jetzt 13 (war 12)
+  const maxGrundlagenQuests = 13;
+
   const expertenQuests = [
     {
       id: 1,
@@ -666,7 +750,7 @@
 
       try {
         const result = quest.validator();
-        const maxQuests = this.state.questMode === 'grundlagen' ? 12 : 8;
+        const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 8;
 
         if (result.passed) {
           if (quest.number === maxQuests) {
@@ -720,7 +804,7 @@
     },
 
     progressToNextQuest: function () {
-      const maxQuests = this.state.questMode === 'grundlagen' ? 12 : 8;
+      const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 8;
       if (this.state.currentQuestNumber < maxQuests) {
         this.state.currentQuestNumber += 1;
         const nextNumber = this.state.currentQuestNumber;
