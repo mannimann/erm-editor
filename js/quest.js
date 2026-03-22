@@ -85,7 +85,7 @@
       number: 1,
       title: 'Erste Entitätsklasse',
       theory: `<p><strong>Entitätsklasse:</strong> Ein Rechteck im ER-Modell, das eine Gruppe von ähnlichen Objekten der realen Welt darstellt. Beispiel: Student, Auto, Person.</p>`,
-      objective: `<p>Erstelle eine Entitätsklasse mit dem exakten Namen <strong>"Schüler"</strong></p>`,
+      objective: `<p>Erstelle eine Entitätsklasse mit dem Namen <strong>"Schüler"</strong></p>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
         if (!schueler) return { passed: false, error: 'Erstelle eine Entitätsklasse mit dem Namen "Schüler"' };
@@ -97,10 +97,10 @@
       number: 2,
       title: 'Attribute hinzufügen',
       theory: `<p><strong>Attribut:</strong> Eine Eigenschaft einer Entitätsklasse. Beispiele: Name, Email, Geburtsdatum.</p>`,
-      objective: `<p>Füge zur Entitätsklasse "Schüler" zwei weitere Attribute hinzu:</p>
+      objective: `<p>Füge zur Entitätsklasse <strong>"Schüler"</strong> zwei weitere Attribute hinzu:</p>
         <ol>
-          <li>Attribut "Vorname"</li>
-          <li>Attribut "Nachname"</li>
+          <li>Attribut <strong>"Vorname"</strong></li>
+          <li>Attribut <strong>"Nachname"</strong></li>
         </ol>
         <p><strong>Hinweis:</strong> Markiere sie NICHT als Primärschlüssel.</p>`,
       validator: function () {
@@ -118,10 +118,9 @@
       number: 3,
       title: 'Primärschlüssel setzen',
       theory: `<p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die einen Datensatz oder eine Entität eindeutig kennzeichnen. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
-          <li>Erstelle ein Attribut "SchülerNr" bei der Entitätsklasse "Schüler"</li>
-          <li>Markiere "SchülerNr" als Primärschlüssel</li>
+      objective: `<ol>
+          <li>Erstelle ein Attribut <strong>"SchülerNr"</strong> bei der Entitätsklasse <strong>"Schüler"</strong></li>
+          <li>Markiere "SchülerNr" als <strong>Primärschlüssel</strong></li>
         </ol>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
@@ -150,15 +149,14 @@
       title: 'Verbundschlüssel',
       theory: `<p><strong>Verbundschlüssel:</strong> Manchmal werden mehrere Attribute kombiniert, um eine Entität eindeutig zu identifizieren. Für Schulklassen verwenden wir Klassenstufe + Parallelklasse (z.B. 5a, 5b, 10c).</p>
         <p>Diese beiden Attribute zusammen bilden den eindeutigen Identifier einer Klasse.</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
-          <li>Erstelle zwei Attribute bei der Entitätsklasse "Klasse":
+      objective: `<ol>
+          <li>Erstelle zwei Attribute bei der Entitätsklasse <strong>"Klasse"</strong>:
             <ul>
-              <li>"Klassenstufe" (z.B. 5, 6, 7, 8...)</li>
-              <li>"Parallelklasse" (z.B. a, b, c...)</li>
+              <li><strong>"Klassenstufe"</strong> (z.B. 5, 6, 7, 8...)</li>
+              <li><strong>"Parallelklasse"</strong> (z.B. a, b, c...)</li>
             </ul>
           </li>
-          <li>Markiere BEIDE als Primärschlüssel</li>
+          <li>Markiere <strong>BEIDE</strong> als Primärschlüssel</li>
         </ol>`,
       validator: function () {
         const klasse = getEntityByName('Klasse');
@@ -185,11 +183,11 @@
           <li><strong>1:n</strong> (eins-zu-vielen): Eine Klasse hat viele Schüler, ein Schüler gehört zu einer Klasse.</li>
           <li><strong>n:m</strong> (viele-zu-vielen): Ein Lehrer unterrichtet viele Schüler, ein Schüler hat Unterricht bei vielen Lehrern. </li>
         </ul>`,
-      objective: `<p>Erstelle eine Beziehung zwischen "Schüler" und "Klasse":</p>
+      objective: `<p>Erstelle eine Beziehung zwischen <strong>"Schüler"</strong> und <strong>"Klasse"</strong>:</p>
         <ol>
           <li>Name der Beziehung: <strong>"geht in"</strong></li>
           <li>Kardinalität: <strong>n:1</strong> (viele Schüler sind in einer Klasse)</li>
-          <li>Schüler auf der linken Seite, Klasse auf der rechten</li>
+          <li><strong>"Schüler"</strong> auf der linken Seite, <strong>"Klasse"</strong> auf der rechten</li>
         </ol>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
@@ -231,16 +229,15 @@
       number: 8,
       title: 'Primärschlüssel für Lehrer',
       theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen müssen einen Primärschlüssel haben. Für Lehrer verwenden wir ein kurzes Kürzel als Kennzeichnung.</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
-          <li>Erstelle drei Attribute bei der Entitätsklasse "Lehrer":
+      objective: `<ol>
+          <li>Erstelle drei Attribute bei der Entitätsklasse <strong>"Lehrer"</strong>:
             <ul>
-              <li>"Lehrer-Kürzel" (Primärschlüssel, z.B. MUS, MAN, BER)</li>
-              <li>"Vorname"</li>
-              <li>"Nachname"</li>
+              <li><strong>"Lehrer-Kürzel"</strong> (z.B. MUS, MAN, BER)</li>
+              <li><strong>"Vorname"</strong></li>
+              <li><strong>"Nachname"</strong></li>
             </ul>
           </li>
-          <li>Markiere nur "Lehrer-Kürzel" als Primärschlüssel</li>
+          <li>Markiere nur <strong>"Lehrer-Kürzel"</strong> als Primärschlüssel</li>
         </ol>`,
       validator: function () {
         const lehrer = getEntityByName('Lehrer');
@@ -267,12 +264,11 @@
           <li><strong>n:m</strong> (viele-zu-vielen): Ein Lehrer unterrichtet viele Schüler, ein Schüler hat Unterricht bei vielen Lehrern. </li>
         </ul>
         <p><strong>Hinweis:</strong> n:m-Beziehungen werden später in der Datenbank zu einer eigenen Tabelle umgewandelt.</p>`,
-      objective: `<p>Erstelle eine Beziehung zwischen "Lehrer" und "Klasse":</p>
+      objective: `<p>Erstelle eine Beziehung zwischen <strong>"Lehrer"</strong> und <strong>"Klasse"</strong>:</p>
         <ol>
           <li>Name der Beziehung: <strong>"unterrichtet"</strong></li>
           <li>Kardinalität: <strong>n:m</strong> (ein Lehrer unterrichtet viele Klassen, eine Klasse hat Unterricht bei vielen Lehrern)</li>
-          <li>Lehrer auf der linken Seite, Klasse auf der rechten</li>
-          <li>Die Beziehung verbindet Lehrer mit dem Lehrer-Kürzel zu Klasse</li>
+          <li><strong>"Lehrer"</strong> auf der linken Seite, <strong>"Klasse"</strong> auf der rechten</li>
         </ol>`,
       validator: function () {
         const lehrer = getEntityByName('Lehrer');
@@ -301,10 +297,9 @@
       number: 10,
       title: 'Beziehungsattribute',
       theory: `<p><strong>Beziehungsattribute:</strong> Auch Beziehungen können Attribute haben! Ein Beispiel: Die Beziehung "unterrichtet" kann das Attribut "Fach" besitzen, um das in dieser Klasse unterrichtete Fach festzuhalten.</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
+      objective: `<ol>
           <li>Füge zur Beziehung <strong>"unterrichtet"</strong> ein Attribut mit dem Namen <strong>"Fach"</strong> hinzu</li>
-          <li>Rechtklick auf die Beziehung → "Attribut hinzufügen"</li>
+          <li>Rechtklick auf die Beziehung → Attribut hinzufügen</li>
         </ol>`,
       validator: function () {
         const rel = getRelationshipByName('unterrichtet');
@@ -318,10 +313,9 @@
       id: 11,
       number: 11,
       title: 'Weitere Beziehung ergänzen',
-      theory: `<Zwischen><strong>Zusätzliche Beziehung:</strong> Zwischen denselben Entitätsklassen kann es mehrere unterschiedliche Beziehungen geben, wenn sie verschiedene Bedeutungen haben. Zwischen zwei Entitätsklassen sind also mehr als eine Beziehung möglich.</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
-          <li>Erstelle eine NEUE Beziehung zwischen "Schüler" und "Klasse"</li>
+      theory: `<p><strong>Zusätzliche Beziehung:</strong> Zwischen denselben Entitätsklassen kann es mehrere unterschiedliche Beziehungen geben, wenn sie verschiedene Bedeutungen haben. Zwischen zwei Entitätsklassen sind also mehr als eine Beziehung möglich.</p>`,
+      objective: `<ol>
+          <li>Erstelle eine <strong>NEUE</strong> Beziehung zwischen <strong>"Schüler"</strong> und <strong>"Klasse"</strong></li>
           <li>Name: <strong>"ist Klassensprecher"</strong></li>
           <li>Kardinalität: <strong>1:1</strong></li>
         </ol>
@@ -355,12 +349,11 @@
       title: 'Selbstbeziehung',
       theory: `<p><strong>Selbstbeziehung:</strong> Eine Entitätsklasse kann auch mit sich selbst in Beziehung stehen! Beide Seiten der Beziehung zeigen dann auf dieselbe Entitätsklasse.</p>
         <p><strong>Beispiel:</strong> Ein Schüler kann mit mehreren anderen Schülern befreundet sein – und ein anderer Schüler kann ebenfalls mit vielen befreundet sein. Das ist eine n:m-Selbstbeziehung innerhalb von "Schüler".</p>`,
-      objective: `<p>Aufgabe:</p>
-        <ol>
-          <li>Erstelle eine <strong>Selbstbeziehung</strong> bei der Entitätsklasse "Schüler"</li>
+      objective: `<ol>
+          <li>Erstelle eine <strong>Selbstbeziehung</strong> bei der Entitätsklasse <strong>"Schüler"</strong></li>
           <li>Name der Beziehung: <strong>"ist befreundet mit"</strong></li>
           <li>Kardinalität: <strong>n:m</strong> (ein Schüler kann viele Freunde haben)</li>
-          <li>Verbinde die Beziehung auf <strong>beiden Seiten</strong> mit "Schüler"</li>
+          <li>Verbinde die Beziehung auf <strong>beiden Seiten</strong> mit <strong>"Schüler"</strong></li>
         </ol>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
@@ -401,7 +394,7 @@
         <p>Bevor du mit den <strong>Expertenquests</strong> weitermachst: Speichere dein fertiges ER-Modell!</p>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
-          <li>Gib deinem ER-Modell in der Titelleiste einen Namen (z.B. "Schule")</li>
+          <li>Gib deinem ER-Modell in der Titelleiste einen <strong>Namen</strong> (z.B. "Schule")</li>
           <li>Klicke auf <strong>"JSON-Export"</strong> in der Titelleiste oben rechts und speichere die Datei</li>
           <li>Klicke auf <strong>"PNG-Export"</strong> und speichere das Bild</li>
         </ol>
