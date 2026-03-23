@@ -1041,12 +1041,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     window.Quest.startQuestSeries(mode);
+    setQuestsMenuOpen(false);
   }
 
   if (grundlagenBtn) {
     grundlagenBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      setQuestsMenuOpen(false);
       startQuestWithConfirm('grundlagen');
     });
   }
@@ -1054,7 +1054,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (expertenBtn) {
     expertenBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      setQuestsMenuOpen(false);
       startQuestWithConfirm('experten');
     });
   }
