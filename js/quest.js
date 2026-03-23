@@ -783,10 +783,8 @@
       id: 2,
       number: 2,
       title: 'Bibliothek',
-      szenario: `<p>Eine Bibliothek möchte nicht nur Bücher, sondern auch einzelne Exemplare und Ausleihen erfassen. So kann sie nachverfolgen, welches konkrete Exemplar ausgeliehen wurde und wer es gerade besitzt.</p>
-        <p>Modelliere die Entitätsklasse <strong>"Mitglied"</strong> mit den Attributen <strong>"Mitgliedsnummer"</strong>, <strong>"Name"</strong>, <strong>"Adresse"</strong> und <strong>"Telefonnummer"</strong>. Der Primärschlüssel ist <strong>"Mitgliedsnummer"</strong>.</p>
-        <p>Für Bücher verwende die Entitätsklasse <strong>"Buch"</strong> mit <strong>"ISBN"</strong>, <strong>"Titel"</strong>, <strong>"Autor"</strong> und <strong>"Erscheinungsjahr"</strong>; Primärschlüssel ist <strong>"ISBN"</strong>. Jedes konkrete Buch wird als Entitätsklasse <strong>"Exemplar"</strong> mit <strong>"Inventarnummer"</strong>, <strong>"Anschaffungsdatum"</strong> und <strong>"Zustand"</strong> modelliert, wobei <strong>"Inventarnummer"</strong> der Primärschlüssel ist. Eine Ausleihe wird als Entitätsklasse <strong>"Ausleihe"</strong> mit <strong>"Ausleihnummer"</strong>, <strong>"Ausleihdatum"</strong>, <strong>"Fälligkeitsdatum"</strong> und <strong>"Rückgabedatum"</strong> angelegt; Primärschlüssel ist <strong>"Ausleihnummer"</strong>.</p>
-        <p>Verknüpfe das Modell über <strong>"ist Exemplar von"</strong> zwischen <strong>"Exemplar"</strong> und <strong>"Buch"</strong> mit <strong>n:1</strong>, über <strong>"leiht aus"</strong> zwischen <strong>"Mitglied"</strong> und <strong>"Ausleihe"</strong> mit <strong>1:n</strong> sowie über <strong>"wird ausgeliehen in"</strong> zwischen <strong>"Exemplar"</strong> und <strong>"Ausleihe"</strong> mit <strong>1:n</strong>.</p>`,
+      szenario: `<p>Eine Stadtbibliothek möchte ihren Bestand und die Ausleihe so organisieren, dass nicht nur Titel, sondern auch einzelne physische Exemplare sauber nachverfolgt werden können. Mitglieder sollen mit ihrer Mitgliedsnummer eindeutig erfasst werden; zusätzlich werden Name, Adresse und Telefonnummer gespeichert. Bücher werden über ihre ISBN identifiziert, außerdem sollen Titel, Autor und Erscheinungsjahr festgehalten werden. Da ein Buch mehrfach im Regal stehen kann, braucht jedes konkrete Exemplar eine eigene Inventarnummer; zu jedem Exemplar werden außerdem Anschaffungsdatum und Zustand dokumentiert.</p>
+        <p>Wenn ein Mitglied ein Exemplar ausleiht, soll dies über einen eigenen Ausleihe-Vorgang laufen. Für jede Ausleihe gibt es daher eine Ausleihnummer sowie die Angaben Ausleihdatum, Fälligkeitsdatum und Rückgabedatum. Aus dem Modell soll hervorgehen, dass ein Buch viele Exemplare haben kann, ein Exemplar aber immer genau zu einem Buch gehört (ist Exemplar von). Ebenso kann ein Mitglied im Laufe der Zeit mehrere Ausleihen auslösen, während jede einzelne Ausleihe genau einem Mitglied zugeordnet ist (leiht aus). Auch ein Exemplar kann mehrfach ausgeliehen werden, jede konkrete Ausleihe bezieht sich jedoch immer auf genau ein Exemplar (wird ausgeliehen in).</p>`,
       masterlösung: {
         entities: ['Mitglied', 'Buch', 'Exemplar', 'Ausleihe'],
         attributes: {
@@ -815,9 +813,8 @@
       id: 3,
       number: 3,
       title: 'Universität / Studiendekan',
-      szenario: `<p>Ein Universitätssystem soll so modelliert werden, dass klar sichtbar wird, welche Studierenden welche Vorlesungen belegen und welcher Professor die jeweilige Vorlesung hält. Zusätzlich soll zu jeder Belegung das Semester und die spätere Leistung festgehalten werden.</p>
-        <p>Lege dafür die Entitätsklasse Student mit den Attributen Matrikelnummer, Vorname, Nachname und E-Mail an; Matrikelnummer ist der Primärschlüssel. Für Lehrveranstaltungen verwende die Entitätsklasse Vorlesung mit Vorlesungscode, Titel, Kreditpunkte und Wochenstunden; Primärschlüssel ist Vorlesungscode. Professoren werden als Entitätsklasse Professor mit ProfessorenKürzel, Name und Fachgebiet modelliert; Primärschlüssel ist ProfessorenKürzel.</p>
-        <p>Die Teilnahme an einer Vorlesung wird als Entitätsklasse Belegung mit den Attributen Belegnummer, Semester, Status und Note erfasst; Belegnummer dient als Primärschlüssel. Verbinde Student und Belegung über die Beziehung (belegt) mit 1:n, Vorlesung und Belegung über (gilt für) mit 1:n und Professor und Vorlesung über (unterrichtet) mit 1:n.</p>`,
+      szenario: `<p>Ein Universitätssystem soll so modelliert werden, dass klar sichtbar wird, welche Studenten an welchen Vorlesungen teilnehmen und welcher Professor die jeweilige Lehrveranstaltung verantwortet. Für die Studierenden sollen Matrikelnummer, Vorname, Nachname und E-Mail erfasst werden. Für jede Vorlesung werden Vorlesungscode, Titel, Kreditpunkte und Wochenstunden gespeichert. Professoren werden mit ProfessorenKürzel, Name und Fachgebiet geführt.</p>
+        <p>Damit die Teilnahme historisch nachvollziehbar bleibt, soll jede einzelne Teilnahme als eigener Vorgang erfasst werden. Dafür wird eine Belegung mit Belegnummer, Semester, Status und Note gespeichert. Ein Student kann im Laufe seines Studiums mehrere Belegungen haben, jede Belegung gehört aber genau zu einem Studenten (belegt). Eine Vorlesung kann in vielen Belegungen vorkommen, jede einzelne Belegung bezieht sich jedoch auf genau eine Vorlesung (gilt für). Ein Professor kann mehrere Vorlesungen unterrichten, während jede Vorlesung genau einem Professor zugeordnet ist (unterrichtet).</p>`,
       masterlösung: {
         entities: ['Student', 'Vorlesung', 'Professor', 'Belegung'],
         attributes: {
@@ -846,9 +843,8 @@
       id: 4,
       number: 4,
       title: 'Krankenhaus-System',
-      szenario: `<p>Ein Krankenhaus möchte dokumentieren, welche Patienten auf welchen Stationen liegen und welche Ärzte einzelne Behandlungen durchführen. Dazu sollen medizinische Maßnahmen separat von Stammdaten und Stationen modelliert werden.</p>
-        <p>Verwende die Entitätsklasse Patient mit den Attributen Versicherungsnummer, Name, Geburtsdatum und Adresse; Primärschlüssel ist Versicherungsnummer. Ärzte werden als Entitätsklasse Arzt mit Personalnummer, Name und Fachbereich angelegt; Primärschlüssel ist Personalnummer. Für Stationen nutze die Entitätsklasse Station mit Stationscode, Name und Bettenzahl; Primärschlüssel ist Stationscode.</p>
-        <p>Jede Maßnahme wird als Entitätsklasse Behandlung mit Behandlungsnummer, Datum, Diagnose und Medikation modelliert; Behandlungsnummer ist der Primärschlüssel. Verbinde Patient und Behandlung über (erhält) mit 1:n, Arzt und Behandlung über (führt durch) mit 1:n, Arzt und Station über (arbeitet auf) mit n:1 sowie Patient und Station über (liegt auf) mit n:1.</p>`,
+      szenario: `<p>Ein Krankenhaus soll so modelliert werden, dass nachvollziehbar ist, welche Patienten behandelt werden, welche Ärzte die Behandlungen durchführen und auf welcher Station ein Patient liegt. Für Patient sollen Versicherungsnummer, Name, Geburtsdatum und Adresse gespeichert werden. Für Arzt werden Personalnummer, Name und Fachbereich geführt. Für Station werden Stationscode, Name und Bettenzahl erfasst.</p>
+        <p>Jeder konkrete medizinische Vorgang wird als Behandlung mit Behandlungsnummer, Datum, Diagnose und Medikation dokumentiert. Ein Patient kann im Zeitverlauf mehrere Behandlungen erhalten, jede Behandlung gehört aber genau zu einem Patienten (erhält). Ein Arzt kann mehrere Behandlungen durchführen, jede Behandlung wird jedoch genau von einem Arzt verantwortet (führt durch). Gleichzeitig ist ein Arzt einer Station zugeordnet, auf der mehrere Ärzte arbeiten können (arbeitet auf). Auch ein Patient liegt auf genau einer Station, während eine Station viele Patienten aufnehmen kann (liegt auf).</p>`,
       masterlösung: {
         entities: ['Patient', 'Arzt', 'Behandlung', 'Station'],
         attributes: {
@@ -878,9 +874,8 @@
       id: 5,
       number: 5,
       title: 'Fitnessstudio-Kursplanung',
-      szenario: `<p>Ein Fitnessstudio bietet verschiedene Kurse an, die von Trainern geleitet und von Mitgliedern besucht werden. Da ein Mitglied mehrere Kurse belegen kann und umgekehrt ein Kurs von mehreren Mitgliedern besucht wird, stehen Mitglieder und Kurse in einer n:m-Beziehung zueinander. Ebenso können Trainer mehrere Kurse an verschiedenen Tagen übernehmen.</p>
-        <p>Modelliere die Entitätsklasse Mitglied mit den Attributen Mitgliedsnummer, Name, Telefonnummer und E-Mail; Primärschlüssel ist Mitgliedsnummer. Kurse werden als Entitätsklasse Kurs mit Kurscode, Titel, Schwierigkeitsstufe und Maximalplätze erfasst; Primärschlüssel ist Kurscode. Trainer werden als Entitätsklasse Trainer mit Trainerkürzel, Name und Lizenz geführt; Primärschlüssel ist Trainerkürzel.</p>
-        <p>Verbinde Mitglied und Kurs über (belegt) mit n:m und hänge das Beziehungsattribut Anmeldedatum an die Beziehung. Verbinde außerdem Trainer und Kurs über (leitet) mit n:m und hänge das Beziehungsattribut Wochentag an die Beziehung.</p>`,
+      szenario: `<p>Ein Fitnessstudio möchte seine Kursorganisation so abbilden, dass sichtbar wird, welche Mitglieder an welchen Kursen teilnehmen und welche Trainer welche Kurse übernehmen. Für Mitglied sollen Mitgliedsnummer, Name, Telefonnummer und E-Mail gespeichert werden. Für Kurs werden Kurscode, Titel, Schwierigkeitsstufe und Maximalplätze erfasst. Für Trainer sollen Trainerkürzel, Name und Lizenz geführt werden.</p>
+        <p>Ein Mitglied kann im Laufe der Zeit mehrere Kurse belegen, und ein Kurs kann von vielen Mitgliedern besucht werden (belegt). Zu jeder Belegung soll zusätzlich das Anmeldedatum festgehalten werden. Ebenso kann ein Trainer mehrere Kurse leiten, während ein Kurs auch von mehreren Trainern betreut werden kann (leitet). Zu dieser Zuordnung soll der Wochentag dokumentiert werden.</p>`,
       masterlösung: {
         entities: ['Mitglied', 'Kurs', 'Trainer'],
         attributes: {
@@ -906,17 +901,17 @@
       id: 6,
       number: 6,
       title: 'Lehre und Hilfskräfte',
-      szenario: `<p>An einer Hochschule soll ein System modelliert werden, das die Zuordnung von Dozenten, studentischen Hilfskräften, Vorlesungen und Seminaren abbildet. Ein Dozent hält Vorlesungen und beschäftigt Hilfskräfte (HiWis). Jeder HiWi ist gleichzeitig ein eingeschriebener Student und leitet Seminare, die jeweils einer Vorlesung zugeordnet sind. Studierende können sowohl Vorlesungen als auch Seminare besuchen.</p>
-        <p>Modelliere die Entitätsklasse Dozent mit Dozentenkürzel, Name und Fachgebiet; Primärschlüssel ist Dozentenkürzel. Studierende werden als Entitätsklasse Student mit Matrikelnummer, Name und E-Mail erfasst; Primärschlüssel ist Matrikelnummer. Hilfskräfte erhalten eine eigene Entitätsklasse Hilfskraft mit HiwiNummer, Stundenlohn und Vertragsbeginn; Primärschlüssel ist HiwiNummer. Vorlesungen werden als Entitätsklasse Vorlesung mit Vorlesungscode, Titel und Kreditpunkte modelliert; Primärschlüssel ist Vorlesungscode. Seminare erscheinen als Entitätsklasse Seminar mit Seminarnummer, Thema und Raum; Primärschlüssel ist Seminarnummer.</p>
-        <p>Verbinde Dozent und Vorlesung über (hält) mit 1:n, Dozent und Hilfskraft über (hat Hilfskraft) mit 1:n, Student und Hilfskraft über (ist) mit 1:1, Seminar und Vorlesung über (gehört zu) mit n:1, Hilfskraft und Seminar über (leitet) mit 1:n, Student und Vorlesung über (besucht) mit n:m sowie Student und Seminar über (nimmt teil an) mit n:m.</p>`,
+      szenario: `<p>Eine Hochschule möchte ihre Lehrorganisation so modellieren, dass sichtbar wird, welche Dozenten welche Vorlesungen halten, welche Hilfskräfte sie dabei unterstützen und welche Seminare zu einer Vorlesung gehören. Für Dozent werden Dozentenkürzel, Name und Fachgebiet gespeichert. Für Student werden Matrikelnummer, Name, Telefonnummer und E-Mail erfasst. Nicht jeder Student arbeitet zusätzlich an der Hochschule, aber einige Studierende sind zugleich Hilfskraft. Für Hilfskraft sollen HiwiNummer, Wochenstunden und Vertragsbeginn gespeichert werden.</p>
+        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
+        <p>Auch die Teilnahme der Studierenden soll abgebildet werden. Ein Student kann an mehreren Vorlesungen teilnehmen, und eine Vorlesung kann von vielen Studenten besucht werden (besucht). Dasselbe gilt für Seminare: Ein Student kann mehrere Seminare besuchen, und ein Seminar kann viele Studenten haben (nimmt teil an).</p>`,
       masterlösung: {
         entities: ['Dozent', 'Student', 'Hilfskraft', 'Vorlesung', 'Seminar'],
         attributes: {
           Dozent: ['Dozentenkürzel', 'Name', 'Fachgebiet'],
-          Student: ['Matrikelnummer', 'Name', 'E-Mail'],
-          Hilfskraft: ['HiwiNummer', 'Stundenlohn', 'Vertragsbeginn'],
-          Vorlesung: ['Vorlesungscode', 'Titel', 'Kreditpunkte'],
-          Seminar: ['Seminarnummer', 'Thema', 'Raum'],
+          Student: ['Matrikelnummer', 'Name', 'Telefonnummer', 'E-Mail'],
+          Hilfskraft: ['HiwiNummer', 'Wochenstunden', 'Vertragsbeginn'],
+          Vorlesung: ['Vorlesungscode', 'Titel', 'Credits'],
+          Seminar: ['Seminarnummer', 'Wochentag', 'Raum'],
         },
         primaryKeys: {
           Dozent: 'Dozentenkürzel',
@@ -943,27 +938,27 @@
       id: 7,
       number: 7,
       title: 'Musikfestival-Organisation',
-      szenario: `<p>Ein Musikfestival soll so modelliert werden, dass Künstler, Bühnen, Auftritte und Crewmitglieder abgebildet werden. Jeder Auftritt findet auf einer bestimmten Bühne an einem Datum zu einer Startzeit statt — diese drei Angaben zusammen identifizieren einen Auftritt eindeutig (Verbundschlüssel). Crewmitglieder arbeiten andere Crewmitglieder ein (Selbstbeziehung).</p>
-        <p>Modelliere die Entitätsklasse Künstler mit Künstlername, Genre und Herkunftsland; Primärschlüssel ist Künstlername. Bühnen werden als Entitätsklasse Bühne mit Bühnenname, Kapazität und Standort erfasst; Primärschlüssel ist Bühnenname. Auftritte werden als Entitätsklasse Auftritt mit Bühnenname, Datum, Startzeit und Dauer modelliert; der Verbundschlüssel besteht aus Bühnenname, Datum und Startzeit. Crewmitglieder erscheinen als Entitätsklasse Crewmitglied mit CrewNummer, Name und Qualifikation; Primärschlüssel ist CrewNummer.</p>
-        <p>Verbinde Künstler und Auftritt über (spielt) mit 1:n, Auftritt und Bühne über (findet statt auf) mit n:1, Crewmitglied und Auftritt über (betreut) mit n:m. Erstelle zusätzlich die Selbstbeziehung (arbeitet ein) bei Crewmitglied mit n:m — beide Seiten der Beziehung zeigen auf Crewmitglied.</p>`,
+      szenario: `<p>Ein großes Musikfestival soll so modelliert werden, dass klar wird, welche Künstler wann auftreten, auf welcher Bühne ein Auftritt stattfindet und wie Crewmitglieder die Abläufe unterstützen. Für Künstler werden Künstlercode, Name und Genre gespeichert. Für Bühne sollen Bühnenname, Kapazität und Bereich geführt werden. Für Crewmitglied werden Crewnummer, Name und Rolle erfasst.</p>
+        <p>Ein geplanter Auftritt soll nicht über eine künstliche Einzel-ID, sondern über einen Verbundschlüssel aus Bühnenname, Datum und Startzeit eindeutig sein. Zusätzlich werden beim Auftritt die Attribute Endzeit und Status gespeichert. Ein Künstler kann mehrere Auftritte haben, jeder Auftritt gehört aber genau zu einem Künstler (spielt). Eine Bühne kann viele Auftritte haben, jeder Auftritt findet aber genau auf einer Bühne statt (findet statt auf).</p>
+        <p>Auch bei der Crew gibt es mehrere Zusammenhänge: Ein Crewmitglied kann mehrere Bühnen betreuen, und jede Bühne wird von mehreren Crewmitgliedern betreut (betreut). Außerdem gibt es eine Hierarchie innerhalb der Crew: Ein Crewmitglied kann andere Crewmitglieder einarbeiten, und ein Crewmitglied kann wiederum von mehreren erfahrenen Kolleginnen und Kollegen eingearbeitet werden (arbeitet ein).</p>`,
       masterlösung: {
         entities: ['Künstler', 'Bühne', 'Auftritt', 'Crewmitglied'],
         attributes: {
-          Künstler: ['Künstlername', 'Genre', 'Herkunftsland'],
-          Bühne: ['Bühnenname', 'Kapazität', 'Standort'],
-          Auftritt: ['Bühnenname', 'Datum', 'Startzeit', 'Dauer'],
-          Crewmitglied: ['CrewNummer', 'Name', 'Qualifikation'],
+          Künstler: ['Künstlercode', 'Name', 'Genre'],
+          Bühne: ['Bühnenname', 'Kapazität', 'Bereich'],
+          Auftritt: ['Bühnenname', 'Datum', 'Startzeit', 'Endzeit', 'Status'],
+          Crewmitglied: ['Crewnummer', 'Name', 'Rolle'],
         },
         primaryKeys: {
-          Künstler: 'Künstlername',
+          Künstler: 'Künstlercode',
           Bühne: 'Bühnenname',
           Auftritt: ['Bühnenname', 'Datum', 'Startzeit'],
-          Crewmitglied: 'CrewNummer',
+          Crewmitglied: 'Crewnummer',
         },
         relationships: [
           { name: 'spielt', from: 'Künstler', to: 'Auftritt', cardinality: '1:n' },
           { name: 'findet statt auf', from: 'Auftritt', to: 'Bühne', cardinality: 'n:1' },
-          { name: 'betreut', from: 'Crewmitglied', to: 'Auftritt', cardinality: 'n:m' },
+          { name: 'betreut', from: 'Crewmitglied', to: 'Bühne', cardinality: 'n:m' },
           { name: 'arbeitet ein', from: 'Crewmitglied', to: 'Crewmitglied', cardinality: 'n:m' },
         ],
       },
@@ -975,20 +970,20 @@
       id: 8,
       number: 8,
       title: 'Katastrophenschutz-Leitstelle',
-      szenario: `<p>Eine Katastrophenschutz-Leitstelle koordiniert Einsatzkräfte, Teams, Einsätze und Fahrzeuge. Jeder Einsatz wird durch Einsatzgebiet, Datum und Startzeit eindeutig identifiziert (Verbundschlüssel). Eine Einsatzkraft gehört zu genau einem Team, kann dieses aber auch leiten — es existieren also zwei verschiedene Beziehungen zwischen Einsatzkraft und Team. Erfahrene Einsatzkräfte arbeiten neue Einsatzkräfte ein (Selbstbeziehung).</p>
-        <p>Modelliere die Entitätsklasse Einsatzkraft mit Dienstnummer, Name, Rang und Spezialgebiet; Primärschlüssel ist Dienstnummer. Teams werden als Entitätsklasse Team mit Teamcode, Bezeichnung und Einsatzgebiet erfasst; Primärschlüssel ist Teamcode. Einsätze werden als Entitätsklasse Einsatz mit Einsatzgebiet, Datum, Startzeit und Priorität modelliert; der Verbundschlüssel besteht aus Einsatzgebiet, Datum und Startzeit. Fahrzeuge erscheinen als Entitätsklasse Fahrzeug mit Kennzeichen, Typ und Kapazität; Primärschlüssel ist Kennzeichen.</p>
-        <p>Verbinde Einsatzkraft und Team über (gehört zu) mit n:1 und über (leitet) mit 1:n. Verbinde Team und Einsatz über (bearbeitet) mit n:m sowie Einsatz und Fahrzeug über (nutzt) mit n:m. Erstelle zusätzlich die Selbstbeziehung (arbeitet ein) bei Einsatzkraft mit 1:n — beide Seiten der Beziehung zeigen auf Einsatzkraft.</p>`,
+      szenario: `<p>Eine regionale Leitstelle möchte Einsätze im Katastrophenschutz so modellieren, dass sichtbar wird, welche Einsatzkräfte in welchen Teams organisiert sind, welche Einsätze von welchen Teams übernommen werden und welche Fahrzeuge dabei eingesetzt werden. Für Einsatzkraft werden Funkrufname, Name, Qualifikation und Telefonnummer gespeichert. Teams werden mit Teamname, Standort und Bereitschaftsstufe geführt. Fahrzeuge werden über Kennzeichen, Fahrzeugtyp und Kapazität verwaltet.</p>
+        <p>Zwischen Einsatzkraft und Team gibt es zwei unterschiedliche Beziehungen. Jede Einsatzkraft gehört genau zu einem Team, ein Team kann jedoch viele Einsatzkräfte umfassen (gehört zu). Zusätzlich hat jedes Team genau eine Einsatzleitung, und eine Einsatzkraft kann die Leitung für mehrere Teams übernehmen (leitet). Außerdem soll die fachliche Einarbeitung abgebildet werden: Eine erfahrene Einsatzkraft kann mehrere andere Einsatzkräfte einarbeiten, und jede eingearbeitete Einsatzkraft kann wiederum später andere einarbeiten (arbeitet ein).</p>
+        <p>Ein Einsatz wird nicht über eine künstliche Einzel-ID, sondern über einen Verbundschlüssel aus Einsatzgebiet, Datum und Startzeit eindeutig bestimmt. Zusätzlich werden Priorität und Lagebild gespeichert. Mehrere Teams können denselben Einsatz bearbeiten, und ein Team kann an vielen Einsätzen beteiligt sein (bearbeitet). Ebenso können in einem Einsatz mehrere Fahrzeuge verwendet werden, und ein Fahrzeug kann über die Zeit in vielen Einsätzen genutzt werden (nutzt).</p>`,
       masterlösung: {
         entities: ['Einsatzkraft', 'Team', 'Einsatz', 'Fahrzeug'],
         attributes: {
-          Einsatzkraft: ['Dienstnummer', 'Name', 'Rang', 'Spezialgebiet'],
-          Team: ['Teamcode', 'Bezeichnung', 'Einsatzgebiet'],
-          Einsatz: ['Einsatzgebiet', 'Datum', 'Startzeit', 'Priorität'],
-          Fahrzeug: ['Kennzeichen', 'Typ', 'Kapazität'],
+          Einsatzkraft: ['Funkrufname', 'Name', 'Qualifikation', 'Telefonnummer'],
+          Team: ['Teamname', 'Standort', 'Bereitschaftsstufe'],
+          Einsatz: ['Einsatzgebiet', 'Datum', 'Startzeit', 'Priorität', 'Lagebild'],
+          Fahrzeug: ['Kennzeichen', 'Fahrzeugtyp', 'Kapazität'],
         },
         primaryKeys: {
-          Einsatzkraft: 'Dienstnummer',
-          Team: 'Teamcode',
+          Einsatzkraft: 'Funkrufname',
+          Team: 'Teamname',
           Einsatz: ['Einsatzgebiet', 'Datum', 'Startzeit'],
           Fahrzeug: 'Kennzeichen',
         },
@@ -1004,6 +999,18 @@
         return validateExpertQuest(this.masterlösung);
       },
     },
+    {
+      id: 9,
+      number: 9,
+      title: '🎉 Abschluss',
+      szenario: `<p><strong>Glückwunsch!</strong> Du hast alle Expertenquests abgeschlossen.</p>
+        <p>Du kannst jetzt auch komplexe Aufgaben im ER-Modell erfolgreich bearbeiten - mit 1:n-, n:m- und 1:1-Beziehungen, Beziehungsattributen, Verbundschlüsseln und Selbstbeziehungen.</p>
+        <p>Starke Leistung!</p>`,
+      validator: function () {
+        // Quest 9 ist immer erfolgreich als Abschluss-Screen
+        return { passed: true };
+      },
+    },
   ];
 
   // ---- Quest Manager ----
@@ -1017,7 +1024,7 @@
     },
 
     getStorageKey: function (mode = this.state.questMode) {
-      const version = mode === 'experten' ? 'v3' : 'v1';
+      const version = mode === 'experten' ? 'v4' : 'v1';
       return 'erm-editor-quests-' + (mode || 'none') + '-' + version;
     },
 
@@ -1095,7 +1102,7 @@
         }
 
         const result = quest.validator();
-        const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 8;
+        const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 9;
 
         if (result.passed && quest.number === maxQuests && !forceRecheck) {
           return { passed: false };
@@ -1105,10 +1112,8 @@
           if (quest.number === maxQuests) {
             if (this.state.questMode === 'experten') {
               this.completeCurrentQuest();
-              window.App?.showQuestSuccessModal?.(quest.number, () => {
-                window.App?.playFullscreenConfetti?.();
-                this.hidePanel();
-              });
+              window.App?.playFullscreenConfetti?.();
+              this.hidePanel();
               return { passed: true };
             }
 
@@ -1162,7 +1167,7 @@
     },
 
     progressToNextQuest: function () {
-      const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 8;
+      const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 9;
       if (this.state.currentQuestNumber < maxQuests) {
         this.state.currentQuestNumber += 1;
         const nextNumber = this.state.currentQuestNumber;
@@ -1190,6 +1195,7 @@
       localStorage.removeItem('erm-editor-quests-experten-v1');
       localStorage.removeItem('erm-editor-quests-experten-v2');
       localStorage.removeItem('erm-editor-quests-experten-v3');
+      localStorage.removeItem('erm-editor-quests-experten-v4');
 
       this.state = {
         questMode: null,
@@ -1220,10 +1226,7 @@
     hidePanel: function () {
       this.state.questsPanelVisible = false;
       this.persist();
-      const panel = document.getElementById('quest-panel');
-      if (panel) {
-        panel.classList.remove('visible');
-      }
+      this.renderPanel();
       const modal = document.querySelector('.quest-congratulations-modal');
       if (modal) {
         modal.classList.remove('visible');

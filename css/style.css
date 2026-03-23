@@ -1284,7 +1284,7 @@ body.is-resizing-drawer {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
-  z-index: 1100;
+  z-index: 3100;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1376,7 +1376,7 @@ body.is-resizing-drawer {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 1000;
+  z-index: 3200;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2037,7 +2037,7 @@ body.is-resizing-drawer {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: 3300;
   animation: fadeIn 0.3s ease;
 }
 
@@ -2119,7 +2119,7 @@ body.is-resizing-drawer {
   align-items: center;
   justify-content: center;
   padding: 16px;
-  z-index: 2200;
+  z-index: 3400;
   animation: fadeIn 0.22s ease;
 }
 

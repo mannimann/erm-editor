@@ -1152,7 +1152,7 @@ window.App = {
     // Update Title & Progress
     const titleEl = panel.querySelector('#quest-title');
     const progressEl = panel.querySelector('#quest-progress');
-    const total = questState.questMode === 'grundlagen' ? 13 : 8;
+    const total = questState.questMode === 'grundlagen' ? 13 : 9;
     if (titleEl) titleEl.textContent = `${quest.number}. ${quest.title}`;
     if (progressEl) progressEl.textContent = `${quest.number} / ${total}`;
 
