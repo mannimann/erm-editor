@@ -162,7 +162,53 @@ function persistStateDebounced(delay = 260) {
   _persistTimer = setTimeout(() => {
     _persistTimer = null;
     persistStateNow();
+    // Live-Checkliste aktualisieren, wenn Experten-Quest aktiv ist
+    if (window.Quest?.state?.questMode === 'experten' && window.Quest?.state?.questsPanelVisible) {
+      updateExpertChecklist();
+    }
   }, delay);
+}
+
+/** Aktualisiert nur die Checklisten-Einträge in-place (ohne volles Panel-Rerender). */
+function updateExpertChecklist() {
+  const checklistEl = document.getElementById('quest-checklist');
+  if (!checklistEl || !window.Quest?.getChecklistStatus) return;
+
+  const checklist = window.Quest.getChecklistStatus();
+  if (!checklist) return;
+
+  const mapping = {
+    entities: checklist.entities,
+    relationships: checklist.relationships,
+    attributes: checklist.attributes,
+    primaryKeys: checklist.primaryKeys,
+  };
+  const labels = {
+    entities: 'Entitätsklassen',
+    relationships: 'Beziehungen',
+    attributes: 'Attribute',
+    primaryKeys: 'Primärschlüssel',
+  };
+
+  for (const [key, data] of Object.entries(mapping)) {
+    const row = checklistEl.querySelector(`[data-checklist-key="${key}"]`);
+    if (!row) continue;
+    const allDone = data.done === data.total;
+    const wasDone = row.classList.contains('quest-checklist-item--done');
+
+    if (allDone && !wasDone) {
+      row.classList.add('quest-checklist-item--done');
+      row.classList.add('quest-checklist-item--just-checked');
+      setTimeout(() => row.classList.remove('quest-checklist-item--just-checked'), 500);
+    } else if (!allDone && wasDone) {
+      row.classList.remove('quest-checklist-item--done');
+    }
+
+    const icon = row.querySelector('.quest-checklist-icon');
+    if (icon) icon.textContent = allDone ? '✓' : '✗';
+    const label = row.querySelector('.quest-checklist-label');
+    if (label) label.textContent = `${labels[key]} (${data.done}/${data.total})`;
+  }
 }
 
 function loadPersistedState() {
@@ -374,11 +420,14 @@ function initTabs() {
     questsToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
+  let syncQuestPanelResizer = () => {}; // wird unten überschrieben
+
   const syncQuestPanelRight = () => {
     const questPanel = document.getElementById('quest-panel');
     if (!questPanel) return;
     if (mobileMedia.matches) {
       questPanel.style.right = '';
+      syncQuestPanelResizer();
       return;
     }
     if (isDrawerOpen) {
@@ -387,6 +436,7 @@ function initTabs() {
     } else {
       questPanel.style.right = '0';
     }
+    syncQuestPanelResizer();
   };
 
   const setDrawerState = (open) => {
@@ -453,7 +503,64 @@ function initTabs() {
     }
     syncBackdrop();
     syncQuestPanelRight();
+    syncQuestPanelResizer();
   });
+
+  // ---- Quest-Panel Resizer (vertikal, obere Kante) ----
+  const questPanelResizer = document.getElementById('quest-panel-resizer');
+  const questPanel = document.getElementById('quest-panel');
+
+  syncQuestPanelResizer = () => {
+    if (!questPanelResizer || !questPanel) return;
+    const isVisible = questPanel.classList.contains('visible');
+    questPanelResizer.classList.toggle('visible', isVisible);
+    if (isVisible) {
+      const h = questPanel.getBoundingClientRect().height;
+      questPanelResizer.style.bottom = `${h}px`;
+      questPanelResizer.style.right = questPanel.style.right || '0';
+    }
+  };
+
+  if (questPanelResizer && questPanel) {
+    let questPanelStartY = 0;
+    let questPanelStartH = 0;
+
+    const stopQuestResize = () => {
+      questPanelResizer.classList.remove('is-dragging');
+      document.body.classList.remove('is-resizing-drawer');
+      window.removeEventListener('mousemove', onQuestPointerMove);
+      window.removeEventListener('mouseup', stopQuestResize);
+    };
+
+    const onQuestPointerMove = (event) => {
+      const delta = questPanelStartY - event.clientY;
+      const minH = 180;
+      const maxH = window.innerHeight * 0.6;
+      const newH = Math.max(minH, Math.min(maxH, questPanelStartH + delta));
+      questPanel.style.height = `${newH}px`;
+      syncQuestPanelResizer();
+    };
+
+    questPanelResizer.addEventListener('mousedown', (event) => {
+      if (!questPanel.classList.contains('visible')) return;
+      event.preventDefault();
+      questPanelStartY = event.clientY;
+      questPanelStartH = questPanel.getBoundingClientRect().height;
+      questPanelResizer.classList.add('is-dragging');
+      document.body.classList.add('is-resizing-drawer');
+      window.addEventListener('mousemove', onQuestPointerMove);
+      window.addEventListener('mouseup', stopQuestResize);
+    });
+  }
+
+  // Lade den Resizer-Zustand nach Panel-Rendering
+  const _origRenderPanel = window.Quest?.renderPanel?.bind(window.Quest);
+  if (_origRenderPanel && window.Quest) {
+    window.Quest.renderPanel = function () {
+      _origRenderPanel();
+      syncQuestPanelResizer();
+    };
+  }
 
   relmodelBackdrop.addEventListener('click', () => {
     setDrawerState(false);
@@ -804,7 +911,6 @@ async function clearAll() {
   if (window.Diagram) window.Diagram.renderAll();
   if (window.RelModel) window.RelModel.reset();
   persistStateDebounced();
-  window.Quest?.hidePanel();
 }
 
 function clearDiagramSilent() {
@@ -951,6 +1057,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Coming-soon Eintrag – nur Info-Modal zeigen
+  const relmodelQuestBtn = document.getElementById('btn-start-relmodel');
+  if (relmodelQuestBtn) {
+    relmodelQuestBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.App?.showAlertModal?.('Diese Quest-Reihe ist noch in Arbeit und wird bald verfügbar sein.', 'Coming soon');
+    });
+  }
+
   // Quest-Close Button
   const questCloseBtn = document.querySelector('.quest-close-btn');
   if (questCloseBtn) {
@@ -1087,7 +1202,57 @@ window.App = {
           ? String(rawTaskHtml || '').replace(/^\s*<p>\s*Aufgabe\s*:\s*<\/p>\s*/i, '')
           : rawTaskHtml;
       taskSection.appendChild(taskContent);
-      content.appendChild(taskSection);
+      // Experten: Wrapper für Side-by-Side-Layout (Text links, Checkliste rechts)
+      const isExperten = questState.questMode === 'experten' && window.Quest?.getChecklistStatus;
+      let questBody;
+      if (isExperten) {
+        questBody = document.createElement('div');
+        questBody.className = 'quest-body-row';
+        questBody.appendChild(taskSection);
+        content.appendChild(questBody);
+      } else {
+        content.appendChild(taskSection);
+      }
+
+      // Experten-Checkliste (rechts neben dem Text)
+      if (isExperten) {
+        const checklist = window.Quest.getChecklistStatus();
+        if (checklist) {
+          const checklistSection = document.createElement('div');
+          checklistSection.className = 'quest-checklist';
+          checklistSection.id = 'quest-checklist';
+
+          const checklistTitle = document.createElement('h4');
+          checklistTitle.textContent = '📋 Checkliste';
+          checklistSection.appendChild(checklistTitle);
+
+          const categories = [
+            { key: 'entities', label: 'Entitätsklassen', data: checklist.entities },
+            { key: 'relationships', label: 'Beziehungen', data: checklist.relationships },
+            { key: 'attributes', label: 'Attribute', data: checklist.attributes },
+            { key: 'primaryKeys', label: 'Primärschlüssel', data: checklist.primaryKeys },
+          ];
+
+          for (const cat of categories) {
+            const row = document.createElement('div');
+            row.className = 'quest-checklist-item';
+            row.setAttribute('data-checklist-key', cat.key);
+            const allDone = cat.data.done === cat.data.total;
+            if (allDone) row.classList.add('quest-checklist-item--done');
+            const icon = document.createElement('span');
+            icon.className = 'quest-checklist-icon';
+            icon.textContent = allDone ? '✓' : '✗';
+            const label = document.createElement('span');
+            label.className = 'quest-checklist-label';
+            label.textContent = `${cat.label} (${cat.data.done}/${cat.data.total})`;
+            row.appendChild(icon);
+            row.appendChild(label);
+            checklistSection.appendChild(row);
+          }
+
+          questBody.appendChild(checklistSection);
+        }
+      }
 
       const actions = document.createElement('div');
       actions.className = 'quest-actions quest-actions-visible';
@@ -1336,16 +1501,18 @@ window.App = {
   },
 
   showValidationFailedModal(baseMessage, hintMessage) {
-    const hintText = String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
+    const hints = window.Quest?.getHints?.() || [];
+    const singleHint = hints.length > 0 ? hints[0] : String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
+
     return this.showAppModal({
       title: 'Überprüfung',
       message: baseMessage || 'Noch nicht korrekt. Versuche es erneut.',
       mode: 'alert',
       confirmLabel: 'Schließen',
       autoCloseMs: 0,
-      extraLabel: 'Hinweise',
+      extraLabel: 'Hinweis',
       onExtra: ({ messageEl, extraBtn }) => {
-        messageEl.textContent = hintText;
+        messageEl.textContent = singleHint;
         extraBtn.style.display = 'none';
       },
     });
