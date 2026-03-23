@@ -1018,6 +1018,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---- Quest-Menu Event Listeners ----
+  const closeQuestDropdownMenu = () => {
+    const btn = document.getElementById('btn-quests-toggle');
+    const menu = document.getElementById('quests-menu');
+    const dropdown = btn?.closest('.tab-dropdown');
+    if (!btn || !menu || !dropdown) return;
+    dropdown.classList.remove('open');
+    menu.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
+  };
+
   const grundlagenBtn = document.querySelector('[data-quest-series="grundlagen"]');
   const expertenBtn = document.querySelector('[data-quest-series="experten"]');
 
@@ -1041,7 +1051,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     window.Quest.startQuestSeries(mode);
-    setQuestsMenuOpen(false);
+    closeQuestDropdownMenu();
   }
 
   if (grundlagenBtn) {
@@ -1063,7 +1073,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (relmodelQuestBtn) {
     relmodelQuestBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      setQuestsMenuOpen(false);
+      closeQuestDropdownMenu();
       window.App?.showAlertModal?.('Diese Quest-Reihe ist noch in Arbeit und wird bald verfügbar sein.', 'Coming soon');
     });
   }
