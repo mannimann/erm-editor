@@ -1046,6 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (grundlagenBtn) {
     grundlagenBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      setQuestsMenuOpen(false);
       startQuestWithConfirm('grundlagen');
     });
   }
@@ -1053,6 +1054,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (expertenBtn) {
     expertenBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      setQuestsMenuOpen(false);
       startQuestWithConfirm('experten');
     });
   }
@@ -1062,6 +1064,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (relmodelQuestBtn) {
     relmodelQuestBtn.addEventListener('click', (e) => {
       e.preventDefault();
+      setQuestsMenuOpen(false);
       window.App?.showAlertModal?.('Diese Quest-Reihe ist noch in Arbeit und wird bald verfügbar sein.', 'Coming soon');
     });
   }
