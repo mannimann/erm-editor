@@ -1107,7 +1107,6 @@
     }
     g.appendChild(hit);
 
-    bindNodeEvents(g, node);
     nodesLayer.appendChild(g);
   }
 
@@ -1307,11 +1306,7 @@
     };
     S().nodes.push(node);
     renderAll();
-    selectNodeFn(node.id);
-    setTimeout(() => {
-      const g = nodesLayer.querySelector(`[data-id="${node.id}"]`);
-      if (g) startInlineEdit(node, g);
-    }, 30);
+    setTimeout(() => startInlineEdit(node), 30);
     return node;
   }
 
@@ -1589,11 +1584,49 @@
     ctxTarget = null;
   }
 
-  function bindNodeEvents(g, node) {
-    g.addEventListener('mousedown', (e) => {
+  // --- Node interaction via event delegation ---
+  // nodesLayer persists across renderAll() calls, so listeners here
+  // are registered once and always work regardless of re-renders.
+  let nodeClickTimer = null;
+
+  function bindNodeLayerEvents() {
+    function getNodeFromTarget(target) {
+      const g = target.closest('.node');
+      if (!g) return null;
+      const id = g.getAttribute('data-id');
+      return id ? byId(id) : null;
+    }
+
+    let lastMousedownNodeId = null;
+    let lastMousedownTime = 0;
+    const DBLCLICK_MS = 350;
+
+    nodesLayer.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
+      const node = getNodeFromTarget(e.target);
+      if (!node) return;
       e.stopPropagation();
       hideContextMenu();
+
+      const now = Date.now();
+      const isDoubleClick = node.id === lastMousedownNodeId && now - lastMousedownTime < DBLCLICK_MS;
+
+      if (isDoubleClick) {
+        // Reset so a third click doesn't re-trigger
+        lastMousedownNodeId = null;
+        lastMousedownTime = 0;
+        // Cancel pending single-click modal (relationship nodes)
+        if (nodeClickTimer !== null) {
+          clearTimeout(nodeClickTimer);
+          nodeClickTimer = null;
+        }
+        e.preventDefault();
+        startInlineEdit(node);
+        return;
+      }
+
+      lastMousedownNodeId = node.id;
+      lastMousedownTime = now;
 
       selectNodeFn(node.id);
 
@@ -1615,23 +1648,26 @@
       e.preventDefault();
     });
 
-    g.addEventListener('click', (e) => {
+    nodesLayer.addEventListener('click', (e) => {
+      const node = getNodeFromTarget(e.target);
+      if (!node) return;
       e.stopPropagation();
       if (suppressClick) {
         suppressClick = false;
         return;
       }
       if (node.type === 'relationship') {
-        openRelationshipModal(node.id);
+        const capturedId = node.id;
+        nodeClickTimer = setTimeout(() => {
+          nodeClickTimer = null;
+          openRelationshipModal(capturedId);
+        }, DBLCLICK_MS + 50);
       }
     });
 
-    g.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      startInlineEdit(node, g);
-    });
-
-    g.addEventListener('contextmenu', (e) => {
+    nodesLayer.addEventListener('contextmenu', (e) => {
+      const node = getNodeFromTarget(e.target);
+      if (!node) return;
       e.preventDefault();
       e.stopPropagation();
       hideContextMenu();
@@ -1851,7 +1887,6 @@
   });
 
   function startInlineEdit(node) {
-    selectNodeFn(node.id);
     const originalName = node.name || '';
     let finished = false;
     let finishAction = 'commit';
@@ -1973,6 +2008,7 @@
   bindToolbarActions();
   bindLayoutControls();
   bindViewportControls();
+  bindNodeLayerEvents();
   setSelectModeVisual();
   applyViewTransform();
   updateZoomIndicator();
