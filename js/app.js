@@ -432,7 +432,8 @@ function initTabs() {
     }
     if (isDrawerOpen) {
       const drawerWidth = relmodelDrawer.getBoundingClientRect().width || lastOpenWidth;
-      questPanel.style.right = `${drawerWidth}px`;
+      const resizerWidth = relmodelResizer.offsetWidth || 10;
+      questPanel.style.right = `${drawerWidth + resizerWidth}px`;
     } else {
       questPanel.style.right = '0';
     }

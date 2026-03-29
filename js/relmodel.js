@@ -401,13 +401,26 @@
         // Eigene Relation pro M:N-Beziehung
         const mnRel = ensureManyToManyRelation(rel);
         mnRel._edgeEntityNames = getDirectedEntityNamesForRelationship(rel, entityEdges);
-        entityEdges.forEach((e) => {
-          const entityId = e.fromId === rel.id ? e.toId : e.fromId;
-          const entity = getNode(entityId);
-          if (!entity) return;
-          const pk = getPkAttr(entityId);
-          if (pk) addAttr(mnRel, pk, true, true, entity.name); // zusammengesetzter PS = FS
-        });
+        // Prüfen auf Selbstbeziehung (beide Kanten zeigen auf dieselbe Entitätsklasse)
+        const entityIds = entityEdges.map((e) => (e.fromId === rel.id ? e.toId : e.fromId));
+        if (entityIds.length === 2 && entityIds[0] === entityIds[1]) {
+          // Selbstbeziehung: Primärschlüssel zweimal einfügen, mit Suffix ...1 und ...2
+          const entity = getNode(entityIds[0]);
+          const pk = getPkAttr(entityIds[0]);
+          if (entity && pk) {
+            addAttr(mnRel, pk + '1', true, true, entity.name + '1');
+            addAttr(mnRel, pk + '2', true, true, entity.name + '2');
+          }
+        } else {
+          // Normale M:N-Beziehung
+          entityEdges.forEach((e, idx) => {
+            const entityId = e.fromId === rel.id ? e.toId : e.fromId;
+            const entity = getNode(entityId);
+            if (!entity) return;
+            const pk = getPkAttr(entityId);
+            if (pk) addAttr(mnRel, pk, true, true, entity.name);
+          });
+        }
         relAttrs.forEach((a) => addRelationshipAttr(mnRel, rel.name, a.name));
       } else if (type === '1:N') {
         // FS der 1-Seite in die N-Seite
