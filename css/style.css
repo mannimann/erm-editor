@@ -997,6 +997,102 @@ body.is-resizing-drawer {
 .feedback-box ul {
   margin: 6px 0 0 18px;
 }
+.feedback-summary {
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding-right: 28px;
+}
+.feedback-details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  padding: 3px 10px 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.feedback-details-toggle:hover {
+  opacity: 1;
+}
+.feedback-details-toggle .feedback-group-chevron {
+  transition: transform 0.2s;
+  font-size: 0.72rem;
+}
+.feedback-details-toggle.open .feedback-group-chevron {
+  transform: rotate(90deg);
+}
+.feedback-details-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.feedback-details-body[hidden] {
+  display: none;
+}
+.feedback-group {
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.feedback-group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  color: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+  gap: 8px;
+}
+.feedback-group-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.75;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.feedback-group-toggle:hover {
+  background: rgba(0, 0, 0, 0.11);
+}
+.feedback-group-toggle.warning {
+  background: rgba(180, 120, 0, 0.1);
+}
+.feedback-group-toggle.warning:hover {
+  background: rgba(180, 120, 0, 0.18);
+}
+.feedback-group-chevron {
+  transition: transform 0.2s;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+.feedback-group-toggle.open .feedback-group-chevron {
+  transform: rotate(90deg);
+}
+.feedback-group-body {
+  padding: 6px 10px 8px 10px;
+  background: rgba(255, 255, 255, 0.35);
+}
+.feedback-group-body ul {
+  margin: 0;
+  padding-left: 18px;
+}
 
 /* Columns */
 #relmodel-columns {

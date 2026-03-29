@@ -846,106 +846,214 @@
       return;
     }
 
-    const errors = [];
-    const warnings = [];
+    // Kategorisierte Fehler/Hinweise
+    const missingRelations = []; // Fehler: fehlende Relationen
+    const extraRelations = []; // Hinweis: überflüssige Relationen
+    const missingAttrs = []; // Fehler: fehlende Attribute
+    const extraAttrs = []; // Hinweis: überflüssige Attribute
+    const pkErrors = []; // Fehler: fehlende PS-Markierungen
+    const pkWarnings = []; // Hinweis: falsche PS-Markierungen
+    const fkWarnings = []; // Hinweis: fehlende FS-Markierungen
 
-    // Alle Relation-Namen der Lösung (normalisiert)
     const solutionNames = _solution.map((r) => normalizeRelationToken(r.name));
     const studentNames = _studentRelations.map((r) => normalizeRelationToken(r.name));
 
     // 1. Fehlende Relationen
     solutionNames.forEach((sn) => {
       if (!studentNames.includes(sn)) {
-        errors.push(`Relation <strong>${sn}</strong> fehlt.`);
+        missingRelations.push(`Relation <strong>${sn}</strong> fehlt.`);
       }
     });
 
     // 2. Überflüssige Relationen
     studentNames.forEach((sn) => {
       if (!solutionNames.includes(sn)) {
-        warnings.push(`Relation <strong>${sn}</strong> ist nicht Teil der erwarteten Lösung.`);
+        extraRelations.push(`Relation <strong>${sn}</strong> ist nicht Teil der erwarteten Lösung.`);
       }
     });
 
-    // 3. Attribute & PS je Relation prüfen
+    // 3. Attribute & PS/FS je Relation – nur für vorhandene Relationen
     _solution.forEach((solRel) => {
       const studRel = _studentRelations.find(
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(solRel.name),
       );
-      if (!studRel) return; // bereits als fehlend markiert
+      if (!studRel) return;
 
       const solAttrs = solRel.attrs.map((a) => normAttr(a.name));
       const studAttrs = studRel.attrs.map((a) => normAttr(a.name));
 
-      // Fehlende Attribute
       solAttrs.forEach((sa) => {
-        if (!studAttrs.includes(sa)) {
-          errors.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> fehlt.`);
-        }
+        if (!studAttrs.includes(sa))
+          missingAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> fehlt.`);
       });
-
-      // Überflüssige Attribute
       studAttrs.forEach((sa) => {
-        if (sa && !solAttrs.includes(sa)) {
-          warnings.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> ist nicht erwartet.`);
-        }
+        if (sa && !solAttrs.includes(sa))
+          extraAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> ist nicht erwartet.`);
       });
 
-      // PS-Prüfung
       const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
 
       solPks.forEach((pk) => {
-        if (!studPks.includes(pk)) {
-          errors.push(
+        if (!studPks.includes(pk))
+          pkErrors.push(
             `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> sollte als Primärschlüssel (PS) markiert sein.`,
           );
-        }
       });
-
       studPks.forEach((pk) => {
-        if (!solPks.includes(pk)) {
-          warnings.push(
+        if (!solPks.includes(pk))
+          pkWarnings.push(
             `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`,
           );
-        }
       });
 
-      // FS-Prüfung (über isFk-Checkbox)
       const solFks = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
       const studFks = studRel.attrs.filter((a) => !!a.isFk).map((a) => normAttr(a.name));
 
       solFks.forEach((fk) => {
-        if (!studFks.includes(fk)) {
-          warnings.push(
+        if (!studFks.includes(fk))
+          fkWarnings.push(
             `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
           );
-        }
       });
     });
 
-    if (errors.length === 0 && warnings.length === 0) {
+    const hasErrors = missingRelations.length || missingAttrs.length || pkErrors.length;
+    const hasWarnings = extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length;
+
+    if (!hasErrors && !hasWarnings) {
       showFeedback('success', '✅ Sehr gut! Deine Überführung ist vollständig und korrekt.');
-    } else if (errors.length === 0) {
-      let msg = '⚠️ Fast richtig – kleine Hinweise:\n<ul>';
-      warnings.forEach((w) => {
-        msg += `<li>${w}</li>`;
-      });
-      msg += '</ul>';
-      showFeedback('success', msg);
-    } else {
-      let msg = `❌ Es gibt noch ${errors.length} Fehler`;
-      if (warnings.length) msg += ` und ${warnings.length} Hinweise`;
-      msg += ':<ul>';
-      errors.forEach((e) => {
-        msg += `<li>${e}</li>`;
-      });
-      warnings.forEach((w) => {
-        msg += `<li style="color:#92400e">⚠️ ${w}</li>`;
-      });
-      msg += '</ul>';
-      showFeedback('error', msg);
+      return;
     }
+
+    showFeedbackCategorized({
+      missingRelations,
+      extraRelations,
+      missingAttrs,
+      extraAttrs,
+      pkErrors,
+      pkWarnings,
+      fkWarnings,
+    });
+  }
+
+  // ======================================================================
+  // FEEDBACK-ANZEIGE
+  // ======================================================================
+
+  function buildAccordionItem(label, messages, isWarning) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'feedback-group';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'feedback-group-toggle' + (isWarning ? ' warning' : '');
+    toggle.innerHTML =
+      `<span class="feedback-group-label">${label}</span>` +
+      `<span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
+
+    const body = document.createElement('div');
+    body.className = 'feedback-group-body';
+    body.hidden = true;
+
+    const ul = document.createElement('ul');
+    messages.forEach((m) => {
+      const li = document.createElement('li');
+      li.innerHTML = m;
+      ul.appendChild(li);
+    });
+    body.appendChild(ul);
+
+    toggle.addEventListener('click', () => {
+      const open = !body.hidden;
+      body.hidden = open;
+      toggle.classList.toggle('open', !open);
+    });
+
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(body);
+    return wrapper;
+  }
+
+  function showFeedbackCategorized({
+    missingRelations,
+    extraRelations,
+    missingAttrs,
+    extraAttrs,
+    pkErrors,
+    pkWarnings,
+    fkWarnings,
+  }) {
+    const area = document.getElementById('feedback-area');
+    area.innerHTML = '';
+
+    const hasRelationIssues = missingRelations.length || extraRelations.length;
+    const hasAttrIssues = missingAttrs.length || extraAttrs.length;
+    const hasPkIssues = pkErrors.length || pkWarnings.length;
+    const hasFkIssues = fkWarnings.length;
+    const hasErrors = missingRelations.length || missingAttrs.length || pkErrors.length;
+
+    const box = document.createElement('div');
+    box.className = 'feedback-box ' + (hasErrors ? 'error' : 'success');
+
+    // Schließen-Button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'feedback-close';
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', 'Hinweis schließen');
+    closeBtn.textContent = '✕';
+    closeBtn.addEventListener('click', () => {
+      area.innerHTML = '';
+    });
+    box.appendChild(closeBtn);
+
+    // Zusammenfassung
+    const summary = document.createElement('div');
+    summary.className = 'feedback-summary';
+    summary.textContent = hasErrors
+      ? '❌ Das Relationenmodell ist noch nicht korrekt.'
+      : '⚠️ Fast richtig – es gibt noch kleine Hinweise.';
+    box.appendChild(summary);
+
+    // „Hinweise"-Toggle
+    const detailsBody = document.createElement('div');
+    detailsBody.className = 'feedback-details-body';
+    detailsBody.hidden = true;
+
+    const detailsToggle = document.createElement('button');
+    detailsToggle.type = 'button';
+    detailsToggle.className = 'feedback-details-toggle';
+    detailsToggle.innerHTML = 'Hinweise <span class="feedback-group-chevron">&#x276F;</span>';
+    detailsToggle.addEventListener('click', () => {
+      const open = !detailsBody.hidden;
+      detailsBody.hidden = open;
+      detailsToggle.classList.toggle('open', !open);
+    });
+    box.appendChild(detailsToggle);
+
+    if (hasRelationIssues) {
+      // Stufe 1: Relationsprobleme — aufgeteilt in fehlend / überflüssig
+      if (missingRelations.length)
+        detailsBody.appendChild(buildAccordionItem('Fehlende Relationen', missingRelations, false));
+      if (extraRelations.length)
+        detailsBody.appendChild(buildAccordionItem('Überflüssige Relationen', extraRelations, true));
+    } else if (hasAttrIssues) {
+      // Stufe 2: Attributprobleme — aufgeteilt in fehlend / überflüssig
+      if (missingAttrs.length) detailsBody.appendChild(buildAccordionItem('Fehlende Attribute', missingAttrs, false));
+      if (extraAttrs.length) detailsBody.appendChild(buildAccordionItem('Überflüssige Attribute', extraAttrs, true));
+    } else if (hasPkIssues || hasFkIssues) {
+      // Stufe 3: PS/FS — getrennt
+      if (pkErrors.length)
+        detailsBody.appendChild(buildAccordionItem('Fehlende Primärschlüssel-Markierungen', pkErrors, false));
+      if (pkWarnings.length)
+        detailsBody.appendChild(buildAccordionItem('Überflüssige Primärschlüssel-Markierungen', pkWarnings, true));
+      if (fkWarnings.length)
+        detailsBody.appendChild(buildAccordionItem('Fehlende Fremdschlüssel-Markierungen', fkWarnings, true));
+    }
+
+    box.appendChild(detailsBody);
+    area.appendChild(box);
+    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   function showFeedback(type, html) {
