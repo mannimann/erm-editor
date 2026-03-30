@@ -483,6 +483,39 @@
   let _nextId = 1;
   let _syncDebounceTimer = null;
   const SYNC_DEBOUNCE_MS = 180;
+  const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
+
+  function persistStudentRelations() {
+    try {
+      localStorage.setItem(
+        RELMODEL_PERSIST_KEY,
+        JSON.stringify({
+          studentRelations: _studentRelations,
+          nextId: _nextId,
+        }),
+      );
+    } catch (_e) {
+      /* ignore */
+    }
+  }
+
+  function loadStudentRelations() {
+    try {
+      const raw = localStorage.getItem(RELMODEL_PERSIST_KEY);
+      if (!raw) return false;
+      const data = JSON.parse(raw);
+      if (Array.isArray(data.studentRelations) && data.studentRelations.length > 0) {
+        _studentRelations = data.studentRelations;
+        if (typeof data.nextId === 'number' && data.nextId > _nextId) _nextId = data.nextId;
+        return true;
+      }
+      return false;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  const _hadPersistedData = loadStudentRelations();
 
   function newRelId() {
     return 'r' + _nextId++;
@@ -513,6 +546,9 @@
   function reset() {
     _studentRelations = [];
     _solution = [];
+    try {
+      localStorage.removeItem(RELMODEL_PERSIST_KEY);
+    } catch (_e) {}
     document.getElementById('feedback-area').innerHTML = '';
     document.getElementById('solution-display').style.display = 'none';
     document.getElementById('btn-hide-solution').style.display = 'none';
@@ -533,6 +569,7 @@
 
   // Alias für Konsistenz mit Datenänderungs-Aufrufen
   function renderAndPersist() {
+    persistStudentRelations();
     renderStudentForm();
   }
 
@@ -554,6 +591,7 @@
     nameInput.addEventListener('input', (e) => {
       rel.name = e.target.value;
       clearInlineError(rel);
+      persistStudentRelations();
     });
 
     const delBtn = document.createElement('button');
@@ -562,7 +600,7 @@
     delBtn.title = 'Relation löschen';
     delBtn.addEventListener('click', () => {
       _studentRelations = _studentRelations.filter((r) => r.id !== rel.id);
-      renderStudentForm();
+      renderAndPersist();
     });
 
     const modeBtn = document.createElement('button');
@@ -576,14 +614,14 @@
         if (error) {
           rel.inlineError = error;
           rel.isEditing = true;
-          renderStudentForm();
+          renderAndPersist();
           return;
         }
         sortAttrsPrimaryFirst(rel.attrs);
         clearInlineError(rel);
       }
       rel.isEditing = !isEditing;
-      renderStudentForm();
+      renderAndPersist();
     });
 
     if (isEditing) {
@@ -627,7 +665,7 @@
       const newAttr = { id: newAttrId(), name: '', isPk: false, isFk: false };
       rel.attrs.push(newAttr);
       clearInlineError(rel);
-      renderStudentForm();
+      renderAndPersist();
       const targetInput = document.querySelector(
         `.relation-card[data-id="${rel.id}"] .attr-row[data-id="${newAttr.id}"] .attr-input`,
       );
@@ -701,16 +739,17 @@
     inp.addEventListener('input', (e) => {
       attr.name = e.target.value;
       clearInlineError(rel);
+      persistStudentRelations();
     });
     inp.addEventListener('change', (e) => {
       attr.name = e.target.value.trim();
       clearInlineError(rel);
-      renderStudentForm();
+      renderAndPersist();
     });
     inp.addEventListener('blur', (e) => {
       attr.name = e.target.value.trim();
       clearInlineError(rel);
-      renderStudentForm();
+      renderAndPersist();
     });
 
     const pkCb = document.createElement('input');
@@ -722,7 +761,7 @@
     pkCb.addEventListener('change', (e) => {
       attr.isPk = e.target.checked;
       clearInlineError(rel);
-      renderStudentForm();
+      renderAndPersist();
     });
 
     const pkLbl = document.createElement('label');
@@ -739,7 +778,7 @@
     fkCb.addEventListener('change', (e) => {
       attr.isFk = e.target.checked;
       clearInlineError(rel);
-      renderStudentForm();
+      renderAndPersist();
     });
 
     const fkLbl = document.createElement('label');
@@ -758,7 +797,7 @@
     delAttrBtn.addEventListener('click', () => {
       rel.attrs = rel.attrs.filter((a) => a.id !== attr.id);
       clearInlineError(rel);
-      renderStudentForm();
+      renderAndPersist();
     });
 
     row.appendChild(inp);
@@ -1090,7 +1129,7 @@
         }
         // unfertige Karten bleiben offen
       });
-      renderStudentForm();
+      renderAndPersist();
       checkInput();
     });
 
@@ -1152,6 +1191,9 @@
       ) ?? Promise.resolve(confirm('Alle eingegebenen Relationen zurücksetzen?')));
       if (!confirmed) return;
       _studentRelations = [];
+      try {
+        localStorage.removeItem(RELMODEL_PERSIST_KEY);
+      } catch (_e) {}
       document.getElementById('feedback-area').innerHTML = '';
       renderStudentForm();
       renderSolution();
@@ -1162,6 +1204,9 @@
   // INIT
   // ======================================================================
   document.addEventListener('DOMContentLoaded', () => {
+    if (_hadPersistedData) {
+      renderStudentForm();
+    }
     initEvents();
   });
 
@@ -1171,5 +1216,6 @@
     requestSyncFromDiagramDebounced,
     reset,
     generateSolution,
+    hadPersistedData: () => _hadPersistedData,
   };
 })();

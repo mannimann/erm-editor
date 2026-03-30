@@ -1079,8 +1079,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.RelModel) window.RelModel.syncFromDiagram();
   }
 
-  // Hinweis: window.AppTabs.setDrawerState(true) kann hier aufgerufen werden
-  // um den Drawer beim Laden zu öffnen — derzeit deaktiviert da kein localStorage.
+  // Drawer öffnen wenn RelModel-Daten aus localStorage geladen wurden
+  if (window.RelModel?.hadPersistedData?.()) {
+    window.AppTabs?.setDrawerState(true);
+  }
 
   document.getElementById('btn-import').addEventListener('click', () => {
     document.getElementById('file-input').click();
