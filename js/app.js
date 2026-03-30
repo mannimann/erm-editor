@@ -578,26 +578,73 @@ function initTabs() {
     }
   });
 
-  // ---- Quest-Button Hinweis-Punkt ----
-  (function initQuestDot() {
-    const QUEST_DOT_KEY = 'erm-quest-dot-dismissed';
-    if (localStorage.getItem(QUEST_DOT_KEY)) return;
-    const dot = document.createElement('span');
-    dot.className = 'quest-dot quest-dot--pulse';
-    dot.setAttribute('aria-hidden', 'true');
-    questsToggleBtn.appendChild(dot);
+  // ---- Quest-Button & Item Hinweis-Punkte ----
+  (function initQuestDots() {
+    // Alle aktiven (nicht disabled) Questreihen-Buttons
+    const itemButtons = Array.from(
+      questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
+    );
+
+    // Prüft ob eine Questreihe noch nicht gestartet wurde
+    function isNotStarted(btn) {
+      const mode = btn.dataset.questSeries;
+      if (!mode) return false;
+      const version = mode === 'experten' ? 'v4' : 'v1';
+      const key = 'erm-editor-quests-' + mode + '-' + version;
+      return !localStorage.getItem(key);
+    }
+
+    // Punkt bei jedem noch nicht gestarteten Item einfügen
+    itemButtons.forEach((btn) => {
+      if (!isNotStarted(btn)) return;
+      const dot = document.createElement('span');
+      dot.className = 'quest-item-dot';
+      dot.setAttribute('aria-hidden', 'true');
+      // Vor dem ersten span-Kind einfügen (vor dem Titel)
+      btn.appendChild(dot);
+    });
+
+    // Punkt am Quests-Button: animiert, solange mind. ein Item-Punkt vorhanden
+    const anyUnstarted = itemButtons.some(isNotStarted);
+    if (!anyUnstarted) return;
+
+    const btnDot = document.createElement('span');
+    btnDot.className = 'quest-dot quest-dot--pulse';
+    btnDot.setAttribute('aria-hidden', 'true');
+    questsToggleBtn.appendChild(btnDot);
+
+    // Nach 25 Sek. Pulse stoppen, Punkt bleibt statisch
     const pulseTimer = setTimeout(() => {
-      dot.classList.remove('quest-dot--pulse');
+      btnDot.classList.remove('quest-dot--pulse');
     }, 25000);
-    const dismiss = () => {
-      clearTimeout(pulseTimer);
-      dot.remove();
-      try {
-        localStorage.setItem(QUEST_DOT_KEY, '1');
-      } catch (_e) {}
-      questsToggleBtn.removeEventListener('click', dismiss);
-    };
-    questsToggleBtn.addEventListener('click', dismiss);
+
+    // Pulsieren beim Klick auf den Quest-Button sofort stoppen
+    questsToggleBtn.addEventListener(
+      'click',
+      () => {
+        clearTimeout(pulseTimer);
+        btnDot.classList.remove('quest-dot--pulse');
+      },
+      { once: true },
+    );
+
+    // Prüft ob noch Item-Punkte vorhanden — wenn nicht, Button-Punkt entfernen
+    function checkAndDismissBtnDot() {
+      const stillAny = itemButtons.some(isNotStarted);
+      if (!stillAny) {
+        clearTimeout(pulseTimer);
+        btnDot.remove();
+      }
+    }
+
+    // Beim Klick auf einen Item-Button: Item-Punkt entfernen, ggf. Button-Punkt auch
+    itemButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const dot = btn.querySelector('.quest-item-dot');
+        if (dot) dot.remove();
+        checkAndDismissBtnDot();
+      });
+    });
   })();
 
   window.AppTabs = { setDrawerState };
