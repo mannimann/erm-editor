@@ -277,6 +277,30 @@ body.is-resizing-drawer {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  position: relative;
+}
+
+.quest-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f97316;
+  flex-shrink: 0;
+}
+.quest-dot--pulse {
+  animation: quest-dot-pulse 1.2s ease-in-out infinite;
+}
+@keyframes quest-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
 }
 
 .tab-dropdown-chevron {
@@ -1021,11 +1045,13 @@ body.is-resizing-drawer {
 .feedback-details-toggle:hover {
   opacity: 1;
 }
-.feedback-details-toggle .feedback-group-chevron {
+.feedback-details-toggle .feedback-group-chevron,
+.feedback-group-toggle .feedback-group-chevron {
   transition: transform 0.2s;
   font-size: 0.72rem;
 }
-.feedback-details-toggle.open .feedback-group-chevron {
+.feedback-details-toggle.open .feedback-group-chevron,
+.feedback-group-toggle.open .feedback-group-chevron {
   transform: rotate(90deg);
 }
 .feedback-details-body {
@@ -1058,6 +1084,15 @@ body.is-resizing-drawer {
   transition: background 0.15s;
   gap: 8px;
 }
+.feedback-group-toggle:hover {
+  background: rgba(0, 0, 0, 0.11);
+}
+.feedback-group-toggle.warning {
+  background: rgba(180, 120, 0, 0.1);
+}
+.feedback-group-toggle.warning:hover {
+  background: rgba(180, 120, 0, 0.18);
+}
 .feedback-group-action {
   display: inline-flex;
   align-items: center;
@@ -1068,26 +1103,18 @@ body.is-resizing-drawer {
   white-space: nowrap;
   flex-shrink: 0;
 }
-.feedback-group-toggle:hover {
-  background: rgba(0, 0, 0, 0.11);
-}
-.feedback-group-toggle.warning {
-  background: rgba(180, 120, 0, 0.1);
-}
-.feedback-group-toggle.warning:hover {
-  background: rgba(180, 120, 0, 0.18);
-}
-.feedback-group-chevron {
-  transition: transform 0.2s;
-  font-size: 0.72rem;
-  flex-shrink: 0;
-}
-.feedback-group-toggle.open .feedback-group-chevron {
-  transform: rotate(90deg);
-}
 .feedback-group-body {
   padding: 6px 10px 8px 10px;
   background: rgba(255, 255, 255, 0.35);
+}
+.feedback-group-body[hidden] {
+  display: none;
+}
+.feedback-group-body--nested {
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .feedback-group-body ul {
   margin: 0;

@@ -577,6 +577,30 @@ function initTabs() {
       setQuestsMenuOpen(false);
     }
   });
+
+  // ---- Quest-Button Hinweis-Punkt ----
+  (function initQuestDot() {
+    const QUEST_DOT_KEY = 'erm-quest-dot-dismissed';
+    if (localStorage.getItem(QUEST_DOT_KEY)) return;
+    const dot = document.createElement('span');
+    dot.className = 'quest-dot quest-dot--pulse';
+    dot.setAttribute('aria-hidden', 'true');
+    questsToggleBtn.appendChild(dot);
+    const pulseTimer = setTimeout(() => {
+      dot.classList.remove('quest-dot--pulse');
+    }, 25000);
+    const dismiss = () => {
+      clearTimeout(pulseTimer);
+      dot.remove();
+      try {
+        localStorage.setItem(QUEST_DOT_KEY, '1');
+      } catch (_e) {}
+      questsToggleBtn.removeEventListener('click', dismiss);
+    };
+    questsToggleBtn.addEventListener('click', dismiss);
+  })();
+
+  window.AppTabs = { setDrawerState };
 }
 
 // ---- Properties Panel ----
@@ -1007,6 +1031,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.Diagram?.centerView) window.Diagram.centerView();
     if (window.RelModel) window.RelModel.syncFromDiagram();
   }
+
+  // Hinweis: window.AppTabs.setDrawerState(true) kann hier aufgerufen werden
+  // um den Drawer beim Laden zu öffnen — derzeit deaktiviert da kein localStorage.
 
   document.getElementById('btn-import').addEventListener('click', () => {
     document.getElementById('file-input').click();

@@ -21,12 +21,6 @@
       .trim();
   }
 
-  function normalizeForeignKeyMarker(name) {
-    const base = stripForeignKeyMarker(name);
-    if (!base) return '';
-    return hasForeignKeyMarker(name) ? `${base}${FK_SUFFIX}` : base;
-  }
-
   function normalizeAttrToken(name) {
     return stripForeignKeyMarker(name)
       .toLowerCase()
@@ -105,17 +99,6 @@
     }
 
     return '';
-  }
-
-  function validateAllRelationsInline() {
-    let hasErrors = false;
-    _studentRelations.forEach((rel) => {
-      removeEmptyAttrs(rel);
-      const error = validateRelationInline(rel);
-      rel.inlineError = error;
-      if (error) hasErrors = true;
-    });
-    return hasErrors;
   }
 
   // ======================================================================
@@ -548,6 +531,11 @@
     });
   }
 
+  // Alias für Konsistenz mit Datenänderungs-Aufrufen
+  function renderAndPersist() {
+    renderStudentForm();
+  }
+
   function buildRelationCard(rel) {
     const isEditing = rel.isEditing !== false;
     const card = document.createElement('div');
@@ -838,6 +826,9 @@
   // ======================================================================
 
   function checkInput() {
+    // Lösung immer aktuell aus dem ERM berechnen
+    // _solution = generateSolution(window.AppState.state);
+
     if (_solution.length === 0) {
       showFeedback(
         'error',
@@ -846,42 +837,33 @@
       return;
     }
 
-    // Kategorisierte Fehler/Hinweise
-    const missingRelations = []; // Fehler: fehlende Relationen
-    const extraRelations = []; // Hinweis: überflüssige Relationen
-    const missingAttrs = []; // Fehler: fehlende Attribute
-    const extraAttrs = []; // Hinweis: überflüssige Attribute
-    const pkErrors = []; // Fehler: fehlende PS-Markierungen
-    const pkWarnings = []; // Hinweis: falsche PS-Markierungen
-    const fkWarnings = []; // Hinweis: fehlende FS-Markierungen
+    const missingRelations = [];
+    const extraRelations = [];
+    const missingAttrs = [];
+    const extraAttrs = [];
+    const pkErrors = [];
+    const pkWarnings = [];
+    const fkWarnings = [];
 
     const solutionNames = _solution.map((r) => normalizeRelationToken(r.name));
     const studentNames = _studentRelations.map((r) => normalizeRelationToken(r.name));
 
-    // 1. Fehlende Relationen
     solutionNames.forEach((sn) => {
-      if (!studentNames.includes(sn)) {
-        missingRelations.push(`Relation <strong>${sn}</strong> fehlt.`);
-      }
+      if (!studentNames.includes(sn)) missingRelations.push(`Relation <strong>${sn}</strong> fehlt.`);
     });
-
-    // 2. Überflüssige Relationen
     studentNames.forEach((sn) => {
-      if (!solutionNames.includes(sn)) {
+      if (!solutionNames.includes(sn))
         extraRelations.push(`Relation <strong>${sn}</strong> ist nicht Teil der erwarteten Lösung.`);
-      }
     });
 
-    // 3. Attribute & PS/FS je Relation – nur für vorhandene Relationen
     _solution.forEach((solRel) => {
       const studRel = _studentRelations.find(
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(solRel.name),
       );
       if (!studRel) return;
-
-      const solAttrs = solRel.attrs.map((a) => normAttr(a.name));
-      const studAttrs = studRel.attrs.map((a) => normAttr(a.name));
-
+      // Fremdschlüssel-Attribute werden erst beim PS/FS-Abschnitt geprüft
+      const solAttrs = solRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
+      const studAttrs = studRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
       solAttrs.forEach((sa) => {
         if (!studAttrs.includes(sa))
           missingAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> fehlt.`);
@@ -890,10 +872,8 @@
         if (sa && !solAttrs.includes(sa))
           extraAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> ist nicht erwartet.`);
       });
-
       const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
-
       solPks.forEach((pk) => {
         if (!studPks.includes(pk))
           pkErrors.push(
@@ -906,10 +886,8 @@
             `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`,
           );
       });
-
       const solFks = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
       const studFks = studRel.attrs.filter((a) => !!a.isFk).map((a) => normAttr(a.name));
-
       solFks.forEach((fk) => {
         if (!studFks.includes(fk))
           fkWarnings.push(
@@ -920,12 +898,10 @@
 
     const hasErrors = missingRelations.length || missingAttrs.length || pkErrors.length;
     const hasWarnings = extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length;
-
     if (!hasErrors && !hasWarnings) {
       showFeedback('success', '✅ Sehr gut! Deine Überführung ist vollständig und korrekt.');
       return;
     }
-
     showFeedbackCategorized({
       missingRelations,
       extraRelations,
@@ -937,25 +913,16 @@
     });
   }
 
-  // ======================================================================
-  // FEEDBACK-ANZEIGE
-  // ======================================================================
-
   function buildAccordionItem(label, messages, isWarning) {
     const wrapper = document.createElement('div');
     wrapper.className = 'feedback-group';
-
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'feedback-group-toggle' + (isWarning ? ' warning' : '');
-    toggle.innerHTML =
-      `<span class="feedback-group-label">${label}</span>` +
-      `<span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
-
+    toggle.innerHTML = `<span class="feedback-group-label">${label}</span><span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
     const body = document.createElement('div');
     body.className = 'feedback-group-body';
     body.hidden = true;
-
     const ul = document.createElement('ul');
     messages.forEach((m) => {
       const li = document.createElement('li');
@@ -963,13 +930,47 @@
       ul.appendChild(li);
     });
     body.appendChild(ul);
-
     toggle.addEventListener('click', () => {
       const open = !body.hidden;
       body.hidden = open;
       toggle.classList.toggle('open', !open);
     });
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(body);
+    return wrapper;
+  }
 
+  function groupByRelation(messages) {
+    const groups = new Map();
+    messages.forEach((msg) => {
+      const match = msg.match(/<strong>([^<]+)<\/strong>/);
+      const key = match ? match[1] : '—';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(msg);
+    });
+    return groups;
+  }
+
+  function buildAccordionItemGrouped(label, messages, isWarning) {
+    const groups = groupByRelation(messages);
+    buildAccordionItem(label, messages, isWarning);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'feedback-group';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'feedback-group-toggle' + (isWarning ? ' warning' : '');
+    toggle.innerHTML = `<span class="feedback-group-label">${label}</span><span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
+    const body = document.createElement('div');
+    body.className = 'feedback-group-body feedback-group-body--nested';
+    body.hidden = true;
+    groups.forEach((msgs, relName) => {
+      body.appendChild(buildAccordionItem(`Relation „${relName}“`, msgs, isWarning));
+    });
+    toggle.addEventListener('click', () => {
+      const open = !body.hidden;
+      body.hidden = open;
+      toggle.classList.toggle('open', !open);
+    });
     wrapper.appendChild(toggle);
     wrapper.appendChild(body);
     return wrapper;
@@ -986,7 +987,6 @@
   }) {
     const area = document.getElementById('feedback-area');
     area.innerHTML = '';
-
     const hasRelationIssues = missingRelations.length || extraRelations.length;
     const hasAttrIssues = missingAttrs.length || extraAttrs.length;
     const hasPkIssues = pkErrors.length || pkWarnings.length;
@@ -996,7 +996,6 @@
     const box = document.createElement('div');
     box.className = 'feedback-box ' + (hasErrors ? 'error' : 'success');
 
-    // Schließen-Button
     const closeBtn = document.createElement('button');
     closeBtn.className = 'feedback-close';
     closeBtn.type = 'button';
@@ -1007,7 +1006,6 @@
     });
     box.appendChild(closeBtn);
 
-    // Zusammenfassung
     const summary = document.createElement('div');
     summary.className = 'feedback-summary';
     summary.textContent = hasErrors
@@ -1015,7 +1013,6 @@
       : '⚠️ Fast richtig – es gibt noch kleine Hinweise.';
     box.appendChild(summary);
 
-    // „Hinweise"-Toggle
     const detailsBody = document.createElement('div');
     detailsBody.className = 'feedback-details-body';
     detailsBody.hidden = true;
@@ -1032,23 +1029,24 @@
     box.appendChild(detailsToggle);
 
     if (hasRelationIssues) {
-      // Stufe 1: Relationsprobleme — aufgeteilt in fehlend / überflüssig
       if (missingRelations.length)
         detailsBody.appendChild(buildAccordionItem('Fehlende Relationen', missingRelations, false));
       if (extraRelations.length)
         detailsBody.appendChild(buildAccordionItem('Überflüssige Relationen', extraRelations, true));
     } else if (hasAttrIssues) {
-      // Stufe 2: Attributprobleme — aufgeteilt in fehlend / überflüssig
-      if (missingAttrs.length) detailsBody.appendChild(buildAccordionItem('Fehlende Attribute', missingAttrs, false));
-      if (extraAttrs.length) detailsBody.appendChild(buildAccordionItem('Überflüssige Attribute', extraAttrs, true));
+      if (missingAttrs.length)
+        detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Attribute', missingAttrs, false));
+      if (extraAttrs.length)
+        detailsBody.appendChild(buildAccordionItemGrouped('Überflüssige Attribute', extraAttrs, true));
     } else if (hasPkIssues || hasFkIssues) {
-      // Stufe 3: PS/FS — getrennt
       if (pkErrors.length)
-        detailsBody.appendChild(buildAccordionItem('Fehlende Primärschlüssel-Markierungen', pkErrors, false));
+        detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Primärschlüssel-Markierungen', pkErrors, false));
       if (pkWarnings.length)
-        detailsBody.appendChild(buildAccordionItem('Überflüssige Primärschlüssel-Markierungen', pkWarnings, true));
+        detailsBody.appendChild(
+          buildAccordionItemGrouped('Überflüssige Primärschlüssel-Markierungen', pkWarnings, true),
+        );
       if (fkWarnings.length)
-        detailsBody.appendChild(buildAccordionItem('Fehlende Fremdschlüssel-Markierungen', fkWarnings, true));
+        detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Fremdschlüssel-Markierungen', fkWarnings, true));
     }
 
     box.appendChild(detailsBody);
@@ -1083,21 +1081,14 @@
 
     document.getElementById('btn-check').addEventListener('click', () => {
       removeCompletelyEmptyRelations();
-
-      const hasInlineErrors = validateAllRelationsInline();
-      if (hasInlineErrors) {
-        _studentRelations.forEach((rel) => {
-          rel.isEditing = !!rel.inlineError;
-        });
-        renderStudentForm();
-        document.getElementById('feedback-area').innerHTML = '';
-        return;
-      }
-
       _studentRelations.forEach((rel) => {
         removeEmptyAttrs(rel);
-        sortAttrsPrimaryFirst(rel.attrs);
-        rel.isEditing = false;
+        const err = validateRelationInline(rel);
+        if (!err) {
+          sortAttrsPrimaryFirst(rel.attrs);
+          rel.isEditing = false;
+        }
+        // unfertige Karten bleiben offen
       });
       renderStudentForm();
       checkInput();
