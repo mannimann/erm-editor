@@ -209,6 +209,32 @@
     </div>
     <!-- /#main-layout -->
 
+    <!-- ===== MODAL: Musterlösung wirklich anzeigen? ===== -->
+    <div
+      id="modal-solution-confirm-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-solution-confirm-title"
+    >
+      <div class="info-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-solution-confirm-title">Musterlösung wirklich anzeigen?</h3>
+        </div>
+        <div class="info-modal-body">
+          <p>
+            Die Musterlösung zeigt die vollständige Überführung deines aktuellen ER-Diagramms ins Relationenmodell.<br />Willst
+            du sie wirklich anzeigen?
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 18px">
+            <button id="btn-solution-cancel" class="rel-btn">Abbrechen</button>
+            <button id="btn-solution-confirm" class="rel-btn warning">Anzeigen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== MODAL: Beziehung bearbeiten ===== -->
     <div id="modal-backdrop" style="display: none">
       <div id="modal-card">

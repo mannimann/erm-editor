@@ -1095,15 +1095,45 @@
     });
 
     document.getElementById('btn-show-solution').addEventListener('click', () => {
-      _solution = generateSolution(window.AppState.state);
-      renderSolution();
-      const solDisplay = document.getElementById('solution-display');
-      const showBtn = document.getElementById('btn-show-solution');
-      const hideBtn = document.getElementById('btn-hide-solution');
-      solDisplay.style.display = '';
-      if (showBtn) showBtn.style.display = 'none';
-      if (hideBtn) hideBtn.style.display = '';
-      solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Sicherheitsabfrage: Modal anzeigen
+      const modal = document.getElementById('modal-solution-confirm-backdrop');
+      if (!modal) return;
+      modal.style.display = 'flex';
+      modal.focus();
+
+      // Event-Handler für Modal-Buttons
+      const cancelBtn = document.getElementById('btn-solution-cancel');
+      const confirmBtn = document.getElementById('btn-solution-confirm');
+
+      function closeModal() {
+        modal.style.display = 'none';
+      }
+
+      // Nur einmalige Handler
+      const onCancel = (e) => {
+        e.preventDefault();
+        closeModal();
+        cancelBtn.removeEventListener('click', onCancel);
+        confirmBtn.removeEventListener('click', onConfirm);
+      };
+      const onConfirm = (e) => {
+        e.preventDefault();
+        closeModal();
+        cancelBtn.removeEventListener('click', onCancel);
+        confirmBtn.removeEventListener('click', onConfirm);
+        // Jetzt wirklich Lösung anzeigen
+        _solution = generateSolution(window.AppState.state);
+        renderSolution();
+        const solDisplay = document.getElementById('solution-display');
+        const showBtn = document.getElementById('btn-show-solution');
+        const hideBtn = document.getElementById('btn-hide-solution');
+        solDisplay.style.display = '';
+        if (showBtn) showBtn.style.display = 'none';
+        if (hideBtn) hideBtn.style.display = '';
+        solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      cancelBtn.addEventListener('click', onCancel);
+      confirmBtn.addEventListener('click', onConfirm);
     });
 
     document.getElementById('btn-hide-solution').addEventListener('click', () => {
