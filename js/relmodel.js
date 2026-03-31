@@ -979,27 +979,23 @@
       // Pflicht-Attribute müssen vorhanden sein (egal ob als Fremdschlüssel markiert oder nicht)
       solAttrs.forEach((sa) => {
         const exists = studRel.attrs.some((a) => normAttr(a.name) === sa);
-        if (!exists) missingAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> fehlt.`);
+        if (!exists) missingAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> fehlt.`);
       });
       // Überflüssig sind nur Attribute, die weder Pflicht noch Kann sind
       studAttrs.forEach((sa) => {
         if (sa && !solAttrs.includes(sa) && !solFkAttrs.includes(sa))
-          extraAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> ist nicht erwartet.`);
+          extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> ist nicht erwartet.`);
       });
       // Primärschlüssel-Prüfung wie gehabt
       const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       solPks.forEach((pk) => {
         if (!studPks.includes(pk))
-          pkErrors.push(
-            `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> sollte als Primärschlüssel (PS) markiert sein.`,
-          );
+          pkErrors.push(`@@REL:${solRel.name}@@<em>${pk}</em> sollte als Primärschlüssel (PS) markiert sein.`);
       });
       studPks.forEach((pk) => {
         if (!solPks.includes(pk))
-          pkWarnings.push(
-            `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`,
-          );
+          pkWarnings.push(`@@REL:${solRel.name}@@<em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`);
       });
       // Fremdschlüssel-Prüfung wie gehabt
       const solFks = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
@@ -1007,9 +1003,7 @@
       // Fehlende Fremdschlüssel-Markierungen
       solFks.forEach((fk) => {
         if (!studFks.includes(fk))
-          fkWarnings.push(
-            `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
-          );
+          fkWarnings.push(`@@REL:${solRel.name}@@<em>${fk}</em> sollte als Fremdschlüssel (FS) markiert sein.`);
       });
       // Überflüssige Fremdschlüssel-Markierungen (nur wenn das Attribut in der Lösung KEIN Fremdschlüssel ist)
       studFks.forEach((fk) => {
@@ -1017,9 +1011,7 @@
           // Prüfe, ob das Attribut in der Lösung als Pflichtattribut existiert
           const isPflicht = solAttrs.includes(fk);
           if (isPflicht) {
-            fkOverWarnings.push(
-              `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> ist kein erwarteter Fremdschlüssel (FS).`,
-            );
+            fkOverWarnings.push(`@@REL:${solRel.name}@@<em>${fk}</em> ist kein erwarteter Fremdschlüssel (FS).`);
           } else {
             // Attribut ist komplett überflüssig (wird schon oben gemeldet)
           }
@@ -1075,11 +1067,21 @@
 
   function groupByRelation(messages) {
     const groups = new Map();
+    // Die Gruppierung muss außerhalb von checkInput den Relationsnamen kennen.
+    // Daher: Erwarte, dass showFeedbackCategorized die Nachrichten bereits nach Relation gruppiert übergibt.
+    // Fallback: Wenn keine Gruppierung möglich, alles unter '—'.
+    // Die Funktion wird aber weiterhin für die Gruppierung nach Relation verwendet,
+    // daher erweitern wir die Nachrichten um einen Marker, z.B. "@@REL:Name@@" am Anfang.
     messages.forEach((msg) => {
-      const match = msg.match(/<strong>([^<]+)<\/strong>/);
-      const key = match ? match[1] : '—';
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(msg);
+      let relName = '—';
+      const relMatch = msg.match(/^@@REL:([^@]+)@@/);
+      let cleanMsg = msg;
+      if (relMatch) {
+        relName = relMatch[1];
+        cleanMsg = msg.replace(/^@@REL:[^@]+@@/, '');
+      }
+      if (!groups.has(relName)) groups.set(relName, []);
+      groups.get(relName).push(cleanMsg);
     });
     return groups;
   }
