@@ -593,6 +593,24 @@
       clearInlineError(rel);
       persistStudentRelations();
     });
+    nameInput.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      // Springe zum ersten Attribut, falls vorhanden — sonst neu anlegen
+      const firstAttrInput = document.querySelector(`.relation-card[data-id="${rel.id}"] .attr-input`);
+      if (firstAttrInput) {
+        firstAttrInput.focus();
+        return;
+      }
+      const newAttr = { id: newAttrId(), name: '', isPk: false, isFk: false };
+      rel.attrs.push(newAttr);
+      clearInlineError(rel);
+      renderAndPersist();
+      const targetInput = document.querySelector(
+        `.relation-card[data-id="${rel.id}"] .attr-row[data-id="${newAttr.id}"] .attr-input`,
+      );
+      if (targetInput) targetInput.focus();
+    });
 
     const delBtn = document.createElement('button');
     delBtn.className = 'btn-del-relation';
@@ -741,15 +759,45 @@
       clearInlineError(rel);
       persistStudentRelations();
     });
+    let _suppressBlur = false;
     inp.addEventListener('change', (e) => {
       attr.name = e.target.value.trim();
       clearInlineError(rel);
       renderAndPersist();
     });
     inp.addEventListener('blur', (e) => {
+      if (_suppressBlur) {
+        _suppressBlur = false;
+        return;
+      }
       attr.name = e.target.value.trim();
       clearInlineError(rel);
       renderAndPersist();
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      attr.name = inp.value.trim();
+      // Springe zum nächsten Attribut, falls vorhanden — sonst neu anlegen
+      const card = document.querySelector(`.relation-card[data-id="${rel.id}"]`);
+      const allInputs = card ? Array.from(card.querySelectorAll('.attr-input')) : [];
+      const currentIndex = allInputs.indexOf(inp);
+      const nextInput = allInputs[currentIndex + 1];
+      if (nextInput) {
+        _suppressBlur = true;
+        persistStudentRelations();
+        nextInput.focus();
+        return;
+      }
+      _suppressBlur = true;
+      const newAttr = { id: newAttrId(), name: '', isPk: false, isFk: false };
+      rel.attrs.push(newAttr);
+      clearInlineError(rel);
+      renderAndPersist();
+      const targetInput = document.querySelector(
+        `.relation-card[data-id="${rel.id}"] .attr-row[data-id="${newAttr.id}"] .attr-input`,
+      );
+      if (targetInput) targetInput.focus();
     });
 
     const pkCb = document.createElement('input');
