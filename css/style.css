@@ -337,9 +337,9 @@ body.is-resizing-drawer {
 .tab-dropdown-item {
   width: 100%;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
   padding: 9px 11px;
   border: 1px solid transparent;
   border-radius: 6px;
@@ -352,22 +352,6 @@ body.is-resizing-drawer {
     border-color 0.15s,
     color 0.15s,
     transform 0.12s;
-}
-
-.tab-dropdown-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.quest-item-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f97316;
-  flex-shrink: 0;
-  margin-left: auto;
 }
 
 .tab-dropdown-item:hover {
@@ -1201,18 +1185,18 @@ body.is-resizing-drawer {
   border-bottom: 1px solid #f1f5f9;
   background: #f8fafc;
   border-radius: var(--radius) var(--radius) 0 0;
+  flex-wrap: wrap;
 }
 .relation-card-actions {
-  margin-left: auto;
   display: flex;
   flex-direction: row;
-  justify-content: center;
   align-items: center;
   gap: 6px;
-  align-self: center;
+  flex-shrink: 0;
 }
 .relation-name-input {
   flex: 1;
+  min-width: 80px;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
   padding: 5px 9px;
@@ -1285,9 +1269,11 @@ body.is-resizing-drawer {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 .attr-input {
   flex: 1;
+  min-width: 60px;
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   padding: 4px 8px;
@@ -1300,20 +1286,24 @@ body.is-resizing-drawer {
 }
 .attr-pk-checkbox {
   cursor: pointer;
+  flex-shrink: 0;
 }
 .attr-pk-label {
-  font-size: 0.78rem;
+  font-size: 1rem;
   color: #64748b;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .attr-fk-checkbox {
   cursor: pointer;
   accent-color: #2563eb;
+  flex-shrink: 0;
 }
 .attr-fk-label {
-  font-size: 0.78rem;
+  font-size: 0.95rem;
   color: #2563eb;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .btn-del-attr {
   background: transparent;
@@ -1323,6 +1313,8 @@ body.is-resizing-drawer {
   cursor: pointer;
   padding: 2px 5px;
   border-radius: 3px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 .btn-del-attr:hover {
   color: #dc2626;
@@ -1364,9 +1356,9 @@ body.is-resizing-drawer {
 .relation-preview-output-inline {
   padding: 4px 8px;
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
 }
 
 .solution-relation.relation-preview-output-inline {

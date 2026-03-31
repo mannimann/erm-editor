@@ -616,7 +616,15 @@
     delBtn.className = 'btn-del-relation';
     delBtn.textContent = '✕';
     delBtn.title = 'Relation löschen';
-    delBtn.addEventListener('click', () => {
+    delBtn.addEventListener('click', async () => {
+      const hasData = (rel.name || '').trim() || rel.attrs.some((a) => (a.name || '').trim());
+      if (hasData) {
+        const confirmed = await (window.App?.showConfirmModal?.(
+          `Relation „${rel.name || 'unbenannt'}" wirklich löschen?`,
+          'Relation löschen',
+        ) ?? Promise.resolve(confirm(`Relation „${rel.name || 'unbenannt'}" wirklich löschen?`)));
+        if (!confirmed) return;
+      }
       _studentRelations = _studentRelations.filter((r) => r.id !== rel.id);
       renderAndPersist();
     });
@@ -931,12 +939,23 @@
     const pkErrors = [];
     const pkWarnings = [];
     const fkWarnings = [];
+    const fkOverWarnings = [];
+    const missingNmRelations = [];
 
     const solutionNames = _solution.map((r) => normalizeRelationToken(r.name));
     const studentNames = _studentRelations.map((r) => normalizeRelationToken(r.name));
 
-    solutionNames.forEach((sn) => {
-      if (!studentNames.includes(sn)) missingRelations.push(`Relation <strong>${sn}</strong> fehlt.`);
+    // Prüfe, ob die Relation aus einer n:m-Beziehung stammt
+    _solution.forEach((rel) => {
+      const isNm = rel._kind === 'mn';
+      const sn = normalizeRelationToken(rel.name);
+      if (!studentNames.includes(sn)) {
+        if (isNm) {
+          missingNmRelations.push(`Relation <strong>${rel.name}</strong> (aus n:m-Beziehung) fehlt.`);
+        } else {
+          missingRelations.push(`Relation <strong>${rel.name}</strong> fehlt.`);
+        }
+      }
     });
     studentNames.forEach((sn) => {
       if (!solutionNames.includes(sn))
@@ -948,17 +967,26 @@
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(solRel.name),
       );
       if (!studRel) return;
-      // Fremdschlüssel-Attribute werden erst beim PS/FS-Abschnitt geprüft
+      // Für die Attribut-Prüfung:
+      // - Pflicht: alle Nicht-Fremdschlüssel-Attribute aus der Lösung
+      // - Kann: alle Fremdschlüssel-Attribute aus der Lösung
       const solAttrs = solRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
-      const studAttrs = studRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
+      const solFkAttrs = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
+      // Studierende: alle Attribute, die nicht als Fremdschlüssel markiert sind ODER die in der Lösung als Fremdschlüssel vorgesehen sind
+      const studAttrs = studRel.attrs
+        .filter((a) => !a.isFk || solFkAttrs.includes(normAttr(a.name)))
+        .map((a) => normAttr(a.name));
+      // Pflicht-Attribute müssen vorhanden sein (egal ob als Fremdschlüssel markiert oder nicht)
       solAttrs.forEach((sa) => {
-        if (!studAttrs.includes(sa))
-          missingAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> fehlt.`);
+        const exists = studRel.attrs.some((a) => normAttr(a.name) === sa);
+        if (!exists) missingAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> fehlt.`);
       });
+      // Überflüssig sind nur Attribute, die weder Pflicht noch Kann sind
       studAttrs.forEach((sa) => {
-        if (sa && !solAttrs.includes(sa))
+        if (sa && !solAttrs.includes(sa) && !solFkAttrs.includes(sa))
           extraAttrs.push(`Relation <strong>${solRel.name}</strong>: Attribut <em>${sa}</em> ist nicht erwartet.`);
       });
+      // Primärschlüssel-Prüfung wie gehabt
       const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       solPks.forEach((pk) => {
@@ -973,13 +1001,29 @@
             `Relation <strong>${solRel.name}</strong>: <em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`,
           );
       });
+      // Fremdschlüssel-Prüfung wie gehabt
       const solFks = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
       const studFks = studRel.attrs.filter((a) => !!a.isFk).map((a) => normAttr(a.name));
+      // Fehlende Fremdschlüssel-Markierungen
       solFks.forEach((fk) => {
         if (!studFks.includes(fk))
           fkWarnings.push(
             `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
           );
+      });
+      // Überflüssige Fremdschlüssel-Markierungen (nur wenn das Attribut in der Lösung KEIN Fremdschlüssel ist)
+      studFks.forEach((fk) => {
+        if (!solFks.includes(fk)) {
+          // Prüfe, ob das Attribut in der Lösung als Pflichtattribut existiert
+          const isPflicht = solAttrs.includes(fk);
+          if (isPflicht) {
+            fkOverWarnings.push(
+              `Relation <strong>${solRel.name}</strong>: <em>${fk}</em> ist kein erwarteter Fremdschlüssel (FS).`,
+            );
+          } else {
+            // Attribut ist komplett überflüssig (wird schon oben gemeldet)
+          }
+        }
       });
     });
 
@@ -991,12 +1035,14 @@
     }
     showFeedbackCategorized({
       missingRelations,
+      missingNmRelations,
       extraRelations,
       missingAttrs,
       extraAttrs,
       pkErrors,
       pkWarnings,
       fkWarnings,
+      fkOverWarnings,
     });
   }
 
@@ -1065,20 +1111,22 @@
 
   function showFeedbackCategorized({
     missingRelations,
+    missingNmRelations = [],
     extraRelations,
     missingAttrs,
     extraAttrs,
     pkErrors,
     pkWarnings,
     fkWarnings,
+    fkOverWarnings = [],
   }) {
     const area = document.getElementById('feedback-area');
     area.innerHTML = '';
     const hasRelationIssues = missingRelations.length || extraRelations.length;
     const hasAttrIssues = missingAttrs.length || extraAttrs.length;
     const hasPkIssues = pkErrors.length || pkWarnings.length;
-    const hasFkIssues = fkWarnings.length;
-    const hasErrors = missingRelations.length || missingAttrs.length || pkErrors.length;
+    const hasFkIssues = fkWarnings.length || fkOverWarnings.length || missingNmRelations.length;
+    const hasErrors = missingRelations.length || missingNmRelations.length || missingAttrs.length || pkErrors.length;
 
     const box = document.createElement('div');
     box.className = 'feedback-box ' + (hasErrors ? 'error' : 'success');
@@ -1133,7 +1181,15 @@
           buildAccordionItemGrouped('Überflüssige Primärschlüssel-Markierungen', pkWarnings, true),
         );
       if (fkWarnings.length)
-        detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Fremdschlüssel-Markierungen', fkWarnings, true));
+        detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Fremdschlüssel-Markierungen', fkWarnings, false));
+      if (fkOverWarnings.length)
+        detailsBody.appendChild(
+          buildAccordionItemGrouped('Überflüssige Fremdschlüssel-Markierungen', fkOverWarnings, true),
+        );
+      if (missingNmRelations.length)
+        detailsBody.appendChild(
+          buildAccordionItem('Fehlende Relationen (aus n:m-Beziehungen)', missingNmRelations, false),
+        );
     }
 
     box.appendChild(detailsBody);
