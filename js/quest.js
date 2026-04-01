@@ -439,7 +439,7 @@
       number: 2,
       title: 'Attribute hinzufügen',
       theory: `<p><strong>Attribut:</strong> Eine Eigenschaft einer Entitätsklasse. Beispiele: Name, Email, Geburtsdatum.</p>`,
-      objective: `<p>Füge zur Entitätsklasse <strong>"Schüler"</strong> zwei weitere Attribute hinzu:</p>
+      objective: `<p>Füge zur Entitätsklasse <strong>"Schüler"</strong> zwei Attribute hinzu:</p>
         <ol>
           <li>Attribut <strong>"Vorname"</strong></li>
           <li>Attribut <strong>"Nachname"</strong></li>
@@ -528,8 +528,8 @@
       objective: `<p>Erstelle eine Beziehung zwischen <strong>"Schüler"</strong> und <strong>"Klasse"</strong>:</p>
         <ol>
           <li>Name der Beziehung: <strong>"geht in"</strong></li>
-          <li>Kardinalität: <strong>n:1</strong> (viele Schüler sind in einer Klasse)</li>
           <li><strong>"Schüler"</strong> auf der linken Seite, <strong>"Klasse"</strong> auf der rechten</li>
+          <li>Kardinalität: <strong>n:1</strong> (viele Schüler sind in einer Klasse)</li>
         </ol>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
@@ -570,11 +570,11 @@
       id: 8,
       number: 8,
       title: 'Primärschlüssel für Lehrer',
-      theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen müssen einen Primärschlüssel haben. Für Lehrer verwenden wir ein kurzes Kürzel als Kennzeichnung.</p>`,
+      theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen müssen einen Primärschlüssel haben. Für Lehrer verwenden wir ein kurzes Kürzel als Kennzeichnung (z.B. MUS, MAN, BER).</p>`,
       objective: `<ol>
           <li>Erstelle drei Attribute bei der Entitätsklasse <strong>"Lehrer"</strong>:
             <ul>
-              <li><strong>"Lehrer-Kürzel"</strong> (z.B. MUS, MAN, BER)</li>
+              <li><strong>"Lehrer-Kürzel"</strong></li>
               <li><strong>"Vorname"</strong></li>
               <li><strong>"Nachname"</strong></li>
             </ul>
@@ -599,7 +599,8 @@
       id: 9,
       number: 9,
       title: 'Zweite Beziehung',
-      theory: `<p><strong>Mehrere Beziehungen:</strong> Entitätsklassen können mit mehreren anderen Klassen in Beziehung stehen.</p>
+      theory: `<p><strong>Mehrere Beziehungen:</strong> Entitätsklassen können mit mehreren anderen Entitätsklassen in Beziehung stehen.</p>
+        <p><strong>Kardinalität:</strong> Beschreibt, wie viele Instanzen an jeder Seite beteiligt sind:</p>  
         <ul>
           <li><strong>1:1</strong> (eins-zu-eins): Ein Schüler hat einen Schülerausweis, ein Schülerausweis gehört einem Schüler.</li>
           <li><strong>1:n</strong> (eins-zu-vielen): Eine Klasse hat viele Schüler, ein Schüler gehört zu einer Klasse.</li>
@@ -609,8 +610,8 @@
       objective: `<p>Erstelle eine Beziehung zwischen <strong>"Lehrer"</strong> und <strong>"Klasse"</strong>:</p>
         <ol>
           <li>Name der Beziehung: <strong>"unterrichtet"</strong></li>
-          <li>Kardinalität: <strong>n:m</strong> (ein Lehrer unterrichtet viele Klassen, eine Klasse hat Unterricht bei vielen Lehrern)</li>
           <li><strong>"Lehrer"</strong> auf der linken Seite, <strong>"Klasse"</strong> auf der rechten</li>
+          <li>Kardinalität: <strong>n:m</strong> (ein Lehrer unterrichtet viele Klassen, eine Klasse hat Unterricht bei vielen Lehrern)</li>
         </ol>`,
       validator: function () {
         const lehrer = getEntityByName('Lehrer');
@@ -694,8 +695,8 @@
       objective: `<ol>
           <li>Erstelle eine <strong>Selbstbeziehung</strong> bei der Entitätsklasse <strong>"Schüler"</strong></li>
           <li>Name der Beziehung: <strong>"ist befreundet mit"</strong></li>
-          <li>Kardinalität: <strong>n:m</strong> (ein Schüler kann viele Freunde haben)</li>
           <li>Verbinde die Beziehung auf <strong>beiden Seiten</strong> mit <strong>"Schüler"</strong></li>
+          <li>Kardinalität: <strong>n:m</strong> (ein Schüler kann viele Freunde haben)</li>
         </ol>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
@@ -1106,22 +1107,16 @@
         const result = quest.validator();
         const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 9;
 
-        if (result.passed && quest.number === maxQuests && !forceRecheck) {
-          return { passed: false };
-        }
-
         if (result.passed) {
           if (quest.number === maxQuests) {
-            if (this.state.questMode === 'experten') {
+            // Bei der letzten Quest: Zeige das Erfolgs-Modal. Erst nach Klick auf OK
+            // wird die Quest als abgeschlossen markiert, der Fullscreen-Konfetti
+            // gestartet und das Quest-Panel geschlossen.
+            window.App?.showQuestSuccessModal?.(quest.number, () => {
               this.completeCurrentQuest();
               window.App?.playFullscreenConfetti?.();
               this.hidePanel();
-              return { passed: true };
-            }
-
-            window.App?.playFullscreenConfetti?.();
-            this.completeCurrentQuest();
-            this.hidePanel();
+            });
             return { passed: true };
           }
 

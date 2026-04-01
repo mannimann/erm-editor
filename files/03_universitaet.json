@@ -1,0 +1,317 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "Expertenquest 3 - Universität",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 130,
+      "y": 375,
+      "name": "Student"
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 570,
+      "y": 95,
+      "name": "Vorlesung"
+    },
+    {
+      "id": "s3",
+      "type": "entity",
+      "x": 570,
+      "y": 375,
+      "name": "Professor"
+    },
+    {
+      "id": "s4",
+      "type": "entity",
+      "x": 130,
+      "y": 95,
+      "name": "Belegung"
+    },
+    {
+      "id": "s5",
+      "type": "attribute",
+      "x": 280,
+      "y": 434,
+      "name": "Matrikelnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": -20,
+      "y": 414,
+      "name": "Vorname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s7",
+      "type": "attribute",
+      "x": 120,
+      "y": 474,
+      "name": "Nachname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s8",
+      "type": "attribute",
+      "x": 0,
+      "y": 314,
+      "name": "E-Mail",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": 740,
+      "y": 134,
+      "name": "Vorlesungscode",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 740,
+      "y": 54,
+      "name": "Titel",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s11",
+      "type": "attribute",
+      "x": 680,
+      "y": -6,
+      "name": "Kreditpunkte",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s12",
+      "type": "attribute",
+      "x": 500,
+      "y": -6,
+      "name": "Wochenstunden",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 560,
+      "y": 474,
+      "name": "ProfessorenKürzel",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s14",
+      "type": "attribute",
+      "x": 740,
+      "y": 454,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": 740,
+      "y": 354,
+      "name": "Fachgebiet",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s16",
+      "type": "attribute",
+      "x": 140,
+      "y": -26,
+      "name": "Belegnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": -20,
+      "y": 134,
+      "name": "Semester",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s18",
+      "type": "attribute",
+      "x": -20,
+      "y": 34,
+      "name": "Status",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s19",
+      "type": "attribute",
+      "x": 260,
+      "y": 14,
+      "name": "Note",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s20",
+      "type": "relationship",
+      "x": 575,
+      "y": 230,
+      "name": "unterrichtet"
+    },
+    {
+      "id": "s21",
+      "type": "relationship",
+      "x": 375,
+      "y": 90,
+      "name": "gilt für"
+    },
+    {
+      "id": "s22",
+      "type": "relationship",
+      "x": 135,
+      "y": 230,
+      "name": "belegt"
+    }
+  ],
+  "edges": [
+    {
+      "id": "s23",
+      "fromId": "s1",
+      "toId": "s5",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s24",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s25",
+      "fromId": "s1",
+      "toId": "s7",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s1",
+      "toId": "s8",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s2",
+      "toId": "s9",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s28",
+      "fromId": "s2",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s29",
+      "fromId": "s2",
+      "toId": "s11",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s30",
+      "fromId": "s2",
+      "toId": "s12",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s31",
+      "fromId": "s3",
+      "toId": "s13",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s32",
+      "fromId": "s3",
+      "toId": "s14",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s33",
+      "fromId": "s3",
+      "toId": "s15",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s34",
+      "fromId": "s4",
+      "toId": "s16",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s35",
+      "fromId": "s4",
+      "toId": "s17",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s36",
+      "fromId": "s4",
+      "toId": "s18",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s37",
+      "fromId": "s4",
+      "toId": "s19",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s38",
+      "fromId": "s3",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s39",
+      "fromId": "s2",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s40",
+      "fromId": "s2",
+      "toId": "s21",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s41",
+      "fromId": "s4",
+      "toId": "s21",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s42",
+      "fromId": "s1",
+      "toId": "s22",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s43",
+      "fromId": "s4",
+      "toId": "s22",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    }
+  ],
+  "nextId": 22
+}

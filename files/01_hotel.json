@@ -1,0 +1,274 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "Expertenquest 1 - Hotel-Verwaltung",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 570,
+      "y": 95,
+      "name": "Gast",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s2",
+      "type": "attribute",
+      "x": 760,
+      "y": 74,
+      "name": "Gastnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s4",
+      "type": "attribute",
+      "x": 500,
+      "y": 14,
+      "name": "Vorname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": 660,
+      "y": 14,
+      "name": "Nachname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s8",
+      "type": "attribute",
+      "x": 720,
+      "y": 174,
+      "name": "E-Mail",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 560,
+      "y": 194,
+      "name": "Telefon",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s12",
+      "type": "entity",
+      "x": 130,
+      "y": 375,
+      "name": "Zimmer",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 60,
+      "y": 454,
+      "name": "Zimmernummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": 300,
+      "y": 354,
+      "name": "Kategorie",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": 220,
+      "y": 454,
+      "name": "PreisProNacht",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s19",
+      "type": "entity",
+      "x": 130,
+      "y": 95,
+      "name": "Buchung",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s20",
+      "type": "attribute",
+      "x": 200,
+      "y": -6,
+      "name": "Buchungsnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s22",
+      "type": "attribute",
+      "x": 40,
+      "y": -6,
+      "name": "Anreisedatum",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s24",
+      "type": "attribute",
+      "x": -20,
+      "y": 74,
+      "name": "Abreisedatum",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s26",
+      "type": "attribute",
+      "x": 20,
+      "y": 174,
+      "name": "AnzahlNaechte",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s28",
+      "type": "relationship",
+      "x": 355,
+      "y": 90,
+      "name": "bucht",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s31",
+      "type": "relationship",
+      "x": 135,
+      "y": 230,
+      "name": "gilt für",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s3",
+      "fromId": "s1",
+      "toId": "s2",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s5",
+      "fromId": "s1",
+      "toId": "s4",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s7",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s9",
+      "fromId": "s1",
+      "toId": "s8",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s11",
+      "fromId": "s1",
+      "toId": "s10",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s14",
+      "fromId": "s12",
+      "toId": "s13",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s16",
+      "fromId": "s12",
+      "toId": "s15",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s18",
+      "fromId": "s12",
+      "toId": "s17",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s21",
+      "fromId": "s19",
+      "toId": "s20",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s23",
+      "fromId": "s19",
+      "toId": "s22",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s25",
+      "fromId": "s19",
+      "toId": "s24",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s27",
+      "fromId": "s19",
+      "toId": "s26",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s29",
+      "fromId": "s28",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s30",
+      "fromId": "s28",
+      "toId": "s19",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s32",
+      "fromId": "s31",
+      "toId": "s12",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s33",
+      "fromId": "s31",
+      "toId": "s19",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    }
+  ],
+  "nextId": 34
+}

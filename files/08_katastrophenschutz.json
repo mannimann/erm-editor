@@ -1,0 +1,363 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "Expertenquest 8 - Katastrophenschutz",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 550,
+      "y": 95,
+      "name": "Einsatzkraft"
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 550,
+      "y": 395,
+      "name": "Team"
+    },
+    {
+      "id": "s3",
+      "type": "entity",
+      "x": 130,
+      "y": 95,
+      "name": "Einsatz"
+    },
+    {
+      "id": "s4",
+      "type": "entity",
+      "x": 130,
+      "y": 395,
+      "name": "Fahrzeug"
+    },
+    {
+      "id": "s5",
+      "type": "relationship",
+      "x": 555,
+      "y": 230,
+      "name": "gehört zu"
+    },
+    {
+      "id": "s6",
+      "type": "relationship",
+      "x": 715,
+      "y": 230,
+      "name": "leitet"
+    },
+    {
+      "id": "s7",
+      "type": "relationship",
+      "x": 355,
+      "y": 90,
+      "name": "arbeitet ein"
+    },
+    {
+      "id": "s8",
+      "type": "relationship",
+      "x": 335,
+      "y": 230,
+      "name": "bearbeitet"
+    },
+    {
+      "id": "s9",
+      "type": "relationship",
+      "x": 135,
+      "y": 250,
+      "name": "nutzt"
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 500,
+      "y": -66,
+      "name": "Funkrufname",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s11",
+      "type": "attribute",
+      "x": 720,
+      "y": 14,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s12",
+      "type": "attribute",
+      "x": 760,
+      "y": 94,
+      "name": "Qualifikation",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 660,
+      "y": -66,
+      "name": "Telefonnummer",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s14",
+      "type": "attribute",
+      "x": 480,
+      "y": 474,
+      "name": "Teamname",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": 640,
+      "y": 474,
+      "name": "Standort",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s16",
+      "type": "attribute",
+      "x": 720,
+      "y": 394,
+      "name": "Bereitschaftsstufe",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": 260,
+      "y": 14,
+      "name": "Einsatzgebiet",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s18",
+      "type": "attribute",
+      "x": 140,
+      "y": -26,
+      "name": "Datum",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s19",
+      "type": "attribute",
+      "x": 20,
+      "y": 14,
+      "name": "Startzeit",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s20",
+      "type": "attribute",
+      "x": 60,
+      "y": 174,
+      "name": "Priorität",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s21",
+      "type": "attribute",
+      "x": -40,
+      "y": 114,
+      "name": "Lagebild",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s22",
+      "type": "attribute",
+      "x": 60,
+      "y": 474,
+      "name": "Kennzeichen",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s23",
+      "type": "attribute",
+      "x": -20,
+      "y": 374,
+      "name": "Fahrzeugtyp",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s24",
+      "type": "attribute",
+      "x": 220,
+      "y": 474,
+      "name": "Kapazität",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s25",
+      "fromId": "s1",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s1",
+      "toId": "s11",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s1",
+      "toId": "s12",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s28",
+      "fromId": "s1",
+      "toId": "s13",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s29",
+      "fromId": "s2",
+      "toId": "s14",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s30",
+      "fromId": "s2",
+      "toId": "s15",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s31",
+      "fromId": "s2",
+      "toId": "s16",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s32",
+      "fromId": "s3",
+      "toId": "s17",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s33",
+      "fromId": "s3",
+      "toId": "s18",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s34",
+      "fromId": "s3",
+      "toId": "s19",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s35",
+      "fromId": "s3",
+      "toId": "s20",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s36",
+      "fromId": "s3",
+      "toId": "s21",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s37",
+      "fromId": "s4",
+      "toId": "s22",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s38",
+      "fromId": "s4",
+      "toId": "s23",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s39",
+      "fromId": "s4",
+      "toId": "s24",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s50",
+      "fromId": "s7",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s51",
+      "fromId": "s7",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s52",
+      "fromId": "s8",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s53",
+      "fromId": "s8",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    },
+    {
+      "id": "s54",
+      "fromId": "s9",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s55",
+      "fromId": "s9",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    },
+    {
+      "id": "s56",
+      "fromId": "s6",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s57",
+      "fromId": "s6",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s58",
+      "fromId": "s5",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s59",
+      "fromId": "s5",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    }
+  ],
+  "nextId": 60
+}

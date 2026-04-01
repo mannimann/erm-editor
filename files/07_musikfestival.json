@@ -1,0 +1,326 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "Expertenquest 7 - Musikfestival",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 130,
+      "y": 395,
+      "name": "Künstler"
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 550,
+      "y": 95,
+      "name": "Bühne"
+    },
+    {
+      "id": "s3",
+      "type": "entity",
+      "x": 130,
+      "y": 95,
+      "name": "Auftritt"
+    },
+    {
+      "id": "s4",
+      "type": "entity",
+      "x": 550,
+      "y": 415,
+      "name": "Crewmitglied"
+    },
+    {
+      "id": "s5",
+      "type": "relationship",
+      "x": 135,
+      "y": 230,
+      "name": "spielt"
+    },
+    {
+      "id": "s6",
+      "type": "relationship",
+      "x": 355,
+      "y": 90,
+      "name": "findet statt auf"
+    },
+    {
+      "id": "s7",
+      "type": "relationship",
+      "x": 555,
+      "y": 250,
+      "name": "betreut"
+    },
+    {
+      "id": "s8",
+      "type": "relationship",
+      "x": 355,
+      "y": 410,
+      "name": "arbeitet ein"
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": 220,
+      "y": 494,
+      "name": "Künstlercode",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 80,
+      "y": 494,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s11",
+      "type": "attribute",
+      "x": -20,
+      "y": 414,
+      "name": "Genre",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s12",
+      "type": "attribute",
+      "x": 700,
+      "y": 14,
+      "name": "Bühnenname",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 740,
+      "y": 94,
+      "name": "Kapazität",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s14",
+      "type": "attribute",
+      "x": 560,
+      "y": -26,
+      "name": "Bereich",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": 140,
+      "y": -26,
+      "name": "Bühnenname",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s16",
+      "type": "attribute",
+      "x": 280,
+      "y": 14,
+      "name": "Datum",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": 0,
+      "y": -26,
+      "name": "Startzeit",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s18",
+      "type": "attribute",
+      "x": -40,
+      "y": 134,
+      "name": "Endzeit",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s19",
+      "type": "attribute",
+      "x": -40,
+      "y": 54,
+      "name": "Status",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s20",
+      "type": "attribute",
+      "x": 720,
+      "y": 374,
+      "name": "Crewnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s21",
+      "type": "attribute",
+      "x": 720,
+      "y": 474,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s22",
+      "type": "attribute",
+      "x": 560,
+      "y": 514,
+      "name": "Rolle",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s23",
+      "fromId": "s1",
+      "toId": "s9",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s24",
+      "fromId": "s1",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s25",
+      "fromId": "s1",
+      "toId": "s11",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s2",
+      "toId": "s12",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s2",
+      "toId": "s13",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s28",
+      "fromId": "s2",
+      "toId": "s14",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s29",
+      "fromId": "s3",
+      "toId": "s15",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s30",
+      "fromId": "s3",
+      "toId": "s16",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s31",
+      "fromId": "s3",
+      "toId": "s17",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s32",
+      "fromId": "s3",
+      "toId": "s18",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s33",
+      "fromId": "s3",
+      "toId": "s19",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s34",
+      "fromId": "s4",
+      "toId": "s20",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s35",
+      "fromId": "s4",
+      "toId": "s21",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s36",
+      "fromId": "s4",
+      "toId": "s22",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s37",
+      "fromId": "s1",
+      "toId": "s5",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s38",
+      "fromId": "s3",
+      "toId": "s5",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s39",
+      "fromId": "s3",
+      "toId": "s6",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s40",
+      "fromId": "s2",
+      "toId": "s6",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s44",
+      "fromId": "s8",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s45",
+      "fromId": "s8",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    },
+    {
+      "id": "s46",
+      "fromId": "s7",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s47",
+      "fromId": "s7",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    }
+  ],
+  "nextId": 48
+}

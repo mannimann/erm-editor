@@ -1,0 +1,274 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "ERM-Grundlagenquest - Schule",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 130,
+      "y": 375,
+      "name": "Schüler",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s2",
+      "type": "attribute",
+      "x": 220,
+      "y": 454,
+      "name": "SchülerNr",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s4",
+      "type": "attribute",
+      "x": 320,
+      "y": 374,
+      "name": "Nachname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": 60,
+      "y": 454,
+      "name": "Vorname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s8",
+      "type": "entity",
+      "x": 130,
+      "y": 95,
+      "name": "Klasse",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": 80,
+      "y": 14,
+      "name": "Parallelklasse",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s23",
+      "type": "relationship",
+      "x": 215,
+      "y": 230,
+      "name": "geht in",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s28",
+      "type": "entity",
+      "x": 550,
+      "y": 95,
+      "name": "Lehrer",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s29",
+      "type": "attribute",
+      "x": 640,
+      "y": 14,
+      "name": "Lehrer-Kürzel",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s31",
+      "type": "relationship",
+      "x": 355,
+      "y": 90,
+      "name": "unterrichtet",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s36",
+      "type": "attribute",
+      "x": 360,
+      "y": 14,
+      "name": "Fach",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s39",
+      "type": "relationship",
+      "x": 55,
+      "y": 230,
+      "name": "ist Klassensprecher",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s42",
+      "type": "attribute",
+      "x": -40,
+      "y": 94,
+      "name": "Klassenstufe",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s44",
+      "type": "attribute",
+      "x": 640,
+      "y": 174,
+      "name": "Vorname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s46",
+      "type": "attribute",
+      "x": 720,
+      "y": 94,
+      "name": "Nachname",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s48",
+      "type": "relationship",
+      "x": -65,
+      "y": 370,
+      "name": "ist befreundet mit",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s3",
+      "fromId": "s1",
+      "toId": "s2",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s5",
+      "fromId": "s1",
+      "toId": "s4",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s7",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s10",
+      "fromId": "s8",
+      "toId": "s9",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s26",
+      "fromId": "s23",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s27",
+      "fromId": "s23",
+      "toId": "s8",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s30",
+      "fromId": "s28",
+      "toId": "s29",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s34",
+      "fromId": "s31",
+      "toId": "s28",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s35",
+      "fromId": "s31",
+      "toId": "s8",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    },
+    {
+      "id": "s37",
+      "fromId": "s31",
+      "toId": "s36",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s40",
+      "fromId": "s39",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s41",
+      "fromId": "s39",
+      "toId": "s8",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s43",
+      "fromId": "s8",
+      "toId": "s42",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s45",
+      "fromId": "s28",
+      "toId": "s44",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s47",
+      "fromId": "s28",
+      "toId": "s46",
+      "edgeType": "attribute",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s49",
+      "fromId": "s48",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s50",
+      "fromId": "s48",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    }
+  ],
+  "nextId": 51
+}

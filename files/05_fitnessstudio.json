@@ -1,0 +1,259 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "Expertenquest 5 - Fitnessstudio-Kursplanung",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 550,
+      "y": 95,
+      "name": "Mitglied"
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 130,
+      "y": 95,
+      "name": "Kurs"
+    },
+    {
+      "id": "s3",
+      "type": "entity",
+      "x": 130,
+      "y": 375,
+      "name": "Trainer"
+    },
+    {
+      "id": "s4",
+      "type": "relationship",
+      "x": 355,
+      "y": 90,
+      "name": "belegt"
+    },
+    {
+      "id": "s5",
+      "type": "relationship",
+      "x": 135,
+      "y": 230,
+      "name": "leitet"
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": 700,
+      "y": 174,
+      "name": "Mitgliedsnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s7",
+      "type": "attribute",
+      "x": 540,
+      "y": 194,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s8",
+      "type": "attribute",
+      "x": 700,
+      "y": 34,
+      "name": "Telefonnummer",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": 560,
+      "y": -6,
+      "name": "E-Mail",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 200,
+      "y": -26,
+      "name": "Kurscode",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s11",
+      "type": "attribute",
+      "x": -60,
+      "y": 114,
+      "name": "Titel",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s12",
+      "type": "attribute",
+      "x": -40,
+      "y": 34,
+      "name": "Schwierigkeitsstufe",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 60,
+      "y": -26,
+      "name": "Maximalplätze",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s14",
+      "type": "attribute",
+      "x": 60,
+      "y": 454,
+      "name": "Trainerkürzel",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": 240,
+      "y": 454,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s16",
+      "type": "attribute",
+      "x": 300,
+      "y": 374,
+      "name": "Lizenz",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": 360,
+      "y": -6,
+      "name": "Anmeldedatum",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s18",
+      "type": "attribute",
+      "x": -40,
+      "y": 234,
+      "name": "Wochentag",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s19",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s20",
+      "fromId": "s1",
+      "toId": "s7",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s21",
+      "fromId": "s1",
+      "toId": "s8",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s22",
+      "fromId": "s1",
+      "toId": "s9",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s23",
+      "fromId": "s2",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s24",
+      "fromId": "s2",
+      "toId": "s11",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s25",
+      "fromId": "s2",
+      "toId": "s12",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s2",
+      "toId": "s13",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s3",
+      "toId": "s14",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s28",
+      "fromId": "s3",
+      "toId": "s15",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s29",
+      "fromId": "s3",
+      "toId": "s16",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s30",
+      "fromId": "s4",
+      "toId": "s17",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s31",
+      "fromId": "s5",
+      "toId": "s18",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s36",
+      "fromId": "s5",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s37",
+      "fromId": "s5",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    },
+    {
+      "id": "s38",
+      "fromId": "s4",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s39",
+      "fromId": "s4",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
+    }
+  ],
+  "nextId": 40
+}

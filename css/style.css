@@ -2251,7 +2251,7 @@ body.is-resizing-drawer {
   padding: 36px 40px 28px;
   text-align: center;
   min-width: 280px;
-  max-width: 380px;
+  max-width: 720px;
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.28);
   animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -2318,7 +2318,7 @@ body.is-resizing-drawer {
   box-shadow: none;
 }
 
-/* Modal-specific variant of the info box (bigger text to match modal content) */
+/* Modal-specific variant of the info box */
 .quest-success-concept {
   background: rgba(59, 130, 246, 0.08);
   border-left: 3px solid #3b82f6;
@@ -2326,8 +2326,9 @@ body.is-resizing-drawer {
   border-radius: 8px;
   margin-bottom: 14px;
   color: #dbeafe;
-  font-size: 1.15rem;
+  font-size: 0.95rem;
   line-height: 1.4;
+  text-align: left;
 }
 
 /* Single Pastell-Gradient utility (used by the success bar) */
@@ -2370,7 +2371,7 @@ body.is-resizing-drawer {
   border-radius: 12px;
   padding: 40px;
   text-align: center;
-  max-width: 500px;
+  max-width: 720px;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.3);
   animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }

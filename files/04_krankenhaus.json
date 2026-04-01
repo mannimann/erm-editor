@@ -1,0 +1,326 @@
+{
+  "notation": "chen",
+  "snapToGrid": true,
+  "diagramTitle": "Expertenquest 4 - Krankenhaus",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 510,
+      "y": 335,
+      "name": "Patient"
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 30,
+      "y": 95,
+      "name": "Arzt"
+    },
+    {
+      "id": "s3",
+      "type": "entity",
+      "x": 510,
+      "y": 95,
+      "name": "Behandlung"
+    },
+    {
+      "id": "s4",
+      "type": "entity",
+      "x": 30,
+      "y": 335,
+      "name": "Station"
+    },
+    {
+      "id": "s5",
+      "type": "attribute",
+      "x": 380,
+      "y": 414,
+      "name": "Versicherungsnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": 540,
+      "y": 434,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s7",
+      "type": "attribute",
+      "x": 680,
+      "y": 374,
+      "name": "Geburtsdatum",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s8",
+      "type": "attribute",
+      "x": 680,
+      "y": 294,
+      "name": "Adresse",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": -120,
+      "y": 34,
+      "name": "Personalnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 160,
+      "y": 14,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s11",
+      "type": "attribute",
+      "x": 20,
+      "y": -26,
+      "name": "Fachbereich",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s12",
+      "type": "attribute",
+      "x": 520,
+      "y": -26,
+      "name": "Behandlungsnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 660,
+      "y": -6,
+      "name": "Datum",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s14",
+      "type": "attribute",
+      "x": 700,
+      "y": 74,
+      "name": "Diagnose",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": 380,
+      "y": 14,
+      "name": "Medikation",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s16",
+      "type": "attribute",
+      "x": -20,
+      "y": 414,
+      "name": "Stationscode",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": 120,
+      "y": 414,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s18",
+      "type": "attribute",
+      "x": -120,
+      "y": 334,
+      "name": "Bettenzahl",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s19",
+      "type": "relationship",
+      "x": 275,
+      "y": 90,
+      "name": "führt durch"
+    },
+    {
+      "id": "s20",
+      "type": "relationship",
+      "x": 515,
+      "y": 210,
+      "name": "erhält"
+    },
+    {
+      "id": "s21",
+      "type": "relationship",
+      "x": 35,
+      "y": 210,
+      "name": "arbeitet auf"
+    },
+    {
+      "id": "s22",
+      "type": "relationship",
+      "x": 275,
+      "y": 330,
+      "name": "liegt auf"
+    }
+  ],
+  "edges": [
+    {
+      "id": "s23",
+      "fromId": "s1",
+      "toId": "s5",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s24",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s25",
+      "fromId": "s1",
+      "toId": "s7",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s1",
+      "toId": "s8",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s2",
+      "toId": "s9",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s28",
+      "fromId": "s2",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s29",
+      "fromId": "s2",
+      "toId": "s11",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s30",
+      "fromId": "s3",
+      "toId": "s12",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s31",
+      "fromId": "s3",
+      "toId": "s13",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s32",
+      "fromId": "s3",
+      "toId": "s14",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s33",
+      "fromId": "s3",
+      "toId": "s15",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s34",
+      "fromId": "s4",
+      "toId": "s16",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s35",
+      "fromId": "s4",
+      "toId": "s17",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s36",
+      "fromId": "s4",
+      "toId": "s18",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s37",
+      "fromId": "s1",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s38",
+      "fromId": "s3",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s39",
+      "fromId": "s2",
+      "toId": "s19",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s40",
+      "fromId": "s3",
+      "toId": "s19",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s41",
+      "fromId": "s2",
+      "toId": "s21",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s42",
+      "fromId": "s4",
+      "toId": "s21",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s43",
+      "fromId": "s1",
+      "toId": "s22",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s44",
+      "fromId": "s4",
+      "toId": "s22",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    }
+  ],
+  "nextId": 48
+}
