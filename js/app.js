@@ -1642,14 +1642,16 @@ window.App = {
         setTimeout(startBarAnimation, 60);
       }
     }
-    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (gleiche Optik wie im Panel)
+    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (nur Grundlagen).
     try {
+      // Immer alte Box entfernen, damit beim Wechsel von Grundlagen -> Experten nichts "hängen bleibt".
+      const existing = modal.querySelector('.quest-success-concept');
+      if (existing) existing.remove();
+
       const currentQuest = window.Quest?.getCurrentQuest?.();
-      const theoryHtml = currentQuest?.theory || '';
+      const isGrundlagen = window.Quest?.state?.questMode === 'grundlagen';
+      const theoryHtml = isGrundlagen ? currentQuest?.theory || '' : '';
       if (theoryHtml) {
-        // Entferne vorhandene Kopie, falls vorhanden
-        const existing = modal.querySelector('.quest-success-concept');
-        if (existing) existing.remove();
         const conceptDiv = document.createElement('div');
         conceptDiv.className = 'quest-concept quest-success-concept';
         conceptDiv.innerHTML = theoryHtml;
@@ -1860,13 +1862,17 @@ window.App = {
     const hints = window.Quest?.getHints?.() || [];
     const singleHint = hints.length > 0 ? hints[0] : String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
 
+    // Bei Expertenquests soll keine separate Hinweisbox/"Hinweis"-Schaltfläche angezeigt werden,
+    // da diese Quests keine Theoriebox besitzen.
+    const showHintButton = !(window.Quest?.state?.questMode === 'experten');
+
     return this.showAppModal({
       title: 'Überprüfung',
       message: baseMessage || 'Noch nicht korrekt. Versuche es erneut.',
       mode: 'alert',
       confirmLabel: 'Schließen',
       autoCloseMs: 0,
-      extraLabel: 'Hinweis',
+      extraLabel: showHintButton ? 'Hinweis' : '',
       onExtra: ({ messageEl, extraBtn }) => {
         messageEl.textContent = singleHint;
         extraBtn.style.display = 'none';

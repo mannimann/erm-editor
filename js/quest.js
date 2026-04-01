@@ -557,7 +557,7 @@
       id: 7,
       number: 7,
       title: 'Dritte Entitätsklasse',
-      theory: `<p><strong>Erweitern des Modells:</strong> Wir fügen eine dritte Entitätsklasse hinzu, um das Szenario realistischer zu machen.</p>`,
+      theory: `<p><strong>Erweitern des Modells:</strong> Ein ER-Modell kann mehrere Entitätsklassen enthalten.</p>`,
       objective: `<p>Erstelle eine neue Entitätsklasse mit dem Namen <strong>"Lehrer"</strong></p>`,
       validator: function () {
         if (countEntities() !== 3) return { passed: false, error: 'Du brauchst jetzt genau 3 Entitätsklassen' };
@@ -733,8 +733,7 @@
       number: 13,
       title: '🎉 Abschluss',
       theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
-        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen, Kardinalitäten, Verbundschlüssel und Selbstbeziehungen zu modellieren.</p>
-        <p>Bevor du mit den <strong>Expertenquests</strong> weitermachst: Speichere dein fertiges ER-Modell!</p>`,
+        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen, Kardinalitäten, Verbundschlüssel und Selbstbeziehungen zu modellieren.</p>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
           <li>Gib deinem ER-Modell in der Titelleiste einen <strong>Namen</strong> (z.B. "Schule")</li>
