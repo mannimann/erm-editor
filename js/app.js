@@ -709,6 +709,7 @@ function initPropertiesPanel() {
 
   propNameInput.addEventListener('input', (e) => {
     if (!_selectedNodeId) return;
+    if (state.diagramLocked) return;
     const node = getNodeById(_selectedNodeId);
     if (!node) return;
 
@@ -794,6 +795,10 @@ function initPropertiesPanel() {
   // PK-Toggle
   document.getElementById('prop-pk').addEventListener('change', (e) => {
     if (!_selectedNodeId) return;
+    if (state.diagramLocked) {
+      e.target.checked = !e.target.checked;
+      return;
+    }
     const node = getNodeById(_selectedNodeId);
     if (!node || node.type !== 'attribute') return;
     node.isPrimaryKey = e.target.checked;
@@ -1005,6 +1010,40 @@ function clearDiagramSilent() {
   persistStateDebounced();
 }
 
+function loadErmFromFile(filename) {
+  return fetch('files/' + encodeURIComponent(filename))
+    .then((res) => {
+      if (!res.ok) throw new Error('Datei nicht gefunden');
+      return res.json();
+    })
+    .then((data) => {
+      if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error('Ungültiges Format');
+      state.nodes = data.nodes;
+      state.edges = data.edges;
+      state.nextId =
+        data.nextId ||
+        Math.max(
+          0,
+          ...data.nodes.map((n) => parseInt(n.id.slice(1)) || 0),
+          ...data.edges.map((ed) => parseInt(ed.id.slice(1)) || 0),
+        ) + 1;
+      state.notation = 'chen';
+      state.snapToGrid = !!data.snapToGrid;
+      state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
+      state.edges.forEach((edge) => {
+        edge.edgeType = inferEdgeType(edge);
+      });
+      const titleInput = document.getElementById('erm-title-input');
+      if (titleInput) titleInput.value = state.diagramTitle || '';
+      clearSelection();
+      if (window.Diagram) window.Diagram.renderAll();
+      if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
+      if (window.Diagram?.centerView) window.Diagram.centerView();
+      if (window.RelModel) window.RelModel.syncFromDiagram();
+      persistStateDebounced();
+    });
+}
+
 // ---- Bootstrap ----
 document.addEventListener('DOMContentLoaded', () => {
   state.notation = 'chen';
@@ -1044,7 +1083,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-export-json').addEventListener('click', exportJSON);
   document.getElementById('btn-export-png').addEventListener('click', exportPNG);
-  document.getElementById('btn-clear').addEventListener('click', clearAll);
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    if (state.diagramLocked) {
+      window.App?.showLockedWarning?.();
+      return;
+    }
+    clearAll();
+  });
 
   const titleInput = document.getElementById('erm-title-input');
   if (titleInput) {
@@ -1054,6 +1099,10 @@ document.addEventListener('DOMContentLoaded', () => {
       titleValueBeforeEdit = state.diagramTitle || '';
     });
     titleInput.addEventListener('input', (e) => {
+      if (state.diagramLocked) {
+        titleInput.value = state.diagramTitle || '';
+        return;
+      }
       state.diagramTitle = e.target.value;
       persistStateDebounced();
     });
@@ -1095,6 +1144,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('btn-import').addEventListener('click', () => {
+    if (state.diagramLocked) {
+      window.App?.showLockedWarning?.();
+      return;
+    }
     document.getElementById('file-input').click();
   });
   document.getElementById('file-input').addEventListener('change', (e) => {
@@ -1155,13 +1208,63 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Coming-soon Eintrag – nur Info-Modal zeigen
+  // Relmodel-Grundlagen: ERM laden und Quest starten
   const relmodelQuestBtn = document.getElementById('btn-start-relmodel');
   if (relmodelQuestBtn) {
-    relmodelQuestBtn.addEventListener('click', (e) => {
+    relmodelQuestBtn.addEventListener('click', async (e) => {
       e.preventDefault();
+      if (!window.Quest) return;
+      const decision = await window.App?.showAppModal?.({
+        title: 'Relationenmodell – Grundlagen',
+        message: 'Das Schule-ER-Modell wird geladen und die Seitenleiste geöffnet.',
+        mode: 'confirm',
+        confirmLabel: 'ERM laden und starten',
+        cancelLabel: 'Abbrechen',
+      });
+      if (!decision) return;
       closeQuestDropdownMenu();
-      window.App?.showAlertModal?.('Diese Quest-Reihe ist noch in Arbeit und wird bald verfügbar sein.', 'Coming soon');
+      try {
+        await loadErmFromFile('00_schule.json');
+      } catch (err) {
+        window.App?.showAlertModal?.('Das ER-Modell konnte nicht geladen werden.', 'Fehler');
+        return;
+      }
+      if (window.RelModel) window.RelModel.reset();
+      state.diagramLocked = true;
+      window.Quest.startQuestSeries('relmodel-grundlagen');
+    });
+  }
+
+  // Relmodel-Experten: Quest starten (Modal nur bei nicht-leerem Diagramm)
+  const relmodelExpertenBtn = document.getElementById('btn-start-relmodel-experten');
+  if (relmodelExpertenBtn) {
+    relmodelExpertenBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!window.Quest) return;
+      if (state.nodes.length > 0) {
+        const decision = await window.App?.showAppModal?.({
+          title: 'Relationenmodell – Experten',
+          message: 'Das aktuelle Diagramm und die Relationen werden gelöscht.',
+          mode: 'confirm',
+          confirmLabel: 'Alles löschen und starten',
+          cancelLabel: 'Abbrechen',
+        });
+        if (!decision) return;
+      }
+      closeQuestDropdownMenu();
+      clearDiagramSilent();
+      if (window.RelModel) window.RelModel.reset();
+      state.diagramLocked = true;
+      window.Quest.startQuestSeries('relmodel-experten');
+      // Auto-load ERM für den ersten Quest
+      const firstQuest = window.Quest.getCurrentQuest?.();
+      if (firstQuest?.jsonFile) {
+        try {
+          await loadErmFromFile(firstQuest.jsonFile);
+        } catch (_) {}
+        if (window.RelModel) window.RelModel.reset();
+        if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+      }
     });
   }
 
@@ -1171,6 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     questCloseBtn.addEventListener('click', () => {
       if (window.Quest && window.Quest.hidePanel) {
         window.Quest.hidePanel();
+        state.diagramLocked = false;
       }
     });
   }
@@ -1186,6 +1290,19 @@ document.addEventListener('DOMContentLoaded', () => {
       );
       if (confirmed) {
         window.Quest.resetCurrentSeriesProgress();
+        // Re-load ERM für Relmodel-Experten nach Reset
+        const qMode = window.Quest.state?.questMode || '';
+        if (qMode === 'relmodel-experten') {
+          const quest = window.Quest.getCurrentQuest?.();
+          if (quest?.jsonFile) {
+            try {
+              await loadErmFromFile(quest.jsonFile);
+            } catch (_) {}
+            if (window.RelModel) window.RelModel.reset();
+            if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+            state.diagramLocked = true;
+          }
+        }
       }
     });
   }
@@ -1198,6 +1315,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (manualCheckBtn && window.Quest?.validateCurrentQuest) {
         e.preventDefault();
         if (window.App?.isQuestCheckSuppressed?.()) return;
+        const qMode = window.Quest.state?.questMode || '';
+        if (qMode.startsWith('relmodel-')) {
+          if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+          if (window.RelModel?.triggerCheck) window.RelModel.triggerCheck();
+        }
         window.Quest.validateCurrentQuest(true);
         return;
       }
@@ -1225,6 +1347,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       window.Quest.jumpToQuest(questNum);
+      // Auto-load ERM für Relmodel-Experten
+      const qMode = window.Quest.state?.questMode || '';
+      if (qMode === 'relmodel-experten') {
+        const quest = window.Quest.getQuestByNumber?.(qMode, questNum);
+        if (quest?.jsonFile) {
+          try {
+            await loadErmFromFile(quest.jsonFile);
+          } catch (_) {}
+          if (window.RelModel) window.RelModel.reset();
+          if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+          state.diagramLocked = true;
+        }
+      }
       window.Quest.renderPanel();
     });
   }
@@ -1332,9 +1467,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!target || !target.hasAttribute('data-tooltip')) return;
       clearTimeout(hideTimer);
       currentTarget = target;
+      const captured = target;
       showTimer = setTimeout(() => {
+        if (currentTarget !== captured) return;
         try {
-          positionTooltipFor(target);
+          positionTooltipFor(captured);
         } catch (e) {
           // ignore positioning errors
         }
@@ -1365,8 +1502,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseout', (e) => {
       const from = findTarget(e.target);
       const to = findTarget(e.relatedTarget);
-      if (from && from !== to) hideTooltip();
+      if (from && from !== to) hideTooltip(!e.relatedTarget);
     });
+
+    document.addEventListener('pointerdown', () => hideTooltip(true));
 
     document.addEventListener(
       'focusin',
@@ -1418,6 +1557,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ---- Quest Panel Rendering ----
 window.App = {
   _suppressQuestCheckUntil: 0,
+  _lockWarningCooldownUntil: 0,
 
   isQuestCheckSuppressed() {
     return Date.now() < this._suppressQuestCheckUntil;
@@ -1427,16 +1567,41 @@ window.App = {
     this._suppressQuestCheckUntil = Date.now() + ms;
   },
 
+  showLockedWarning() {
+    if (Date.now() < this._lockWarningCooldownUntil) return;
+    this._lockWarningCooldownUntil = Date.now() + 5000;
+    this.showTopToast?.('Das ER-Modell ist während der Quest gesperrt.');
+  },
+
+  onQuestChanged(quest, questState) {
+    if (questState.questMode === 'relmodel-experten' && quest?.jsonFile) {
+      loadErmFromFile(quest.jsonFile)
+        .then(() => {
+          if (window.RelModel) window.RelModel.reset();
+          if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+          state.diagramLocked = true;
+        })
+        .catch(() => {});
+    }
+  },
+
   updateQuestPanel(quest, questState) {
     if (!quest) return;
 
     const panel = document.getElementById('quest-panel');
     if (!panel) return;
 
+    const mode = questState.questMode;
+    const isGrundlagen = mode === 'grundlagen' || mode === 'relmodel-grundlagen';
+    const isRelmodel = mode === 'relmodel-grundlagen' || mode === 'relmodel-experten';
+    const isErmExperten = mode === 'experten';
+    const isRelmodelExperten = mode === 'relmodel-experten';
+    const hasChecklist = isErmExperten;
+
     // Update Title & Progress (count completed quests, exclude final completion task)
     const titleEl = panel.querySelector('#quest-title');
     const progressEl = panel.querySelector('#quest-progress');
-    const total = questState.questMode === 'grundlagen' ? 13 : 9;
+    const total = window.Quest?.getMaxQuests?.(mode) || 9;
     const effectiveTotal = Math.max(1, total - 1);
     const completedCount = (questState.completedQuests || []).filter((n) => Number(n) < total).length || 0;
     if (titleEl) titleEl.textContent = `${quest.number}. ${quest.title}`;
@@ -1457,9 +1622,7 @@ window.App = {
         circle.className = 'quest-circle';
         circle.setAttribute('data-quest-number', i);
         circle.textContent = i;
-        // Tooltip: try to resolve quest title via Quest API — set data-tooltip so
-        // the global floating tooltip manager styles it (avoid native title)
-        const qTitle = window.Quest?.getQuestByNumber?.(questState.questMode, i)?.title || `Aufgabe ${i}`;
+        const qTitle = window.Quest?.getQuestByNumber?.(mode, i)?.title || `Aufgabe ${i}`;
         circle.setAttribute('data-tooltip', qTitle);
         if (!circle.hasAttribute('aria-label')) circle.setAttribute('aria-label', qTitle);
         if (i === quest.number) circle.classList.add('current');
@@ -1477,19 +1640,19 @@ window.App = {
       const taskSection = document.createElement('div');
       taskSection.className = 'quest-section quest-task';
       const taskHeader = document.createElement('h4');
-      taskHeader.textContent = questState.questMode === 'grundlagen' ? '🎯 Aufgabe' : '🎯 Szenario';
+      taskHeader.textContent = isGrundlagen || isRelmodelExperten ? '🎯 Aufgabe' : '🎯 Szenario';
       taskSection.appendChild(taskHeader);
       const taskContent = document.createElement('div');
-      const rawTaskHtml = questState.questMode === 'grundlagen' ? quest.objective : quest.szenario;
-      taskContent.innerHTML =
-        questState.questMode === 'grundlagen'
-          ? String(rawTaskHtml || '').replace(/^\s*<p>\s*Aufgabe\s*:\s*<\/p>\s*/i, '')
-          : rawTaskHtml;
+      const rawTaskHtml = isGrundlagen ? quest.objective : quest.szenario;
+      const taskHtml = isGrundlagen
+        ? String(rawTaskHtml || '').replace(/^\s*<p>\s*Aufgabe\s*:\s*<\/p>\s*/i, '')
+        : rawTaskHtml;
+      taskContent.innerHTML = taskHtml;
       taskSection.appendChild(taskContent);
-      // Experten: Wrapper für Side-by-Side-Layout (Text links, Checkliste rechts)
-      const isExperten = questState.questMode === 'experten' && window.Quest?.getChecklistStatus;
+
+      // Experten (ERM + Relmodel): Wrapper für Side-by-Side-Layout
       let questBody;
-      if (isExperten) {
+      if (hasChecklist) {
         questBody = document.createElement('div');
         questBody.className = 'quest-body-row';
         questBody.appendChild(taskSection);
@@ -1498,9 +1661,9 @@ window.App = {
         content.appendChild(taskSection);
       }
 
-      // Experten-Checkliste (rechts neben dem Text)
-      if (isExperten) {
-        const checklist = window.Quest.getChecklistStatus();
+      // Checkliste (rechts neben dem Text)
+      if (hasChecklist) {
+        const checklist = window.Quest?.getChecklistStatus?.();
         if (checklist) {
           const checklistSection = document.createElement('div');
           checklistSection.className = 'quest-checklist';
@@ -1510,14 +1673,25 @@ window.App = {
           checklistTitle.textContent = '📋 Checkliste';
           checklistSection.appendChild(checklistTitle);
 
-          const categories = [
-            { key: 'entities', label: 'Entitätsklassen', data: checklist.entities },
-            { key: 'relationships', label: 'Beziehungen', data: checklist.relationships },
-            { key: 'attributes', label: 'Attribute', data: checklist.attributes },
-            { key: 'primaryKeys', label: 'Primärschlüssel', data: checklist.primaryKeys },
-          ];
+          let categories;
+          if (isRelmodelExperten) {
+            categories = [
+              { key: 'relations', label: 'Relationen', data: checklist.relations },
+              { key: 'attributes', label: 'Attribute', data: checklist.attributes },
+              { key: 'primaryKeys', label: 'Primärschlüssel', data: checklist.primaryKeys },
+              { key: 'foreignKeys', label: 'Fremdschlüssel', data: checklist.foreignKeys },
+            ];
+          } else {
+            categories = [
+              { key: 'entities', label: 'Entitätsklassen', data: checklist.entities },
+              { key: 'relationships', label: 'Beziehungen', data: checklist.relationships },
+              { key: 'attributes', label: 'Attribute', data: checklist.attributes },
+              { key: 'primaryKeys', label: 'Primärschlüssel', data: checklist.primaryKeys },
+            ];
+          }
 
           for (const cat of categories) {
+            if (!cat.data) continue;
             const row = document.createElement('div');
             row.className = 'quest-checklist-item';
             row.setAttribute('data-checklist-key', cat.key);
@@ -1649,8 +1823,9 @@ window.App = {
       if (existing) existing.remove();
 
       const currentQuest = window.Quest?.getCurrentQuest?.();
-      const isGrundlagen = window.Quest?.state?.questMode === 'grundlagen';
-      const theoryHtml = isGrundlagen ? currentQuest?.theory || '' : '';
+      const questMode = window.Quest?.state?.questMode || '';
+      const isAnyGrundlagen = questMode === 'grundlagen' || questMode === 'relmodel-grundlagen';
+      const theoryHtml = isAnyGrundlagen ? currentQuest?.theory || '' : '';
       if (theoryHtml) {
         const conceptDiv = document.createElement('div');
         conceptDiv.className = 'quest-concept quest-success-concept';
@@ -1862,9 +2037,9 @@ window.App = {
     const hints = window.Quest?.getHints?.() || [];
     const singleHint = hints.length > 0 ? hints[0] : String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
 
-    // Bei Expertenquests soll keine separate Hinweisbox/"Hinweis"-Schaltfläche angezeigt werden,
-    // da diese Quests keine Theoriebox besitzen.
-    const showHintButton = !(window.Quest?.state?.questMode === 'experten');
+    // Bei Experten-Quests (ERM + Relmodel) soll keine Hinweisbox angezeigt werden.
+    const questMode = window.Quest?.state?.questMode || '';
+    const showHintButton = questMode === 'grundlagen' || questMode === 'relmodel-grundlagen';
 
     return this.showAppModal({
       title: 'Überprüfung',
@@ -1888,6 +2063,25 @@ window.App = {
       confirmLabel: 'OK',
       autoCloseMs: 3000,
     });
+  },
+
+  showTopToast(message) {
+    if (!message) return;
+    let toast = document.getElementById('app-top-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'app-top-toast';
+      toast.className = 'app-top-toast';
+      document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.classList.add('visible');
+    if (this._topToastTimer) clearTimeout(this._topToastTimer);
+    this._topToastTimer = setTimeout(() => {
+      toast.classList.remove('visible');
+      this._topToastTimer = null;
+    }, 2400);
   },
 
   showConfirmModal(message, title = 'Bitte bestätigen') {

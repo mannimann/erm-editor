@@ -1014,6 +1014,414 @@
   ];
 
   // ---- Quest Manager ----
+  // Hilfsfunktionen für Relmodel-Grundlagen-Validatoren
+  function normalizeRelToken(name) {
+    return String(name || '')
+      .toLowerCase()
+      .replace(/[\s_-]+/g, '')
+      .trim();
+  }
+
+  function getStudentRelByName(name) {
+    const rels = window.RelModel?.getStudentRelations?.() || [];
+    const n = normalizeRelToken(name);
+    return rels.find((r) => normalizeRelToken(r.name) === n) || null;
+  }
+
+  function studentRelHasAttr(relName, attrName) {
+    const rel = getStudentRelByName(relName);
+    if (!rel) return false;
+    const n = normalizeRelToken(attrName);
+    return rel.attrs.some((a) => normalizeRelToken(a.name) === n);
+  }
+
+  function studentRelAttrIsPk(relName, attrName) {
+    const rel = getStudentRelByName(relName);
+    if (!rel) return false;
+    const n = normalizeRelToken(attrName);
+    const attr = rel.attrs.find((a) => normalizeRelToken(a.name) === n);
+    return !!attr?.isPk;
+  }
+
+  function studentRelAttrIsFk(relName, attrName) {
+    const rel = getStudentRelByName(relName);
+    if (!rel) return false;
+    const n = normalizeRelToken(attrName);
+    const attr = rel.attrs.find((a) => normalizeRelToken(a.name) === n);
+    return !!attr?.isFk;
+  }
+
+  function countStudentRelations() {
+    return (window.RelModel?.getStudentRelations?.() || []).length;
+  }
+
+  /**
+   * Liefert eine Checkliste für Relmodel-Experten-Quests.
+   * Liest die Musterlösung aus RelModel.generateSolution() und
+   * vergleicht sie mit den studentischen Eingaben.
+   */
+  function getRelmodelChecklistStatus() {
+    const solution = window.RelModel?.generateSolution?.(window.AppState?.state) || [];
+    const studentRels = window.RelModel?.getStudentRelations?.() || [];
+    if (solution.length === 0) return null;
+
+    const relations = { total: 0, done: 0, items: [] };
+    const attributes = { total: 0, done: 0, items: [] };
+    const primaryKeys = { total: 0, done: 0, items: [] };
+    const foreignKeys = { total: 0, done: 0, items: [] };
+
+    for (const solRel of solution) {
+      relations.total++;
+      const sn = normalizeRelToken(solRel.name);
+      const studRel = studentRels.find((r) => normalizeRelToken(r.name) === sn);
+      const found = !!studRel;
+      if (found) relations.done++;
+      relations.items.push({ label: solRel.name, ok: found });
+
+      if (!studRel) continue;
+
+      // Nicht-FK-Attribute (Pflicht)
+      for (const attr of solRel.attrs.filter((a) => !a.isFk)) {
+        attributes.total++;
+        const ok = studRel.attrs.some((a) => normalizeRelToken(a.name) === normalizeRelToken(attr.name));
+        if (ok) attributes.done++;
+        attributes.items.push({ label: `${solRel.name}.${attr.name}`, ok });
+      }
+
+      // Primärschlüssel
+      for (const attr of solRel.attrs.filter((a) => a.isPk)) {
+        primaryKeys.total++;
+        const studAttr = studRel.attrs.find((a) => normalizeRelToken(a.name) === normalizeRelToken(attr.name));
+        const ok = !!studAttr?.isPk;
+        if (ok) primaryKeys.done++;
+        primaryKeys.items.push({ label: `${solRel.name}.${attr.name}`, ok });
+      }
+
+      // Fremdschlüssel
+      for (const attr of solRel.attrs.filter((a) => a.isFk)) {
+        foreignKeys.total++;
+        const studAttr = studRel.attrs.find((a) => normalizeRelToken(a.name) === normalizeRelToken(attr.name));
+        const ok = !!studAttr?.isFk;
+        if (ok) foreignKeys.done++;
+        foreignKeys.items.push({ label: `${solRel.name}.${attr.name}`, ok });
+      }
+    }
+
+    return { relations, attributes, primaryKeys, foreignKeys };
+  }
+
+  // ---- Quest-Datenbank: RELMODEL GRUNDLAGEN (10 Quests) ----
+  const relmodelGrundlagenQuests = [
+    {
+      id: 1,
+      number: 1,
+      title: 'Seitenleiste öffnen',
+      theory: `<p><strong>Relationenmodell:</strong> Im Relationenmodell werden Daten in Tabellen (Relationen) organisiert. Jede Tabelle hat Spalten (Attribute) und Zeilen (Tupel). Primärschlüssel identifizieren jede Zeile eindeutig.</p>
+        <p>Die Überführung eines ER-Modells in ein Relationenmodell ist ein wichtiger Schritt beim Datenbank-Entwurf.</p>`,
+      objective: `<p>Öffne die Relationenmodell-Seitenleiste, um mit der Überführung zu beginnen.</p>
+        <p>Klicke dazu auf den Button <strong>„🗃 Relationenmodell"</strong> oben rechts in der Tab-Leiste.</p>`,
+      validator: function () {
+        if (!window.RelModel?.isDrawerOpen?.()) {
+          return { passed: false, error: 'Öffne die Relationenmodell-Seitenleiste über den Button oben rechts.' };
+        }
+        return { passed: true };
+      },
+    },
+    {
+      id: 2,
+      number: 2,
+      title: 'Relationen anlegen',
+      theory: `<p><strong>Entitätsklasse → Relation:</strong> Jede Entitätsklasse im ER-Modell wird zu einer eigenen Relation (Tabelle) im Relationenmodell. Der Name der Entitätsklasse wird zum Relationsnamen.</p>`,
+      objective: `<p>Lege die Relationen (Tabellen) für die drei Entitätsklassen des Schul-ERM an.</p>
+        <p>Erstelle drei Relationen mit den Namen:</p>
+        <ol>
+          <li><strong>„Schüler"</strong></li>
+          <li><strong>„Klasse"</strong></li>
+          <li><strong>„Lehrer"</strong></li>
+        </ol>
+        <p><strong>Hinweis:</strong> Klicke auf „+ Relation hinzufügen" in der Seitenleiste.</p>`,
+      validator: function () {
+        if (!getStudentRelByName('Schüler')) return { passed: false, error: 'Relation „Schüler" fehlt.' };
+        if (!getStudentRelByName('Klasse')) return { passed: false, error: 'Relation „Klasse" fehlt.' };
+        if (!getStudentRelByName('Lehrer')) return { passed: false, error: 'Relation „Lehrer" fehlt.' };
+        return { passed: true };
+      },
+    },
+    {
+      id: 3,
+      number: 3,
+      title: 'Attribute hinzufügen',
+      theory: `<p><strong>Attribute → Spalten:</strong> Die Attribute einer Entitätsklasse im ER-Modell werden zu den Spalten der entsprechenden Relation im Relationenmodell.</p>`,
+      objective: `<p>Füge die Attribute der drei Entitätsklassen in die entsprechenden Relationen ein.</p>
+        <ul>
+          <li><strong>Schüler:</strong> SchülerNr, Vorname, Nachname</li>
+          <li><strong>Klasse:</strong> Klassenstufe, Parallelklasse</li>
+          <li><strong>Lehrer:</strong> Lehrer-Kürzel, Vorname, Nachname</li>
+        </ul>`,
+      validator: function () {
+        for (const attr of ['SchülerNr', 'Vorname', 'Nachname']) {
+          if (!studentRelHasAttr('Schüler', attr))
+            return { passed: false, error: `Attribut „${attr}" fehlt bei der Relation „Schüler".` };
+        }
+        for (const attr of ['Klassenstufe', 'Parallelklasse']) {
+          if (!studentRelHasAttr('Klasse', attr))
+            return { passed: false, error: `Attribut „${attr}" fehlt bei der Relation „Klasse".` };
+        }
+        for (const attr of ['Lehrer-Kürzel', 'Vorname', 'Nachname']) {
+          if (!studentRelHasAttr('Lehrer', attr))
+            return { passed: false, error: `Attribut „${attr}" fehlt bei der Relation „Lehrer".` };
+        }
+        return { passed: true };
+      },
+    },
+    {
+      id: 4,
+      number: 4,
+      title: 'Primärschlüssel markieren',
+      theory: `<p><strong>Primärschlüssel (PS):</strong> Die Primärschlüssel aus dem ER-Modell werden auch im Relationenmodell als Primärschlüssel markiert. Sie identifizieren jede Zeile eindeutig.</p>
+        <p>Ein <strong>Verbundschlüssel</strong> besteht aus mehreren Attributen, die zusammen den Primärschlüssel bilden (z.B. Klassenstufe + Parallelklasse).</p>`,
+      objective: `<p>Markiere die Primärschlüssel in den drei Relationen.</p>
+        <ul>
+          <li><strong>Schüler:</strong> SchülerNr (PS)</li>
+          <li><strong>Klasse:</strong> Klassenstufe + Parallelklasse (Verbundschlüssel, beide PS)</li>
+          <li><strong>Lehrer:</strong> Lehrer-Kürzel (PS)</li>
+        </ul>`,
+      validator: function () {
+        if (!studentRelAttrIsPk('Schüler', 'SchülerNr'))
+          return { passed: false, error: '„SchülerNr" muss bei „Schüler" als Primärschlüssel markiert sein.' };
+        if (!studentRelAttrIsPk('Klasse', 'Klassenstufe'))
+          return { passed: false, error: '„Klassenstufe" muss bei „Klasse" als Primärschlüssel markiert sein.' };
+        if (!studentRelAttrIsPk('Klasse', 'Parallelklasse'))
+          return { passed: false, error: '„Parallelklasse" muss bei „Klasse" als Primärschlüssel markiert sein.' };
+        if (!studentRelAttrIsPk('Lehrer', 'Lehrer-Kürzel'))
+          return { passed: false, error: '„Lehrer-Kürzel" muss bei „Lehrer" als Primärschlüssel markiert sein.' };
+        return { passed: true };
+      },
+    },
+    {
+      id: 5,
+      number: 5,
+      title: '1:n-Beziehung „geht in"',
+      theory: `<p><strong>1:n-Beziehung auflösen:</strong> Bei einer 1:n-Beziehung wird der Primärschlüssel der 1-Seite als <strong>Fremdschlüssel (FS)</strong> in die Relation der n-Seite aufgenommen.</p>
+        <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Klassenstufe, Parallelklasse) wird als FS in die Relation Schüler aufgenommen.</p>`,
+      objective: `<p>Löse die 1:n-Beziehung „geht in" (Schüler n : 1 Klasse) auf.</p>
+        <p>Füge bei der Relation <strong>„Schüler"</strong> die Fremdschlüssel <strong>„Klassenstufe"</strong> und <strong>„Parallelklasse"</strong> hinzu und markiere sie als <strong>Fremdschlüssel (FS)</strong>.</p>`,
+      validator: function () {
+        if (!studentRelHasAttr('Schüler', 'Klassenstufe'))
+          return { passed: false, error: '„Klassenstufe" fehlt als Fremdschlüssel bei „Schüler".' };
+        if (!studentRelHasAttr('Schüler', 'Parallelklasse'))
+          return { passed: false, error: '„Parallelklasse" fehlt als Fremdschlüssel bei „Schüler".' };
+        if (!studentRelAttrIsFk('Schüler', 'Klassenstufe'))
+          return { passed: false, error: '„Klassenstufe" muss bei „Schüler" als Fremdschlüssel markiert sein.' };
+        if (!studentRelAttrIsFk('Schüler', 'Parallelklasse'))
+          return { passed: false, error: '„Parallelklasse" muss bei „Schüler" als Fremdschlüssel markiert sein.' };
+        return { passed: true };
+      },
+    },
+    {
+      id: 6,
+      number: 6,
+      title: '1:1-Beziehung „ist Klassensprecher"',
+      theory: `<p><strong>1:1-Beziehung auflösen:</strong> Bei einer 1:1-Beziehung wird der Primärschlüssel einer Seite als Fremdschlüssel in die andere Seite aufgenommen. In welche Richtung ist frei wählbar.</p>`,
+      objective: `<p>Löse die 1:1-Beziehung „ist Klassensprecher" (Schüler 1 : 1 Klasse) auf.</p>
+        <p>Füge bei der Relation <strong>„Klasse"</strong> den Fremdschlüssel <strong>„SchülerNr"</strong> hinzu und markiere ihn als <strong>FS</strong>.</p>
+        <p><em>Alternativ könntest du auch Klassenstufe + Parallelklasse als FS in Schüler einfügen – hier verwenden wir die Variante mit SchülerNr in Klasse.</em></p>`,
+      validator: function () {
+        // Akzeptiere beide Richtungen
+        const klHatSchuelerNr = studentRelHasAttr('Klasse', 'SchülerNr') && studentRelAttrIsFk('Klasse', 'SchülerNr');
+        // Alternative: Schüler hat Klassenstufe+Parallelklasse als FK (das haben sie aber schon von Quest 5)
+        // Wir prüfen, ob die Relation Klasse den FK SchülerNr hat
+        if (klHatSchuelerNr) return { passed: true };
+        return { passed: false, error: 'Füge „SchülerNr" als Fremdschlüssel zur Relation „Klasse" hinzu.' };
+      },
+    },
+    {
+      id: 7,
+      number: 7,
+      title: 'n:m-Beziehung „unterrichtet"',
+      theory: `<p><strong>n:m-Beziehung auflösen:</strong> Eine n:m-Beziehung kann nicht direkt in eine bestehende Relation aufgenommen werden. Stattdessen wird eine <strong>neue Hilfsrelation</strong> (auch: Zwischentabelle) erstellt.</p>
+        <p>Die Hilfsrelation erhält die Primärschlüssel beider beteiligten Entitätsklassen als Fremdschlüssel. Zusammen bilden diese den <strong>Verbundschlüssel</strong> (PS + FS) der Hilfsrelation.</p>`,
+      objective: `<p>Löse die n:m-Beziehung „unterrichtet" (Lehrer n : m Klasse) auf.</p>
+        <ol>
+          <li>Erstelle eine neue Relation <strong>„unterrichtet"</strong></li>
+          <li>Füge die Attribute <strong>„Lehrer-Kürzel"</strong>, <strong>„Klassenstufe"</strong> und <strong>„Parallelklasse"</strong> hinzu</li>
+          <li>Markiere alle drei als <strong>Primärschlüssel (PS)</strong> und <strong>Fremdschlüssel (FS)</strong></li>
+        </ol>`,
+      validator: function () {
+        const rel = getStudentRelByName('unterrichtet');
+        if (!rel) return { passed: false, error: 'Relation „unterrichtet" fehlt.' };
+        for (const attr of ['Lehrer-Kürzel', 'Klassenstufe', 'Parallelklasse']) {
+          if (!studentRelHasAttr('unterrichtet', attr))
+            return { passed: false, error: `Attribut „${attr}" fehlt bei „unterrichtet".` };
+          if (!studentRelAttrIsPk('unterrichtet', attr))
+            return { passed: false, error: `„${attr}" muss bei „unterrichtet" als Primärschlüssel markiert sein.` };
+          if (!studentRelAttrIsFk('unterrichtet', attr))
+            return { passed: false, error: `„${attr}" muss bei „unterrichtet" als Fremdschlüssel markiert sein.` };
+        }
+        return { passed: true };
+      },
+    },
+    {
+      id: 8,
+      number: 8,
+      title: 'Beziehungsattribut „Fach"',
+      theory: `<p><strong>Beziehungsattribute:</strong> Attribute, die im ER-Modell an einer Beziehung hängen, werden in die entsprechende Hilfsrelation (bei n:m) oder in die Relation der n-Seite (bei 1:n) übernommen.</p>
+        <p>Das Attribut „Fach" gehört zur Beziehung „unterrichtet" und wird daher in die Hilfsrelation „unterrichtet" aufgenommen.</p>`,
+      objective: `<p>Füge das Beziehungsattribut zur Hilfsrelation hinzu.</p>
+        <p>Ergänze bei der Relation <strong>„unterrichtet"</strong> das Attribut <strong>„Fach"</strong>.</p>
+        <p><em>Beziehungsattribute sind reguläre Attribute – kein PS und kein FS.</em></p>`,
+      validator: function () {
+        if (!studentRelHasAttr('unterrichtet', 'Fach'))
+          return { passed: false, error: 'Attribut „Fach" fehlt bei der Relation „unterrichtet".' };
+        return { passed: true };
+      },
+    },
+    {
+      id: 9,
+      number: 9,
+      title: 'Selbstbeziehung „ist befreundet mit"',
+      theory: `<p><strong>Selbstbeziehung auflösen:</strong> Selbstbeziehungen werden genau wie andere Beziehungen aufgelöst. Bei einer n:m-Selbstbeziehung entsteht eine Hilfsrelation, in der derselbe Primärschlüssel zweimal vorkommt – einmal für jede Seite der Beziehung.</p>
+        <p>Da beide Fremdschlüssel auf dieselbe Relation verweisen, müssen sie <strong>umbenannt</strong> werden, damit sie sich unterscheiden (z.B. „SchülerNr" und „SchülerNr-Freund").</p>`,
+      objective: `<p>Löse die n:m-Selbstbeziehung „ist befreundet mit" (Schüler n : m Schüler) auf.</p>
+        <ol>
+          <li>Erstelle eine neue Relation <strong>„ist befreundet mit"</strong></li>
+          <li>Füge zwei Fremdschlüssel-Attribute hinzu, die beide auf SchülerNr verweisen (z.B. <strong>„SchülerNr"</strong> und <strong>„SchülerNr-Freund"</strong>)</li>
+          <li>Markiere beide als <strong>PS</strong> und <strong>FS</strong></li>
+        </ol>`,
+      validator: function () {
+        const rel = getStudentRelByName('ist befreundet mit');
+        if (!rel) return { passed: false, error: 'Relation „ist befreundet mit" fehlt.' };
+        // Muss mindestens 2 Attribute haben, die PK und FK sind
+        const pkFkAttrs = rel.attrs.filter((a) => a.isPk && a.isFk);
+        if (pkFkAttrs.length < 2)
+          return {
+            passed: false,
+            error: '„ist befreundet mit" braucht mindestens zwei Attribute, die jeweils als PS und FS markiert sind.',
+          };
+        return { passed: true };
+      },
+    },
+    {
+      id: 10,
+      number: 10,
+      title: '🎉 Abschluss',
+      theory: `<p><strong>Glückwunsch!</strong> Du hast die Überführung des ER-Modells in ein Relationenmodell erfolgreich abgeschlossen!</p>
+        <p>Du beherrschst jetzt: Relationen anlegen, Attribute übernehmen, Primärschlüssel setzen, 1:n-Beziehungen auflösen (FS auf n-Seite), 1:1-Beziehungen auflösen, n:m-Beziehungen in Hilfsrelationen auflösen, Beziehungsattribute übernehmen und Selbstbeziehungen modellieren.</p>`,
+      objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
+        <ol>
+          <li>Klicke auf <strong>„JSON-Export"</strong> in der Seitenleiste und speichere die Datei</li>
+          <li>Klicke auf <strong>„PNG-Export"</strong> und speichere das Bild</li>
+        </ol>
+        <p>Danach kannst du die Relationenmodell-Expertenquests im Menü starten!</p>`,
+      validator: function () {
+        return { passed: true };
+      },
+    },
+  ];
+
+  // ---- Quest-Datenbank: RELMODEL EXPERTEN (9 Quests) ----
+  const relmodelExpertenQuests = [
+    {
+      id: 1,
+      number: 1,
+      title: 'Hotel-Verwaltung',
+      szenario: `<p><strong>Überführe das ER-Modell «Hotel-Verwaltung» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '01_hotel.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 2,
+      number: 2,
+      title: 'Bibliothek',
+      szenario: `<p><strong>Überführe das ER-Modell «Bibliothek» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '02_bibliothek.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 3,
+      number: 3,
+      title: 'Universität',
+      szenario: `<p><strong>Überführe das ER-Modell «Universität» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '03_universitaet.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 4,
+      number: 4,
+      title: 'Krankenhaus',
+      szenario: `<p><strong>Überführe das ER-Modell «Krankenhaus» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '04_krankenhaus.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 5,
+      number: 5,
+      title: 'Fitnessstudio',
+      szenario: `<p><strong>Überführe das ER-Modell «Fitnessstudio» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '05_fitnessstudio.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 6,
+      number: 6,
+      title: 'Lehre & Hilfskräfte',
+      szenario: `<p><strong>Überführe das ER-Modell «Lehre & Hilfskräfte» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '06_universitaet2.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 7,
+      number: 7,
+      title: 'Musikfestival',
+      szenario: `<p><strong>Überführe das ER-Modell «Musikfestival» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '07_musikfestival.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 8,
+      number: 8,
+      title: 'Katastrophenschutz-Leitstelle',
+      szenario: `<p><strong>Überführe das ER-Modell «Katastrophenschutz-Leitstelle» in das Relationenmodell.</strong></p>
+        <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
+      jsonFile: '08_katastrophenschutz.json',
+      validator: function () {
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
+      },
+    },
+    {
+      id: 9,
+      number: 9,
+      title: '🎉 Abschluss',
+      szenario: `<p><strong>Glückwunsch!</strong> Du hast alle Relationenmodell-Expertenquests abgeschlossen.</p>
+        <p>Du kannst jetzt ER-Modelle sicher und selbstständig in Relationenmodelle überführen – mit allen Beziehungstypen, Fremdschlüsseln und Hilfsrelationen.</p>
+        <p>Starke Leistung!</p>`,
+      validator: function () {
+        return { passed: true };
+      },
+    },
+  ];
+
   const QuestManager = {
     state: {
       questMode: null, // 'grundlagen' oder 'experten'
@@ -1024,8 +1432,10 @@
     },
 
     getStorageKey: function (mode = this.state.questMode) {
-      const version = mode === 'experten' ? 'v4' : 'v1';
-      return 'erm-editor-quests-' + (mode || 'none') + '-' + version;
+      if (mode === 'experten') return 'erm-editor-quests-experten-v4';
+      if (mode === 'relmodel-grundlagen') return 'erm-editor-quests-relmodel-grundlagen-v1';
+      if (mode === 'relmodel-experten') return 'erm-editor-quests-relmodel-experten-v1';
+      return 'erm-editor-quests-' + (mode || 'none') + '-v1';
     },
 
     init: function () {
@@ -1076,8 +1486,20 @@
     },
 
     getCurrentQuest: function () {
-      const quests = this.state.questMode === 'grundlagen' ? grundlagenQuests : expertenQuests;
+      const quests = this.getQuestsForMode(this.state.questMode);
       return quests.find((q) => q.number === this.state.currentQuestNumber) || null;
+    },
+
+    getQuestsForMode: function (mode) {
+      if (mode === 'grundlagen') return grundlagenQuests;
+      if (mode === 'experten') return expertenQuests;
+      if (mode === 'relmodel-grundlagen') return relmodelGrundlagenQuests;
+      if (mode === 'relmodel-experten') return relmodelExpertenQuests;
+      return [];
+    },
+
+    getMaxQuests: function (mode = this.state.questMode) {
+      return this.getQuestsForMode(mode).length;
     },
 
     validateCurrentQuest: function (forceRecheck = false) {
@@ -1104,10 +1526,12 @@
         }
 
         const result = quest.validator();
-        const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 9;
+        const maxQuests = this.getMaxQuests();
 
         if (result.passed) {
           if (quest.number === maxQuests) {
+            // Abschlussquest: nur bei manuellem Klick abschließen
+            if (!forceRecheck) return { passed: false };
             // Bei der letzten Quest: Zeige das Erfolgs-Modal. Erst nach Klick auf OK
             // wird die Quest als abgeschlossen markiert, der Fullscreen-Konfetti
             // gestartet und das Quest-Panel geschlossen.
@@ -1163,7 +1587,7 @@
     },
 
     progressToNextQuest: function () {
-      const maxQuests = this.state.questMode === 'grundlagen' ? 13 : 9;
+      const maxQuests = this.getMaxQuests();
       if (this.state.currentQuestNumber < maxQuests) {
         this.state.currentQuestNumber += 1;
         const nextNumber = this.state.currentQuestNumber;
@@ -1171,6 +1595,11 @@
           this.state.unlockedQuests.push(nextNumber);
         }
         this.persist();
+        // Auto-load hook für Relmodel-Experten
+        if (window.App?.onQuestChanged) {
+          const quest = this.getCurrentQuest();
+          window.App.onQuestChanged(quest, this.state);
+        }
         return true;
       }
       return false; // Alle Quests abgeschlossen
@@ -1186,12 +1615,14 @@
     },
 
     resetAllProgress: function () {
-      // Lösche alle Quest-Speicherungen für beide Reihen
+      // Lösche alle Quest-Speicherungen für alle Reihen
       localStorage.removeItem('erm-editor-quests-grundlagen-v1');
       localStorage.removeItem('erm-editor-quests-experten-v1');
       localStorage.removeItem('erm-editor-quests-experten-v2');
       localStorage.removeItem('erm-editor-quests-experten-v3');
       localStorage.removeItem('erm-editor-quests-experten-v4');
+      localStorage.removeItem('erm-editor-quests-relmodel-grundlagen-v1');
+      localStorage.removeItem('erm-editor-quests-relmodel-experten-v1');
 
       this.state = {
         questMode: null,
@@ -1223,6 +1654,7 @@
 
     hidePanel: function () {
       this.state.questsPanelVisible = false;
+      if (window.AppState?.state) window.AppState.state.diagramLocked = false;
       this.persist();
       this.renderPanel();
       const modal = document.querySelector('.quest-congratulations-modal');
@@ -1249,15 +1681,22 @@
     },
 
     getChecklistStatus: function () {
-      if (this.state.questMode !== 'experten') return null;
-      const quest = this.getCurrentQuest();
-      return quest?.masterlösung ? getExpertChecklistStatus(quest.masterlösung) : null;
+      if (this.state.questMode === 'experten') {
+        const quest = this.getCurrentQuest();
+        return quest?.masterlösung ? getExpertChecklistStatus(quest.masterlösung) : null;
+      }
+      if (this.state.questMode === 'relmodel-experten') {
+        return getRelmodelChecklistStatus();
+      }
+      return null;
     },
 
     getHints: function () {
-      if (this.state.questMode !== 'experten') return [];
-      const quest = this.getCurrentQuest();
-      return quest?.masterlösung ? getExpertHints(quest.masterlösung) : [];
+      if (this.state.questMode === 'experten') {
+        const quest = this.getCurrentQuest();
+        return quest?.masterlösung ? getExpertHints(quest.masterlösung) : [];
+      }
+      return [];
     },
   };
 
@@ -1265,7 +1704,7 @@
   window.Quest = QuestManager;
   // Liefert eine Quest-Definition nach Reihenname und Nummer (für Tooltips/Labels)
   QuestManager.getQuestByNumber = function (mode, number) {
-    const quests = mode === 'experten' ? expertenQuests : grundlagenQuests;
+    const quests = QuestManager.getQuestsForMode(mode);
     if (!Array.isArray(quests)) return null;
     return quests.find((q) => Number(q.number) === Number(number)) || null;
   };

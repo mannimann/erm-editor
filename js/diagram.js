@@ -1383,6 +1383,10 @@
     document.querySelectorAll('.tool-btn[data-tool]').forEach((btn) => {
       btn.addEventListener('click', () => {
         hideContextMenu();
+        if (S().diagramLocked) {
+          window.App?.showLockedWarning?.();
+          return;
+        }
         const tool = btn.dataset.tool;
         if (tool === 'entity') addEntityAction();
         if (tool === 'relationship') addRelationshipAction();
@@ -1607,6 +1611,10 @@
       if (!node) return;
       e.stopPropagation();
       hideContextMenu();
+      if (S().diagramLocked) {
+        window.App?.showLockedWarning?.();
+        return;
+      }
 
       const now = Date.now();
       const isDoubleClick = node.id === lastMousedownNodeId && now - lastMousedownTime < DBLCLICK_MS;
@@ -1657,6 +1665,10 @@
         return;
       }
       if (node.type === 'relationship') {
+        if (S().diagramLocked) {
+          window.App?.showLockedWarning?.();
+          return;
+        }
         const capturedId = node.id;
         nodeClickTimer = setTimeout(() => {
           nodeClickTimer = null;
@@ -1671,6 +1683,10 @@
       e.preventDefault();
       e.stopPropagation();
       hideContextMenu();
+      if (S().diagramLocked) {
+        window.App?.showLockedWarning?.();
+        return;
+      }
       showContextMenu(e, 'node', node.id);
     });
   }
@@ -1777,6 +1793,10 @@
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const tag = document.activeElement.tagName.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (S().diagramLocked) {
+        window.App?.showLockedWarning?.();
+        return;
+      }
       if (selectedNodeId) {
         deleteNode(selectedNodeId);
         return;
@@ -1836,6 +1856,11 @@
 
   ctxRename.addEventListener('click', () => {
     if (!ctxTarget || ctxTarget.type !== 'node') return;
+    if (S().diagramLocked) {
+      hideContextMenu();
+      window.App?.showLockedWarning?.();
+      return;
+    }
     const node = byId(ctxTarget.id);
     hideContextMenu();
     if (node) startInlineEdit(node);
@@ -1843,6 +1868,11 @@
 
   ctxEditRelationship.addEventListener('click', () => {
     if (!ctxTarget || ctxTarget.type !== 'node') return;
+    if (S().diagramLocked) {
+      hideContextMenu();
+      window.App?.showLockedWarning?.();
+      return;
+    }
 
     let relationshipId = null;
     const node = byId(ctxTarget.id);
@@ -1857,6 +1887,11 @@
 
   ctxAddAttr.addEventListener('click', () => {
     if (!ctxTarget || ctxTarget.type !== 'node') return;
+    if (S().diagramLocked) {
+      hideContextMenu();
+      window.App?.showLockedWarning?.();
+      return;
+    }
 
     const node = byId(ctxTarget.id);
     hideContextMenu();
@@ -1866,6 +1901,11 @@
 
   ctxTogglePk.addEventListener('click', () => {
     if (!ctxTarget || ctxTarget.type !== 'node') return;
+    if (S().diagramLocked) {
+      hideContextMenu();
+      window.App?.showLockedWarning?.();
+      return;
+    }
     const node = byId(ctxTarget.id);
     hideContextMenu();
     if (!node || node.type !== 'attribute') return;
@@ -1880,6 +1920,11 @@
 
   ctxDelete.addEventListener('click', () => {
     if (!ctxTarget) return;
+    if (S().diagramLocked) {
+      hideContextMenu();
+      window.App?.showLockedWarning?.();
+      return;
+    }
     const target = ctxTarget;
     hideContextMenu();
     if (target.type === 'node') deleteNode(target.id);

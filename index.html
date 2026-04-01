@@ -62,10 +62,26 @@
               <span class="tab-dropdown-item-subtitle">Setze komplexe Szenarien um</span>
             </div>
           </button>
-          <button class="tab-dropdown-item tab-dropdown-item-disabled" type="button" id="btn-start-relmodel" disabled>
+          <button
+            class="tab-dropdown-item"
+            type="button"
+            id="btn-start-relmodel"
+            data-quest-series="relmodel-grundlagen"
+          >
             <div class="tab-dropdown-item-text">
               <span class="tab-dropdown-item-title">🗄 Relationenmodell-Grundlagen-Quest</span>
-              <span class="tab-dropdown-item-subtitle">coming soon</span>
+              <span class="tab-dropdown-item-subtitle">ER-Modelle Schritt für Schritt überführen lernen</span>
+            </div>
+          </button>
+          <button
+            class="tab-dropdown-item"
+            type="button"
+            id="btn-start-relmodel-experten"
+            data-quest-series="relmodel-experten"
+          >
+            <div class="tab-dropdown-item-text">
+              <span class="tab-dropdown-item-title">⚡ Relationenmodell-Experten-Quests</span>
+              <span class="tab-dropdown-item-subtitle">ER-Modelle selbstständig überführen</span>
             </div>
           </button>
         </div>
@@ -183,6 +199,18 @@
               <button id="btn-rules-modal" class="rel-btn" title="Transformationsregeln ERM → Relationenmodell">
                 📚 Regeln
               </button>
+            </div>
+            <div id="relmodel-io-row">
+              <button id="btn-relmodel-import" class="rel-btn" title="Relationenmodell aus JSON-Datei laden">
+                ⬆ Importieren
+              </button>
+              <button id="btn-relmodel-export-json" class="rel-btn" title="Relationenmodell als JSON speichern">
+                ⬇ JSON-Export
+              </button>
+              <button id="btn-relmodel-export-png" class="rel-btn" title="Relationenmodell als PNG-Bild exportieren">
+                🖼 PNG-Export
+              </button>
+              <input type="file" id="relmodel-file-input" accept=".json" style="display: none" />
             </div>
           </div>
 
@@ -429,6 +457,12 @@
     </div>
 
     <!-- Scripts -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+      integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
     <script src="js/app.js"></script>
     <script src="js/diagram.js"></script>
     <script src="js/relmodel.js"></script>

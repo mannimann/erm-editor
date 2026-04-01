@@ -571,6 +571,19 @@
   function renderAndPersist() {
     persistStudentRelations();
     renderStudentForm();
+    // Debounced Quest-Auto-Check bei Relmodel-Grundlagen
+    notifyQuestChange();
+  }
+
+  let _questChangeTimer = null;
+  function notifyQuestChange() {
+    if (_questChangeTimer) clearTimeout(_questChangeTimer);
+    _questChangeTimer = setTimeout(() => {
+      _questChangeTimer = null;
+      if (window.Quest?.state?.questMode === 'relmodel-grundlagen' && window.Quest?.state?.questsPanelVisible) {
+        window.Quest.validateCurrentQuest();
+      }
+    }, 600);
   }
 
   function buildRelationCard(rel) {
@@ -929,7 +942,7 @@
         'error',
         'Das ER-Diagramm enthält noch keine auswertbaren Elemente. Bitte zuerst das ER-Diagramm erstellen.',
       );
-      return;
+      return { passed: false };
     }
 
     const missingRelations = [];
@@ -1023,7 +1036,7 @@
     const hasWarnings = extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length;
     if (!hasErrors && !hasWarnings) {
       showFeedback('success', '✅ Sehr gut! Deine Überführung ist vollständig und korrekt.');
-      return;
+      return { passed: true };
     }
     showFeedbackCategorized({
       missingRelations,
@@ -1036,6 +1049,7 @@
       fkWarnings,
       fkOverWarnings,
     });
+    return { passed: false };
   }
 
   function buildAccordionItem(label, messages, isWarning) {
@@ -1306,6 +1320,82 @@
     });
   }
 
+  // ---- Import / Export ----
+  function exportRelmodelJSON() {
+    if (_studentRelations.length === 0) {
+      window.App?.showAlertModal?.('Es sind keine Relationen zum Exportieren vorhanden.', 'Export nicht möglich');
+      return;
+    }
+    const data = JSON.stringify({ studentRelations: _studentRelations, nextId: _nextId }, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const title = (window.AppState?.state?.diagramTitle || 'relationenmodell').replace(/[^a-zA-Z0-9äöüÄÖÜß_\- ]/g, '');
+    a.download = title + '.erm-editor-relmodel.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function importRelmodelJSON(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (!Array.isArray(data.studentRelations)) throw new Error('Ungültiges Format');
+        _studentRelations = data.studentRelations;
+        if (typeof data.nextId === 'number' && data.nextId > _nextId) _nextId = data.nextId;
+        ensureStudentIds();
+        persistStudentRelations();
+        renderStudentForm();
+        document.getElementById('feedback-area').innerHTML = '';
+      } catch (err) {
+        window.App?.showAlertModal?.(`Fehler beim Importieren: ${err.message}`, 'Import fehlgeschlagen');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function exportRelmodelPNG() {
+    const area = document.getElementById('student-relations-list');
+    if (!area || _studentRelations.length === 0) {
+      window.App?.showAlertModal?.('Es sind keine Relationen zum Exportieren vorhanden.', 'Export nicht möglich');
+      return;
+    }
+    // Alle Relationen in den Preview-Modus setzen
+    _studentRelations.forEach((rel) => {
+      removeEmptyAttrs(rel);
+      sortAttrsPrimaryFirst(rel.attrs);
+      rel.isEditing = false;
+    });
+    renderStudentForm();
+    // Kurze Verzögerung damit das DOM-Update sichtbar wird
+    setTimeout(() => {
+      if (typeof html2canvas !== 'function') {
+        window.App?.showAlertModal?.('html2canvas ist nicht verfügbar.', 'Export fehlgeschlagen');
+        return;
+      }
+      html2canvas(area, { backgroundColor: '#ffffff', scale: 2 })
+        .then((canvas) => {
+          canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const title = (window.AppState?.state?.diagramTitle || 'relationenmodell').replace(
+              /[^a-zA-Z0-9äöüÄÖÜß_\- ]/g,
+              '',
+            );
+            a.download = title + '.erm-editor-relmodel.png';
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 3000);
+          }, 'image/png');
+        })
+        .catch(() => {
+          window.App?.showAlertModal?.('PNG-Export fehlgeschlagen. Bitte versuche es erneut.', 'Export fehlgeschlagen');
+        });
+    }, 100);
+  }
+
   // ======================================================================
   // INIT
   // ======================================================================
@@ -1314,6 +1404,23 @@
       renderStudentForm();
     }
     initEvents();
+
+    // Import/Export Event-Listener
+    const importBtn = document.getElementById('btn-relmodel-import');
+    const fileInput = document.getElementById('relmodel-file-input');
+    if (importBtn && fileInput) {
+      importBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files[0]) {
+          importRelmodelJSON(e.target.files[0]);
+          e.target.value = '';
+        }
+      });
+    }
+    const exportJsonBtn = document.getElementById('btn-relmodel-export-json');
+    if (exportJsonBtn) exportJsonBtn.addEventListener('click', exportRelmodelJSON);
+    const exportPngBtn = document.getElementById('btn-relmodel-export-png');
+    if (exportPngBtn) exportPngBtn.addEventListener('click', exportRelmodelPNG);
   });
 
   // Globale Exports
@@ -1323,5 +1430,39 @@
     reset,
     generateSolution,
     hadPersistedData: () => _hadPersistedData,
+    getStudentRelations: () => JSON.parse(JSON.stringify(_studentRelations)),
+    setStudentRelations: (rels) => {
+      _studentRelations = Array.isArray(rels) ? rels : [];
+      ensureStudentIds();
+      persistStudentRelations();
+      renderStudentForm();
+    },
+    isDrawerOpen: () => {
+      const drawer = document.getElementById('relmodel-drawer');
+      return drawer ? !drawer.classList.contains('collapsed') : false;
+    },
+    openDrawer: () => {
+      if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(true);
+    },
+    checkAndGetResult: () => {
+      removeCompletelyEmptyRelations();
+      _studentRelations.forEach((rel) => {
+        removeEmptyAttrs(rel);
+        const err = validateRelationInline(rel);
+        if (!err) {
+          sortAttrsPrimaryFirst(rel.attrs);
+          rel.isEditing = false;
+        }
+      });
+      renderStudentForm();
+      return checkInput();
+    },
+    triggerCheck: () => {
+      const btn = document.getElementById('btn-check');
+      if (btn) btn.click();
+    },
+    exportJSON: exportRelmodelJSON,
+    importJSON: importRelmodelJSON,
+    exportPNG: exportRelmodelPNG,
   };
 })();
