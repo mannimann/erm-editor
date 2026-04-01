@@ -494,8 +494,8 @@
       objective: `<ol>
           <li>Erstelle zwei Attribute bei der Entitätsklasse <strong>"Klasse"</strong>:
             <ul>
-              <li><strong>"Klassenstufe"</strong> (z.B. 5, 6, 7, 8...)</li>
-              <li><strong>"Parallelklasse"</strong> (z.B. a, b, c...)</li>
+              <li><strong>"Klassenstufe"</strong></li>
+              <li><strong>"Parallelklasse"</strong></li>
             </ul>
           </li>
           <li>Markiere <strong>BEIDE</strong> als Primärschlüssel</li>
@@ -1071,6 +1071,8 @@
       this.state.questsPanelVisible = true;
       this.persist();
       this.renderPanel();
+      // UI: Aktualisiere Badge/Dot-Anzeigen im Menü
+      if (window.App?.updateQuestDots) window.App.updateQuestDots();
     },
 
     getCurrentQuest: function () {
@@ -1205,6 +1207,7 @@
         questsPanelVisible: false,
       };
       this.hidePanel();
+      if (window.App?.updateQuestDots) window.App.updateQuestDots();
     },
 
     resetCurrentSeriesProgress: function () {
@@ -1221,6 +1224,7 @@
       }
 
       this.renderPanel();
+      if (window.App?.updateQuestDots) window.App.updateQuestDots();
     },
 
     hidePanel: function () {
@@ -1265,6 +1269,12 @@
 
   // ---- Export ----
   window.Quest = QuestManager;
+  // Liefert eine Quest-Definition nach Reihenname und Nummer (für Tooltips/Labels)
+  QuestManager.getQuestByNumber = function (mode, number) {
+    const quests = mode === 'experten' ? expertenQuests : grundlagenQuests;
+    if (!Array.isArray(quests)) return null;
+    return quests.find((q) => Number(q.number) === Number(number)) || null;
+  };
   QuestManager.init();
   // Panel-Zustand nach Seitenneuladen wiederherstellen
   QuestManager.renderPanel();

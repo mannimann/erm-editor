@@ -418,6 +418,7 @@ function initTabs() {
     questsDropdown.classList.toggle('open', open);
     questsMenu.hidden = !open;
     questsToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && window.App?.updateQuestDots) window.App.updateQuestDots();
   };
 
   let syncQuestPanelResizer = () => {}; // wird unten überschrieben
@@ -580,12 +581,6 @@ function initTabs() {
 
   // ---- Quest-Button & Item Hinweis-Punkte ----
   (function initQuestDots() {
-    // Alle aktiven (nicht disabled) Questreihen-Buttons
-    const itemButtons = Array.from(
-      questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
-    );
-
-    // Prüft ob eine Questreihe noch nicht gestartet wurde
     function isNotStarted(btn) {
       const mode = btn.dataset.questSeries;
       if (!mode) return false;
@@ -594,57 +589,72 @@ function initTabs() {
       return !localStorage.getItem(key);
     }
 
-    // Punkt bei jedem noch nicht gestarteten Item einfügen
-    itemButtons.forEach((btn) => {
-      if (!isNotStarted(btn)) return;
-      const dot = document.createElement('span');
-      dot.className = 'quest-item-dot';
-      dot.setAttribute('aria-hidden', 'true');
-      // Vor dem ersten span-Kind einfügen (vor dem Titel)
-      btn.appendChild(dot);
-    });
+    function updateQuestDots() {
+      const itemButtons = Array.from(
+        questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
+      );
 
-    // Punkt am Quests-Button: animiert, solange mind. ein Item-Punkt vorhanden
-    const anyUnstarted = itemButtons.some(isNotStarted);
-    if (!anyUnstarted) return;
+      // Item-Dots verwalten
+      itemButtons.forEach((btn) => {
+        const dot = btn.querySelector('.quest-item-dot');
+        if (isNotStarted(btn)) {
+          if (!dot) {
+            const d = document.createElement('span');
+            d.className = 'quest-item-dot';
+            d.setAttribute('aria-hidden', 'true');
+            btn.appendChild(d);
+          }
+        } else {
+          if (dot) dot.remove();
+        }
+      });
 
-    const btnDot = document.createElement('span');
-    btnDot.className = 'quest-dot quest-dot--pulse';
-    btnDot.setAttribute('aria-hidden', 'true');
-    questsToggleBtn.appendChild(btnDot);
+      // Haupt-Button-Dot verwalten
+      const anyUnstarted = itemButtons.some(isNotStarted);
+      let btnDot = questsToggleBtn.querySelector('.quest-dot');
+      if (anyUnstarted) {
+        if (!btnDot) {
+          btnDot = document.createElement('span');
+          btnDot.className = 'quest-dot quest-dot--pulse';
+          btnDot.setAttribute('aria-hidden', 'true');
+          questsToggleBtn.appendChild(btnDot);
 
-    // Nach 25 Sek. Pulse stoppen, Punkt bleibt statisch
-    const pulseTimer = setTimeout(() => {
-      btnDot.classList.remove('quest-dot--pulse');
-    }, 25000);
+          // Nach 25 Sek. Pulse stoppen, Punkt bleibt statisch
+          const pulseTimer = setTimeout(() => {
+            if (btnDot) btnDot.classList.remove('quest-dot--pulse');
+          }, 25000);
 
-    // Pulsieren beim Klick auf den Quest-Button sofort stoppen
-    questsToggleBtn.addEventListener(
-      'click',
-      () => {
-        clearTimeout(pulseTimer);
-        btnDot.classList.remove('quest-dot--pulse');
-      },
-      { once: true },
-    );
-
-    // Prüft ob noch Item-Punkte vorhanden — wenn nicht, Button-Punkt entfernen
-    function checkAndDismissBtnDot() {
-      const stillAny = itemButtons.some(isNotStarted);
-      if (!stillAny) {
-        clearTimeout(pulseTimer);
-        btnDot.remove();
+          questsToggleBtn.addEventListener(
+            'click',
+            () => {
+              clearTimeout(pulseTimer);
+              if (btnDot) btnDot.classList.remove('quest-dot--pulse');
+            },
+            { once: true },
+          );
+        }
+      } else {
+        if (btnDot) btnDot.remove();
       }
     }
 
-    // Beim Klick auf einen Item-Button: Item-Punkt entfernen, ggf. Button-Punkt auch
+    // Initial render + attach click handlers so dots update on user interaction
+    updateQuestDots();
+
+    const itemButtons = Array.from(
+      questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
+    );
     itemButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
         const dot = btn.querySelector('.quest-item-dot');
         if (dot) dot.remove();
-        checkAndDismissBtnDot();
+        updateQuestDots();
       });
     });
+
+    // Expose for external updates (e.g. when quest progress is reset)
+    if (!window.App) window.App = {};
+    window.App.updateQuestDots = updateQuestDots;
   })();
 
   window.AppTabs = { setDrawerState };
@@ -1218,6 +1228,191 @@ document.addEventListener('DOMContentLoaded', () => {
       window.Quest.renderPanel();
     });
   }
+  // Tooltip migration + global floating tooltip manager
+  (function initTooltips() {
+    const migrate = (root) => {
+      try {
+        const nodes = (root || document).querySelectorAll('[title]');
+        nodes.forEach((el) => {
+          const t = el.getAttribute('title');
+          if (!t) return;
+          if (el.hasAttribute('data-tooltip')) return;
+          if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', t);
+          el.setAttribute('data-tooltip', t);
+          el.removeAttribute('title');
+        });
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    migrate(document.body);
+
+    // Create a single floating tooltip element used for all targets
+    const tooltip = document.createElement('div');
+    tooltip.id = 'global-tooltip';
+    tooltip.setAttribute('aria-hidden', 'true');
+    tooltip.innerHTML =
+      '<div class="tooltip-content" role="tooltip"></div><div class="tooltip-arrow" aria-hidden="true"></div>';
+    document.body.appendChild(tooltip);
+    // Indicate to CSS that a global tooltip exists (disables pseudo rules)
+    document.body.classList.add('has-global-tooltip');
+
+    let showTimer = null;
+    let hideTimer = null;
+    let currentTarget = null;
+    const SHOW_DELAY = 600; // ms before tooltip appears (increased)
+    const HIDE_DELAY = 120; // ms after hiding
+
+    function findTarget(node) {
+      if (!node || !(node instanceof Element)) return null;
+      return node.closest && node.closest('[data-tooltip]');
+    }
+
+    function positionTooltipFor(target, preferredPos) {
+      const content = tooltip.querySelector('.tooltip-content');
+      const arrow = tooltip.querySelector('.tooltip-arrow');
+      const text = String(target.getAttribute('data-tooltip') || '').trim();
+      if (!text) return;
+      content.innerHTML = text;
+      tooltip.style.display = 'block';
+      tooltip.style.visibility = 'hidden';
+
+      // measure after content set
+      const ttRect = tooltip.getBoundingClientRect();
+      const rect = target.getBoundingClientRect();
+      const margin = 8;
+      let pos = preferredPos || target.getAttribute('data-tooltip-pos') || 'top';
+
+      // Compute candidate positions and pick one that fits vertically.
+      const pad = 8;
+      const topIfTop = rect.top - ttRect.height - margin;
+      const topIfBottom = rect.bottom + margin;
+
+      // If preferred is top but there isn't enough space above, try bottom.
+      if (pos === 'top' && topIfTop < pad) {
+        if (topIfBottom + ttRect.height <= window.innerHeight - pad) pos = 'bottom';
+      } else if (pos === 'bottom' && topIfBottom + ttRect.height > window.innerHeight - pad) {
+        if (topIfTop >= pad) pos = 'top';
+      }
+
+      let left = 0;
+      let top = 0;
+      if (pos === 'right') {
+        left = rect.right + margin;
+        top = rect.top + rect.height / 2 - ttRect.height / 2;
+      } else if (pos === 'left') {
+        left = rect.left - ttRect.width - margin;
+        top = rect.top + rect.height / 2 - ttRect.height / 2;
+      } else if (pos === 'bottom') {
+        top = topIfBottom;
+        left = rect.left + rect.width / 2 - ttRect.width / 2;
+      } else {
+        // top
+        top = topIfTop;
+        left = rect.left + rect.width / 2 - ttRect.width / 2;
+      }
+
+      // If neither top nor bottom fits, clamp inside viewport (choose best fit)
+      if (top < pad) top = pad;
+      if (top + ttRect.height > window.innerHeight - pad) top = Math.max(pad, window.innerHeight - ttRect.height - pad);
+
+      // Clamp horizontally
+      left = Math.max(pad, Math.min(left, window.innerWidth - ttRect.width - pad));
+
+      tooltip.setAttribute('data-pos', pos);
+      tooltip.style.left = Math.round(left) + 'px';
+      tooltip.style.top = Math.round(top) + 'px';
+      tooltip.style.visibility = 'visible';
+      tooltip.setAttribute('aria-hidden', 'false');
+      tooltip.classList.add('visible');
+    }
+
+    function showTooltipFor(target) {
+      if (!target || !target.hasAttribute('data-tooltip')) return;
+      clearTimeout(hideTimer);
+      currentTarget = target;
+      showTimer = setTimeout(() => {
+        try {
+          positionTooltipFor(target);
+        } catch (e) {
+          // ignore positioning errors
+        }
+      }, SHOW_DELAY);
+    }
+
+    function hideTooltip(immediate = false) {
+      clearTimeout(showTimer);
+      clearTimeout(hideTimer);
+      currentTarget = null;
+      tooltip.setAttribute('aria-hidden', 'true');
+      tooltip.classList.remove('visible');
+      if (immediate) {
+        tooltip.style.display = 'none';
+      } else {
+        hideTimer = setTimeout(() => {
+          tooltip.style.display = 'none';
+        }, HIDE_DELAY);
+      }
+    }
+
+    // Event delegation: pointer + keyboard
+    document.addEventListener('mouseover', (e) => {
+      const t = findTarget(e.target);
+      if (t) showTooltipFor(t);
+    });
+
+    document.addEventListener('mouseout', (e) => {
+      const from = findTarget(e.target);
+      const to = findTarget(e.relatedTarget);
+      if (from && from !== to) hideTooltip();
+    });
+
+    document.addEventListener(
+      'focusin',
+      (e) => {
+        const t = findTarget(e.target);
+        if (t) showTooltipFor(t);
+      },
+      true,
+    );
+
+    document.addEventListener(
+      'focusout',
+      (e) => {
+        const t = findTarget(e.target);
+        if (t) hideTooltip();
+      },
+      true,
+    );
+
+    // Hide on scroll/resize to avoid stale position
+    window.addEventListener('scroll', () => hideTooltip(true), true);
+    window.addEventListener('resize', () => hideTooltip(true));
+
+    // Keep migrating title->data-tooltip for dynamically added content
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.type === 'attributes' && m.attributeName === 'title') {
+          const target = m.target;
+          if (!(target instanceof Element)) continue;
+          const val = target.getAttribute('title');
+          if (!val) continue;
+          if (!target.hasAttribute('data-tooltip')) {
+            if (!target.hasAttribute('aria-label')) target.setAttribute('aria-label', val);
+            target.setAttribute('data-tooltip', val);
+          }
+          target.removeAttribute('title');
+        } else if (m.type === 'childList' && m.addedNodes.length) {
+          m.addedNodes.forEach((n) => {
+            if (n.nodeType === 1) migrate(n);
+          });
+        }
+      }
+    });
+
+    observer.observe(document.body, { attributes: true, attributeFilter: ['title'], subtree: true, childList: true });
+  })();
 });
 
 // ---- Quest Panel Rendering ----
@@ -1238,16 +1433,18 @@ window.App = {
     const panel = document.getElementById('quest-panel');
     if (!panel) return;
 
-    // Update Title & Progress
+    // Update Title & Progress (count completed quests, exclude final completion task)
     const titleEl = panel.querySelector('#quest-title');
     const progressEl = panel.querySelector('#quest-progress');
     const total = questState.questMode === 'grundlagen' ? 13 : 9;
+    const effectiveTotal = Math.max(1, total - 1);
+    const completedCount = (questState.completedQuests || []).filter((n) => Number(n) < total).length || 0;
     if (titleEl) titleEl.textContent = `${quest.number}. ${quest.title}`;
-    if (progressEl) progressEl.textContent = `${quest.number} / ${total}`;
+    if (progressEl) progressEl.textContent = `${completedCount} / ${effectiveTotal}`;
 
-    // Update Progress Bar
+    // Update Progress Bar (based on completed quests excluding final)
     const progressFill = panel.querySelector('#quest-progress-fill');
-    if (progressFill) progressFill.style.width = (quest.number / total) * 100 + '%';
+    if (progressFill) progressFill.style.width = (completedCount / effectiveTotal) * 100 + '%';
 
     // Update Progress Circles – alle klickbar
     const circlesContainer = panel.querySelector('#quest-circles');
@@ -1260,6 +1457,11 @@ window.App = {
         circle.className = 'quest-circle';
         circle.setAttribute('data-quest-number', i);
         circle.textContent = i;
+        // Tooltip: try to resolve quest title via Quest API — set data-tooltip so
+        // the global floating tooltip manager styles it (avoid native title)
+        const qTitle = window.Quest?.getQuestByNumber?.(questState.questMode, i)?.title || `Aufgabe ${i}`;
+        circle.setAttribute('data-tooltip', qTitle);
+        if (!circle.hasAttribute('aria-label')) circle.setAttribute('aria-label', qTitle);
         if (i === quest.number) circle.classList.add('current');
         else if (questState.completedQuests.includes(i)) circle.classList.add('completed');
         else if (nextPending !== null && i === nextPending) circle.classList.add('up-next');
@@ -1271,13 +1473,6 @@ window.App = {
     const content = document.getElementById('quest-content');
     if (content) {
       content.innerHTML = '';
-
-      if (quest.theory) {
-        const conceptDiv = document.createElement('div');
-        conceptDiv.className = 'quest-concept';
-        conceptDiv.innerHTML = quest.theory;
-        content.appendChild(conceptDiv);
-      }
 
       const taskSection = document.createElement('div');
       taskSection.className = 'quest-section quest-task';
@@ -1382,12 +1577,12 @@ window.App = {
       return;
     }
 
-    const msgEl = modal.querySelector('.quest-success-message');
+    const titleEl = modal.querySelector('.quest-success-title');
     const barFill = modal.querySelector('.quest-success-bar-fill');
     let okBtn = modal.querySelector('.quest-success-ok-btn');
     const previousActiveElement = document.activeElement;
 
-    if (msgEl) msgEl.textContent = `Aufgabe ${questNumber} erfolgreich gelöst!`;
+    if (titleEl) titleEl.textContent = `Aufgabe ${questNumber} geschafft!`;
 
     // Fokus vom Hintergrund lösen, damit Enter nicht an darunterliegende Buttons weitergereicht wird.
     if (previousActiveElement && typeof previousActiveElement.blur === 'function') {
@@ -1398,32 +1593,82 @@ window.App = {
     modal.setAttribute('tabindex', '-1');
     this.spawnQuestConfetti(modal.querySelector('.quest-success-card'));
 
-    // Balken zurücksetzen und Animation starten
+    // Ensure gradient is anchored to the full track so it is revealed while the fill grows
     if (barFill) {
-      barFill.style.transition = 'none';
-      barFill.style.width = '0%';
-      barFill.offsetHeight; // reflow
-      barFill.style.transition = 'width 3s linear';
-      barFill.style.width = '100%';
+      barFill.classList.add('quest-success-gradient');
+
+      const startBarAnimation = () => {
+        const barTrack = modal.querySelector('.quest-success-bar-track');
+        let trackWidth = 0;
+        try {
+          if (barTrack) {
+            trackWidth = Math.round(barTrack.getBoundingClientRect().width) || barTrack.offsetWidth || 0;
+          }
+        } catch (e) {
+          trackWidth = barTrack ? barTrack.offsetWidth || 0 : 0;
+        }
+
+        barFill.style.backgroundRepeat = 'no-repeat';
+        barFill.style.backgroundPosition = 'left center';
+        if (trackWidth > 0) {
+          // Anchor the gradient to the full track width (px) so it looks "revealed" while the element grows
+          barFill.style.backgroundSize = `${trackWidth}px 100%`;
+        } else {
+          // Fallback: scale to cover
+          barFill.style.backgroundSize = '100% 100%';
+        }
+
+        // Reset and start animation using double rAF to avoid first-load layout/measurement race conditions
+        barFill.style.transition = 'none';
+        barFill.style.width = '0%';
+        barFill.offsetHeight; // reflow
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            barFill.style.transition = 'width 3s linear';
+            barFill.style.width = '100%';
+          });
+        });
+      };
+
+      // Ensure fonts/layout are stable before measuring — helps on first modal after reload
+      if (document.fonts && document.fonts.ready && typeof document.fonts.ready.then === 'function') {
+        document.fonts.ready
+          .then(() => {
+            startBarAnimation();
+          })
+          .catch(() => startBarAnimation());
+      } else {
+        // Fallback small delay
+        setTimeout(startBarAnimation, 60);
+      }
+    }
+    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (gleiche Optik wie im Panel)
+    try {
+      const currentQuest = window.Quest?.getCurrentQuest?.();
+      const theoryHtml = currentQuest?.theory || '';
+      if (theoryHtml) {
+        // Entferne vorhandene Kopie, falls vorhanden
+        const existing = modal.querySelector('.quest-success-concept');
+        if (existing) existing.remove();
+        const conceptDiv = document.createElement('div');
+        conceptDiv.className = 'quest-concept quest-success-concept';
+        conceptDiv.innerHTML = theoryHtml;
+        const barTrack = modal.querySelector('.quest-success-bar-track');
+        if (barTrack) modal.querySelector('.quest-success-card').insertBefore(conceptDiv, barTrack);
+        else modal.querySelector('.quest-success-card').appendChild(conceptDiv);
+      }
+    } catch (e) {
+      // ignore
     }
 
     // Alten Listener entfernen (verhindert mehrfaches Feuern)
     const newBtn = okBtn.cloneNode(true);
     okBtn.parentNode.replaceChild(newBtn, okBtn);
 
-    let timer;
     let closed = false;
-    const onKeyDown = (event) => {
-      if (event.key !== 'Enter' && event.key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
-      close();
-    };
-
     const close = () => {
       if (closed) return;
       closed = true;
-      clearTimeout(timer);
       modal.removeEventListener('keydown', onKeyDown, true);
       modal.style.display = 'none';
       this.suppressQuestCheck(350);
@@ -1437,10 +1682,32 @@ window.App = {
       onComplete?.();
     };
 
+    const onKeyDown = (event) => {
+      // Warten bis OK aktiviert ist
+      if (newBtn.disabled) return;
+      if (event.key !== 'Enter' && event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+    };
+
     modal.addEventListener('keydown', onKeyDown, true);
-    timer = setTimeout(close, 3000);
-    newBtn.addEventListener('click', close);
-    newBtn.focus();
+
+    // OK-Button für 3s deaktivieren, danach aktivieren – Modal schließt erst per OK
+    newBtn.disabled = true;
+    const enableTimer = setTimeout(() => {
+      newBtn.disabled = false;
+      try {
+        newBtn.focus();
+      } catch (e) {
+        // ignore
+      }
+    }, 3000);
+
+    newBtn.addEventListener('click', () => {
+      clearTimeout(enableTimer);
+      close();
+    });
   },
 
   spawnQuestConfetti(containerEl) {
