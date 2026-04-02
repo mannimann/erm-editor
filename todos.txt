@@ -1,14 +1,3 @@
-json struktur bei erm aufräumen
-- chen entfernen (veralteter hinweis)
-- 1:n zwischen entitätsklassen und attributen nicht nötig -> vereinfachen
--- wie wird das im diagramm gespeichert, lässt sich da auch etwas vereinfachen?
-
-Breite des textes ER-Diagramm in titelleiste an breite der seitenleiste anpassen
-titel des programms, sowie titel der webseite: ERM-Editor
-
-toast so weit runterschieben, dass es im er-diagramm-bereich am oberen rand erscheint
-
-
-
 auto-layout überarbeiten
 positionierung der kardinalitäten überarbeiten (immer auf gleicher seite der linie bei einer Beziehung)
+ggf. alte modals entfernen

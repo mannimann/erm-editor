@@ -1,5 +1,4 @@
 {
-  "notation": "chen",
   "snapToGrid": true,
   "diagramTitle": "ERM-Grundlagenquest - Schule",
   "nodes": [
@@ -137,33 +136,25 @@
       "id": "s3",
       "fromId": "s1",
       "toId": "s2",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s5",
       "fromId": "s1",
       "toId": "s4",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s7",
       "fromId": "s1",
       "toId": "s6",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s10",
       "fromId": "s8",
       "toId": "s9",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s26",
@@ -185,9 +176,7 @@
       "id": "s30",
       "fromId": "s28",
       "toId": "s29",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s34",
@@ -209,9 +198,7 @@
       "id": "s37",
       "fromId": "s31",
       "toId": "s36",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s40",
@@ -233,25 +220,19 @@
       "id": "s43",
       "fromId": "s8",
       "toId": "s42",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s45",
       "fromId": "s28",
       "toId": "s44",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s47",
       "fromId": "s28",
       "toId": "s46",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s49",

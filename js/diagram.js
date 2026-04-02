@@ -6,11 +6,121 @@
 (function () {
   const NODE_ENTITY_W = 140;
   const NODE_ENTITY_H = 50;
+  const NODE_ENTITY_W_MAX = 320;
   const NODE_ATTR_RX = 60;
   const NODE_ATTR_RY = 26;
+  const NODE_ATTR_RX_MAX = 170;
   const NODE_REL_W = 130;
   const NODE_REL_H = 60;
+  const NODE_REL_W_MAX = 300;
   const GRID_SIZE = 20;
+
+  function truncateLabelToApproxWidth(text, maxWidth, avgCharWidth) {
+    const raw = String(text || '').trim();
+    if (!raw) return '';
+    if (Math.ceil(raw.length * avgCharWidth) <= maxWidth) return raw;
+    const allowedChars = Math.max(1, Math.floor((maxWidth - avgCharWidth * 3) / avgCharWidth));
+    return `${raw.slice(0, allowedChars)}...`;
+  }
+
+  function wrapLabelToTwoLines(text, maxWidth, avgCharWidth) {
+    const raw = String(text || '').trim();
+    if (!raw) return [''];
+
+    const maxChars = Math.max(3, Math.floor(maxWidth / avgCharWidth));
+    if (raw.length <= maxChars) return [raw];
+
+    const words = raw.split(/\s+/).filter((w) => !!w);
+
+    // Fallback for single very long token.
+    if (words.length <= 1) {
+      if (raw.length <= maxChars * 2) {
+        return [raw.slice(0, maxChars), raw.slice(maxChars)];
+      }
+      return [raw.slice(0, maxChars), `${raw.slice(maxChars, maxChars * 2 - 3)}...`];
+    }
+
+    const lines = ['', ''];
+    let currentLine = 0;
+
+    words.forEach((word) => {
+      if (currentLine > 1) return;
+      const candidate = lines[currentLine] ? `${lines[currentLine]} ${word}` : word;
+      if (candidate.length <= maxChars) {
+        lines[currentLine] = candidate;
+        return;
+      }
+      if (currentLine === 0) {
+        currentLine = 1;
+        const secondCandidate = lines[currentLine] ? `${lines[currentLine]} ${word}` : word;
+        if (secondCandidate.length <= maxChars) {
+          lines[currentLine] = secondCandidate;
+          return;
+        }
+      }
+      // Word doesn't fit in second line: truncate with ellipsis.
+      const base = lines[1] || '';
+      const withWord = base ? `${base} ${word}` : word;
+      lines[1] = withWord.slice(0, Math.max(1, maxChars - 3)).trimEnd() + '...';
+      currentLine = 2;
+    });
+
+    const first = lines[0] || raw.slice(0, maxChars);
+    const second = lines[1] || '';
+    return second ? [first, second] : [first];
+  }
+
+  function getNodeVisual(nodeOrType, explicitName = '') {
+    const type = typeof nodeOrType === 'string' ? nodeOrType : nodeOrType?.type;
+    const rawName = typeof nodeOrType === 'string' ? explicitName : nodeOrType?.name;
+
+    if (type === 'entity') {
+      const label = String(rawName || 'Entitätsklasse').trim() || 'Entitätsklasse';
+      const avgCharWidth = 7.4;
+      // Kleinerer Innenabstand: Text näher am Rand der Entitätsklasse
+      const horizontalPadding = 18;
+      const maxTextWidth = NODE_ENTITY_W_MAX - horizontalPadding;
+      const displayLines = wrapLabelToTwoLines(label, maxTextWidth, avgCharWidth);
+      const longest = displayLines.reduce((maxLen, line) => Math.max(maxLen, line.length), 0);
+      const width = Math.max(
+        NODE_ENTITY_W,
+        Math.min(NODE_ENTITY_W_MAX, Math.ceil(longest * avgCharWidth + horizontalPadding)),
+      );
+      return { w: width, h: NODE_ENTITY_H, displayLines, displayName: displayLines.join(' ') };
+    }
+
+    if (type === 'attribute') {
+      const label = String(rawName || 'Attribut').trim() || 'Attribut';
+      const avgCharWidth = 7.0;
+      // Etwas größerer Innenabstand: mehr Luft bis zum Rand der Ellipse
+      const horizontalPadding = 36;
+      const maxTextWidth = NODE_ATTR_RX_MAX * 2 - horizontalPadding;
+      const displayName = truncateLabelToApproxWidth(label, maxTextWidth, avgCharWidth);
+      const w = Math.max(
+        NODE_ATTR_RX * 2,
+        Math.min(NODE_ATTR_RX_MAX * 2, Math.ceil(displayName.length * avgCharWidth + horizontalPadding)),
+      );
+      const rx = Math.ceil(w / 2);
+      return { rx, ry: NODE_ATTR_RY, w, h: NODE_ATTR_RY * 2, displayName };
+    }
+
+    const label = String(rawName || 'Beziehung').trim() || 'Beziehung';
+    const avgCharWidth = 7.1;
+    const horizontalPadding = 36;
+    const maxTextWidth = NODE_REL_W_MAX - horizontalPadding;
+    const displayLines = wrapLabelToTwoLines(label, maxTextWidth, avgCharWidth);
+    const longest = displayLines.reduce((maxLen, line) => Math.max(maxLen, line.length), 0);
+    const width = Math.max(NODE_REL_W, Math.min(NODE_REL_W_MAX, Math.ceil(longest * avgCharWidth + horizontalPadding)));
+    return { w: width, h: NODE_REL_H, displayLines, displayName: displayLines.join(' ') };
+  }
+
+  function getAttributeEllipseSize(nodeOrName) {
+    const visual = getNodeVisual(
+      typeof nodeOrName === 'string' ? 'attribute' : nodeOrName,
+      typeof nodeOrName === 'string' ? nodeOrName : '',
+    );
+    return { rx: visual.rx, ry: visual.ry, w: visual.w, h: visual.h, displayName: visual.displayName };
+  }
 
   function S() {
     return window.AppState.state;
@@ -84,10 +194,17 @@
     return Math.round(value / GRID_SIZE) * GRID_SIZE;
   }
 
-  function getNodeSize(type) {
-    if (type === 'entity') return { w: NODE_ENTITY_W, h: NODE_ENTITY_H };
-    if (type === 'attribute') return { w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 };
-    return { w: NODE_REL_W, h: NODE_REL_H };
+  function getNodeSize(type, node = null) {
+    if (type === 'entity') {
+      const visual = getNodeVisual(node || 'entity', node ? '' : 'Entitätsklasse');
+      return { w: visual.w, h: visual.h };
+    }
+    if (type === 'attribute') {
+      const attrSize = getAttributeEllipseSize(node);
+      return { w: attrSize.w, h: attrSize.h };
+    }
+    const visual = getNodeVisual(node || 'relationship', node ? '' : 'Beziehung');
+    return { w: visual.w, h: visual.h };
   }
 
   function maybeSnapPosition(type, x, y) {
@@ -254,12 +371,18 @@
 
   function getNodeCenter(node) {
     switch (node.type) {
-      case 'entity':
-        return { x: node.x + NODE_ENTITY_W / 2, y: node.y + NODE_ENTITY_H / 2 };
-      case 'attribute':
-        return { x: node.x + NODE_ATTR_RX, y: node.y + NODE_ATTR_RY };
-      case 'relationship':
-        return { x: node.x + NODE_REL_W / 2, y: node.y + NODE_REL_H / 2 };
+      case 'entity': {
+        const visual = getNodeVisual(node);
+        return { x: node.x + visual.w / 2, y: node.y + visual.h / 2 };
+      }
+      case 'attribute': {
+        const attrSize = getAttributeEllipseSize(node);
+        return { x: node.x + attrSize.rx, y: node.y + attrSize.ry };
+      }
+      case 'relationship': {
+        const visual = getNodeVisual(node);
+        return { x: node.x + visual.w / 2, y: node.y + visual.h / 2 };
+      }
       default:
         return { x: node.x, y: node.y };
     }
@@ -348,11 +471,12 @@
   }
 
   function getRelationshipCorners(node) {
+    const visual = getNodeVisual(node);
     return [
-      { index: 0, x: node.x + NODE_REL_W / 2, y: node.y },
-      { index: 1, x: node.x + NODE_REL_W, y: node.y + NODE_REL_H / 2 },
-      { index: 2, x: node.x + NODE_REL_W / 2, y: node.y + NODE_REL_H },
-      { index: 3, x: node.x, y: node.y + NODE_REL_H / 2 },
+      { index: 0, x: node.x + visual.w / 2, y: node.y },
+      { index: 1, x: node.x + visual.w, y: node.y + visual.h / 2 },
+      { index: 2, x: node.x + visual.w / 2, y: node.y + visual.h },
+      { index: 3, x: node.x, y: node.y + visual.h / 2 },
     ];
   }
 
@@ -564,20 +688,23 @@
     const uy = dy / len;
 
     if (node.type === 'entity') {
-      const hw = NODE_ENTITY_W / 2;
-      const hh = NODE_ENTITY_H / 2;
+      const visual = getNodeVisual(node);
+      const hw = visual.w / 2;
+      const hh = visual.h / 2;
       const t = Math.min(hw / Math.abs(ux || 0.0001), hh / Math.abs(uy || 0.0001));
       return { x: c.x + ux * t, y: c.y + uy * t };
     }
     if (node.type === 'attribute') {
-      const rx = NODE_ATTR_RX;
-      const ry = NODE_ATTR_RY;
+      const attrSize = getAttributeEllipseSize(node);
+      const rx = attrSize.rx;
+      const ry = attrSize.ry;
       const angle = Math.atan2(dy * rx, dx * ry);
       return { x: c.x + rx * Math.cos(angle), y: c.y + ry * Math.sin(angle) };
     }
     if (node.type === 'relationship') {
-      const hw = NODE_REL_W / 2;
-      const hh = NODE_REL_H / 2;
+      const visual = getNodeVisual(node);
+      const hw = visual.w / 2;
+      const hh = visual.h / 2;
       const denom = Math.abs(ux) / hw + Math.abs(uy) / hh || 1;
       const t = 1 / denom;
       return { x: c.x + ux * t, y: c.y + uy * t };
@@ -598,7 +725,21 @@
     t.setAttribute('dominant-baseline', 'middle');
     t.setAttribute('font-size', '13');
     t.setAttribute('fill', '#1e293b');
-    t.textContent = text;
+    const lines = Array.isArray(text) ? text.filter((line) => String(line || '').length > 0) : [text];
+    if (lines.length <= 1) {
+      t.textContent = lines[0] || '';
+      return t;
+    }
+
+    const lineHeight = 14;
+    const startY = y - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach((line, index) => {
+      const span = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      span.setAttribute('x', x);
+      span.setAttribute('y', startY + index * lineHeight);
+      span.textContent = line;
+      t.appendChild(span);
+    });
     return t;
   }
 
@@ -607,8 +748,8 @@
     const underline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     underline.setAttribute('x1', centerX - width / 2);
     underline.setAttribute('x2', centerX + width / 2);
-    underline.setAttribute('y1', centerY + 14);
-    underline.setAttribute('y2', centerY + 14);
+    underline.setAttribute('y1', centerY + 10);
+    underline.setAttribute('y2', centerY + 10);
     underline.setAttribute('stroke', '#1e293b');
     underline.setAttribute('stroke-width', '2.5');
     underline.setAttribute('stroke-linecap', 'round');
@@ -628,9 +769,16 @@
   }
 
   function getNodeBounds(node) {
-    if (node.type === 'entity') return { x: node.x, y: node.y, w: NODE_ENTITY_W, h: NODE_ENTITY_H };
-    if (node.type === 'attribute') return { x: node.x, y: node.y, w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 };
-    return { x: node.x, y: node.y, w: NODE_REL_W, h: NODE_REL_H };
+    if (node.type === 'entity') {
+      const visual = getNodeVisual(node);
+      return { x: node.x, y: node.y, w: visual.w, h: visual.h };
+    }
+    if (node.type === 'attribute') {
+      const attrSize = getAttributeEllipseSize(node);
+      return { x: node.x, y: node.y, w: attrSize.w, h: attrSize.h };
+    }
+    const visual = getNodeVisual(node);
+    return { x: node.x, y: node.y, w: visual.w, h: visual.h };
   }
 
   function clampValue(value, min, max) {
@@ -791,6 +939,7 @@
 
     // Phase 2: place relationships between entities
     relationships.forEach((relationship, index) => {
+      const relVisual = getNodeVisual(relationship);
       const connectedEntityEdges = getRelationshipEntityEdges(relationship.id);
       const connectedEntities = connectedEntityEdges
         .map((edge) => byId(edge.fromId === relationship.id ? edge.toId : edge.fromId))
@@ -815,7 +964,7 @@
 
         const lineStep = 48;
         const rawOffset = pairIndex * lineStep;
-        const maxOffset = Math.max(0, dist / 2 - Math.max(NODE_REL_W, NODE_REL_H));
+        const maxOffset = Math.max(0, dist / 2 - Math.max(relVisual.w, relVisual.h));
         const clampedOffset = Math.min(rawOffset, maxOffset);
         const side = pairIndex % 2 === 0 ? 1 : -1;
 
@@ -823,7 +972,7 @@
         const relCenterY = (firstCenter.y + secondCenter.y) / 2 + uy * clampedOffset * side;
 
         // Berechne obere linke Ecke aus dem Mittelpunkt
-        const relPos = clampPosition(relationship.type, relCenterX - NODE_REL_W / 2, relCenterY - NODE_REL_H / 2);
+        const relPos = clampPosition(relationship.type, relCenterX - relVisual.w / 2, relCenterY - relVisual.h / 2);
         relationship.x = relPos.x;
         relationship.y = relPos.y;
         reserveNode(relationship, 24);
@@ -836,8 +985,8 @@
         const angle = (-Math.PI / 2 + (index % 6) * (Math.PI / 3)) % (Math.PI * 2);
         const relPos = clampPosition(
           relationship.type,
-          entityCenter.x + Math.cos(angle) * orbit - NODE_REL_W / 2,
-          entityCenter.y + Math.sin(angle) * orbit - NODE_REL_H / 2,
+          entityCenter.x + Math.cos(angle) * orbit - relVisual.w / 2,
+          entityCenter.y + Math.sin(angle) * orbit - relVisual.h / 2,
         );
         relationship.x = relPos.x;
         relationship.y = relPos.y;
@@ -880,9 +1029,10 @@
       const center = getNodeCenter(parentNode);
       const parentCandidates = nodes.filter((n) => n.type === parentNode.type);
       const isClosestToOwnParent = (candidatePos) => {
+        const attrSize = getAttributeEllipseSize(attr);
         const candidateCenter = {
-          x: candidatePos.x + NODE_ATTR_RX,
-          y: candidatePos.y + NODE_ATTR_RY,
+          x: candidatePos.x + attrSize.rx,
+          y: candidatePos.y + attrSize.ry,
         };
         const ownCenter = getNodeCenter(parentNode);
         const ownDistSq = (candidateCenter.x - ownCenter.x) ** 2 + (candidateCenter.y - ownCenter.y) ** 2;
@@ -912,8 +1062,9 @@
             for (let a = 0; a < angleOffsets.length; a += 1) {
               const angle = baseAngle + angleOffsets[a];
               const rCandidate = radius + radiusOffsets[r];
-              const x = center.x + Math.cos(angle) * rCandidate - NODE_ATTR_RX;
-              const y = center.y + Math.sin(angle) * rCandidate - NODE_ATTR_RY;
+              const attrSize = getAttributeEllipseSize(attr);
+              const x = center.x + Math.cos(angle) * rCandidate - attrSize.rx;
+              const y = center.y + Math.sin(angle) * rCandidate - attrSize.ry;
               const pos = tryPlaceNodeAt(attr.type, x, y, 12, isClosestToOwnParent);
               if (!pos) continue;
               attr.x = pos.x;
@@ -924,8 +1075,9 @@
           }
 
           if (!placed) {
-            const fallbackX = center.x + Math.cos(baseAngle) * (radius + 84) - NODE_ATTR_RX;
-            const fallbackY = center.y + Math.sin(baseAngle) * (radius + 84) - NODE_ATTR_RY;
+            const attrSize = getAttributeEllipseSize(attr);
+            const fallbackX = center.x + Math.cos(baseAngle) * (radius + 84) - attrSize.rx;
+            const fallbackY = center.y + Math.sin(baseAngle) * (radius + 84) - attrSize.ry;
             const constrained = findConstrainedPlacement(
               attr.type,
               fallbackX,
@@ -1042,46 +1194,49 @@
     let shape;
     let textEl;
     if (node.type === 'entity') {
+      const visual = getNodeVisual(node);
       shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      shape.setAttribute('width', NODE_ENTITY_W);
-      shape.setAttribute('height', NODE_ENTITY_H);
+      shape.setAttribute('width', visual.w);
+      shape.setAttribute('height', visual.h);
       shape.setAttribute('fill', isSelected ? '#bfdbfe' : '#dbeafe');
       shape.setAttribute('stroke', '#2563eb');
       shape.setAttribute('stroke-width', '2');
-      textEl = makeText(NODE_ENTITY_W / 2, NODE_ENTITY_H / 2, node.name || 'Entitätsklasse');
+      textEl = makeText(visual.w / 2, visual.h / 2, visual.displayLines || visual.displayName || 'Entitätsklasse');
     } else if (node.type === 'attribute') {
+      const attrSize = getAttributeEllipseSize(node);
       shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-      shape.setAttribute('cx', NODE_ATTR_RX);
-      shape.setAttribute('cy', NODE_ATTR_RY);
-      shape.setAttribute('rx', NODE_ATTR_RX);
-      shape.setAttribute('ry', NODE_ATTR_RY);
+      shape.setAttribute('cx', attrSize.rx);
+      shape.setAttribute('cy', attrSize.ry);
+      shape.setAttribute('rx', attrSize.rx);
+      shape.setAttribute('ry', attrSize.ry);
       shape.setAttribute('fill', isSelected ? '#fde68a' : '#fef3c7');
       shape.setAttribute('stroke', '#d97706');
       shape.setAttribute('stroke-width', '2');
 
       textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      textEl.setAttribute('x', NODE_ATTR_RX);
-      textEl.setAttribute('y', NODE_ATTR_RY);
+      textEl.setAttribute('x', attrSize.rx);
+      textEl.setAttribute('y', attrSize.ry);
       textEl.setAttribute('text-anchor', 'middle');
       textEl.setAttribute('dominant-baseline', 'middle');
       textEl.setAttribute('font-size', '13');
       textEl.setAttribute('fill', '#1e293b');
       if (node.isPrimaryKey) {
         textEl.setAttribute('font-weight', '800');
-        textEl.textContent = node.name || 'Attribut';
+        textEl.textContent = attrSize.displayName || 'Attribut';
       } else {
-        textEl.textContent = node.name || 'Attribut';
+        textEl.textContent = attrSize.displayName || 'Attribut';
       }
     } else {
+      const visual = getNodeVisual(node);
       shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
       shape.setAttribute(
         'points',
-        `${NODE_REL_W / 2},0 ${NODE_REL_W},${NODE_REL_H / 2} ${NODE_REL_W / 2},${NODE_REL_H} 0,${NODE_REL_H / 2}`,
+        `${visual.w / 2},0 ${visual.w},${visual.h / 2} ${visual.w / 2},${visual.h} 0,${visual.h / 2}`,
       );
       shape.setAttribute('fill', isSelected ? '#bbf7d0' : '#dcfce7');
       shape.setAttribute('stroke', '#16a34a');
       shape.setAttribute('stroke-width', '2');
-      textEl = makeText(NODE_REL_W / 2, NODE_REL_H / 2, node.name || 'Beziehung');
+      textEl = makeText(visual.w / 2, visual.h / 2, visual.displayLines || visual.displayName || 'Beziehung');
     }
 
     if (isSelected) {
@@ -1094,10 +1249,19 @@
     hit.setAttribute('y', -5);
     const bbox =
       node.type === 'entity'
-        ? { w: NODE_ENTITY_W + 10, h: NODE_ENTITY_H + 10 }
+        ? {
+            w: getNodeVisual(node).w + 10,
+            h: getNodeVisual(node).h + 10,
+          }
         : node.type === 'attribute'
-          ? { w: NODE_ATTR_RX * 2 + 10, h: NODE_ATTR_RY * 2 + 10 }
-          : { w: NODE_REL_W + 10, h: NODE_REL_H + 10 };
+          ? {
+              w: getAttributeEllipseSize(node).w + 10,
+              h: getAttributeEllipseSize(node).h + 10,
+            }
+          : {
+              w: getNodeVisual(node).w + 10,
+              h: getNodeVisual(node).h + 10,
+            };
     hit.setAttribute('width', bbox.w);
     hit.setAttribute('height', bbox.h);
     hit.setAttribute('fill', 'transparent');
@@ -1105,7 +1269,8 @@
     g.appendChild(shape);
     if (textEl) g.appendChild(textEl);
     if (node.type === 'attribute' && node.isPrimaryKey) {
-      g.appendChild(makePrimaryKeyDecoration(node.name || 'Attribut', NODE_ATTR_RX, NODE_ATTR_RY));
+      const attrSize = getAttributeEllipseSize(node);
+      g.appendChild(makePrimaryKeyDecoration(attrSize.displayName || 'Attribut', attrSize.rx, attrSize.ry));
     }
     g.appendChild(hit);
 
@@ -1270,28 +1435,29 @@
     const worldCenterY = (-viewState.y + localCenter.y) / viewState.scale;
     const dims =
       type === 'entity'
-        ? { w: NODE_ENTITY_W, h: NODE_ENTITY_H }
+        ? getNodeVisual('entity', 'Entitätsklasse')
         : type === 'attribute'
-          ? { w: NODE_ATTR_RX * 2, h: NODE_ATTR_RY * 2 }
-          : { w: NODE_REL_W, h: NODE_REL_H };
+          ? getAttributeEllipseSize('Attribut')
+          : getNodeVisual('relationship', 'Beziehung');
     return findFreePosition(type, worldCenterX - dims.w / 2, worldCenterY - dims.h / 2);
   }
 
   function getAttributeSpawnPosition(entityNode) {
     const center = getNodeCenter(entityNode);
+    const attrSize = getAttributeEllipseSize('Attribut');
     for (let ring = 0; ring < 4; ring += 1) {
       const radius = 116 + ring * 34;
       for (let step = 0; step < 12; step += 1) {
         const angle = (step / 12) * Math.PI * 2;
         const candidate = clampPosition(
           'attribute',
-          center.x + Math.cos(angle) * radius - NODE_ATTR_RX,
-          center.y + Math.sin(angle) * radius - NODE_ATTR_RY,
+          center.x + Math.cos(angle) * radius - attrSize.rx,
+          center.y + Math.sin(angle) * radius - attrSize.ry,
         );
         if (positionIsFree('attribute', candidate.x, candidate.y)) return candidate;
       }
     }
-    return findFreePosition('attribute', center.x + 90 - NODE_ATTR_RX, center.y - NODE_ATTR_RY);
+    return findFreePosition('attribute', center.x + 90 - attrSize.rx, center.y - attrSize.ry);
   }
 
   function addNode(type, x, y) {
@@ -1328,9 +1494,11 @@
       fromId,
       toId,
       edgeType,
-      chenFrom: '1',
-      chenTo: 'n',
     };
+    if (edgeType === 'relationship') {
+      edge.chenFrom = '1';
+      edge.chenTo = '1';
+    }
     S().edges.push(edge);
     renderAll();
     return edge.id;
@@ -1352,19 +1520,20 @@
 
   function getAttributeSpawnPositionForNode(node) {
     const center = getNodeCenter(node);
+    const attrSize = getAttributeEllipseSize('Attribut');
     for (let ring = 0; ring < 4; ring += 1) {
       const radius = 116 + ring * 34;
       for (let step = 0; step < 12; step += 1) {
         const angle = (step / 12) * Math.PI * 2;
         const candidate = clampPosition(
           'attribute',
-          center.x + Math.cos(angle) * radius - NODE_ATTR_RX,
-          center.y + Math.sin(angle) * radius - NODE_ATTR_RY,
+          center.x + Math.cos(angle) * radius - attrSize.rx,
+          center.y + Math.sin(angle) * radius - attrSize.ry,
         );
         if (positionIsFree('attribute', candidate.x, candidate.y)) return candidate;
       }
     }
-    return findFreePosition('attribute', center.x + 90 - NODE_ATTR_RX, center.y - NODE_ATTR_RY);
+    return findFreePosition('attribute', center.x + 90 - attrSize.rx, center.y - attrSize.ry);
   }
 
   function addAttributeToRelationship(relationshipId) {
@@ -1941,17 +2110,20 @@
     let cy;
     let fw;
     if (node.type === 'entity') {
-      cx = node.x + NODE_ENTITY_W / 2;
-      cy = node.y + NODE_ENTITY_H / 2;
-      fw = NODE_ENTITY_W - 10;
+      const visual = getNodeVisual(node);
+      cx = node.x + visual.w / 2;
+      cy = node.y + visual.h / 2;
+      fw = visual.w - 10;
     } else if (node.type === 'attribute') {
-      cx = node.x + NODE_ATTR_RX;
-      cy = node.y + NODE_ATTR_RY;
-      fw = NODE_ATTR_RX * 2 - 10;
+      const attrSize = getAttributeEllipseSize(node);
+      cx = node.x + attrSize.rx;
+      cy = node.y + attrSize.ry;
+      fw = attrSize.w - 10;
     } else {
-      cx = node.x + NODE_REL_W / 2;
-      cy = node.y + NODE_REL_H / 2;
-      fw = NODE_REL_W - 20;
+      const visual = getNodeVisual(node);
+      cx = node.x + visual.w / 2;
+      cy = node.y + visual.h / 2;
+      fw = visual.w - 20;
     }
 
     const fo = document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');

@@ -9,7 +9,7 @@ const state = {
   snapToGrid: true,
   diagramTitle: 'er-diagramm',
   nodes: [], // { id, type, x, y, name, isPrimaryKey }
-  edges: [], // { id, fromId, toId, edgeType, chenFrom, chenTo }
+  edges: [], // { id, fromId, toId, edgeType, (relationship: chenFrom, chenTo) }
   nextId: 1,
 };
 
@@ -129,21 +129,32 @@ function getUniqueEntityAttributeName(entityId, baseName, excludeAttributeId = n
 
 function getExportBaseName() {
   const rawTitle = String(state.diagramTitle || '').trim();
-  const safe = (rawTitle || 'er-diagramm')
+  const safe = (rawTitle || 'erm-editor')
     .replace(/[\\/:*?"<>|]/g, '-')
     .replace(/\s+/g, '_')
     .replace(/\.+$/g, '')
     .slice(0, 80);
-  return safe || 'er-diagramm';
+  return safe || 'erm-editor';
 }
 
 function buildPersistPayload() {
   return {
-    notation: state.notation,
     snapToGrid: !!state.snapToGrid,
     diagramTitle: state.diagramTitle,
     nodes: state.nodes,
-    edges: state.edges,
+    edges: state.edges.map((edge) => {
+      const base = {
+        id: edge.id,
+        fromId: edge.fromId,
+        toId: edge.toId,
+        edgeType: edge.edgeType,
+      };
+      if (edge.edgeType === 'relationship') {
+        base.chenFrom = edge.chenFrom || '1';
+        base.chenTo = edge.chenTo || '1';
+      }
+      return base;
+    }),
     nextId: state.nextId,
   };
 }

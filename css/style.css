@@ -176,7 +176,12 @@ body.is-resizing-drawer {
 #app-title {
   font-size: 1.15rem;
   font-weight: 700;
+  width: var(--toolbar-width);
+  flex: 0 0 var(--toolbar-width);
+  text-align: center;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: 0.02em;
 }
 
@@ -391,6 +396,11 @@ body.is-resizing-drawer {
 .tab-btn-static {
   cursor: default;
   user-select: none;
+  width: var(--toolbar-width);
+  flex: 0 0 var(--toolbar-width);
+  padding-left: 0;
+  padding-right: 0;
+  text-align: center;
 }
 
 .tab-btn-static:hover {
@@ -1103,7 +1113,7 @@ body.is-resizing-drawer {
 
 .app-top-toast {
   position: fixed;
-  top: 14px;
+  top: calc(52px + 41px + 8px);
   left: 50%;
   transform: translateX(-50%) translateY(-10px);
   background: #b91c1c;

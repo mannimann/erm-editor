@@ -1,5 +1,4 @@
 {
-  "notation": "chen",
   "snapToGrid": true,
   "diagramTitle": "Expertenquest 1 - Hotel-Verwaltung",
   "nodes": [
@@ -145,97 +144,73 @@
       "id": "s3",
       "fromId": "s1",
       "toId": "s2",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s5",
       "fromId": "s1",
       "toId": "s4",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s7",
       "fromId": "s1",
       "toId": "s6",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s9",
       "fromId": "s1",
       "toId": "s8",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s11",
       "fromId": "s1",
       "toId": "s10",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s14",
       "fromId": "s12",
       "toId": "s13",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s16",
       "fromId": "s12",
       "toId": "s15",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s18",
       "fromId": "s12",
       "toId": "s17",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s21",
       "fromId": "s19",
       "toId": "s20",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s23",
       "fromId": "s19",
       "toId": "s22",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s25",
       "fromId": "s19",
       "toId": "s24",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s27",
       "fromId": "s19",
       "toId": "s26",
-      "edgeType": "attribute",
-      "chenFrom": "1",
-      "chenTo": "n"
+      "edgeType": "attribute"
     },
     {
       "id": "s29",
