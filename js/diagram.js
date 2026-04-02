@@ -1028,8 +1028,9 @@
       if (!parentNode) return;
       const center = getNodeCenter(parentNode);
       const parentCandidates = nodes.filter((n) => n.type === parentNode.type);
+      let currentAttr = null;
       const isClosestToOwnParent = (candidatePos) => {
-        const attrSize = getAttributeEllipseSize(attr);
+        const attrSize = getAttributeEllipseSize(currentAttr || 'Attribut');
         const candidateCenter = {
           x: candidatePos.x + attrSize.rx,
           y: candidatePos.y + attrSize.ry,
@@ -1054,6 +1055,7 @@
         .slice()
         .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de', { sensitivity: 'base' }))
         .forEach((attr, index) => {
+          currentAttr = attr;
           const baseAngle = -Math.PI / 2 + (index / Math.max(1, attrs.length)) * Math.PI * 2;
           let placed = false;
 
