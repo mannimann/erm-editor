@@ -148,6 +148,77 @@ function buildPersistPayload() {
   };
 }
 
+const QUEST_WORK_PREFIX = 'erm-editor-quest-work-v1';
+
+function getQuestWorkStorageKey(mode, questNumber) {
+  const q = Number(questNumber) || 1;
+  if (mode === 'grundlagen') return `${QUEST_WORK_PREFIX}:erm:grundlagen`;
+  if (mode === 'experten') return `${QUEST_WORK_PREFIX}:erm:experten:q${q}`;
+  if (mode === 'relmodel-grundlagen') return `${QUEST_WORK_PREFIX}:relmodel:grundlagen`;
+  if (mode === 'relmodel-experten') return `${QUEST_WORK_PREFIX}:relmodel:experten:q${q}`;
+  return null;
+}
+
+function hasStorageEntry(storageKey) {
+  if (!storageKey) return false;
+  try {
+    return localStorage.getItem(storageKey) !== null;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function applyErmPayload(data, shouldPersist = true) {
+  if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.edges)) return false;
+
+  state.nodes = data.nodes;
+  state.edges = data.edges;
+  state.nextId =
+    data.nextId ||
+    Math.max(
+      0,
+      ...data.nodes.map((n) => parseInt(String(n.id || '').slice(1), 10) || 0),
+      ...data.edges.map((ed) => parseInt(String(ed.id || '').slice(1), 10) || 0),
+    ) + 1;
+  state.notation = 'chen';
+  state.snapToGrid = !!data.snapToGrid;
+  state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
+  state.edges.forEach((edge) => {
+    edge.edgeType = inferEdgeType(edge);
+  });
+
+  const titleInput = document.getElementById('erm-title-input');
+  if (titleInput) titleInput.value = state.diagramTitle || '';
+  clearSelection();
+  if (window.Diagram) window.Diagram.renderAll();
+  if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
+  if (window.Diagram?.centerView) window.Diagram.centerView();
+  if (window.RelModel) window.RelModel.syncFromDiagram();
+  if (shouldPersist) persistStateDebounced();
+  return true;
+}
+
+function saveErmSnapshot(storageKey) {
+  if (!storageKey) return;
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(buildPersistPayload()));
+  } catch (_err) {
+    // ignore
+  }
+}
+
+function loadErmSnapshot(storageKey) {
+  if (!storageKey) return false;
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    return applyErmPayload(data, true);
+  } catch (_err) {
+    return false;
+  }
+}
+
 function persistStateNow() {
   try {
     localStorage.setItem(PERSIST_KEY, JSON.stringify(buildPersistPayload()));
@@ -162,6 +233,13 @@ function persistStateDebounced(delay = 260) {
   _persistTimer = setTimeout(() => {
     _persistTimer = null;
     persistStateNow();
+
+    const qMode = window.Quest?.state?.questMode || '';
+    if (qMode === 'grundlagen' || qMode === 'experten') {
+      const qNumber = window.Quest?.state?.currentQuestNumber || 1;
+      saveErmSnapshot(getQuestWorkStorageKey(qMode, qNumber));
+    }
+
     // Live-Checkliste aktualisieren, wenn Experten-Quest aktiv ist
     if (window.Quest?.state?.questMode === 'experten' && window.Quest?.state?.questsPanelVisible) {
       updateExpertChecklist();
@@ -216,24 +294,7 @@ function loadPersistedState() {
     const raw = localStorage.getItem(PERSIST_KEY);
     if (!raw) return false;
     const data = JSON.parse(raw);
-    if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) return false;
-
-    state.nodes = data.nodes;
-    state.edges = data.edges;
-    state.nextId =
-      data.nextId ||
-      Math.max(
-        0,
-        ...data.nodes.map((n) => parseInt(String(n.id || '').slice(1), 10) || 0),
-        ...data.edges.map((ed) => parseInt(String(ed.id || '').slice(1), 10) || 0),
-      ) + 1;
-    state.notation = 'chen';
-    state.snapToGrid = !!data.snapToGrid;
-    state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
-    state.edges.forEach((edge) => {
-      edge.edgeType = inferEdgeType(edge);
-    });
-    return true;
+    return applyErmPayload(data, false);
   } catch (_err) {
     return false;
   }
@@ -607,6 +668,27 @@ function initTabs() {
         } else {
           if (dot) dot.remove();
         }
+
+        // Fortschritt-Badge aktualisieren
+        const badge = btn.querySelector('.quest-progress-badge');
+        if (badge && window.Quest) {
+          const mode = badge.getAttribute('data-mode');
+          if (mode) {
+            const maxQuests = window.Quest.getMaxQuests?.(mode) || 0;
+            const storageKey = `erm-editor-quests-${mode === 'relmodel-grundlagen' ? 'relmodel-grundlagen' : mode === 'relmodel-experten' ? 'relmodel-experten' : mode}-v${mode === 'experten' ? '4' : mode === 'relmodel-grundlagen' ? '1' : mode === 'relmodel-experten' ? '1' : '1'}`;
+            let completedCount = 0;
+            try {
+              const saved = localStorage.getItem(storageKey);
+              if (saved) {
+                const data = JSON.parse(saved);
+                completedCount = (data.completedQuests || []).filter((n) => Number(n) < maxQuests).length || 0;
+              }
+            } catch (_) {}
+            const effectiveTotal = Math.max(1, maxQuests - 1);
+            badge.textContent = `(${completedCount}/${effectiveTotal})`;
+            badge.style.display = effectiveTotal > 0 ? 'inline' : 'none';
+          }
+        }
       });
 
       // Haupt-Button-Dot verwalten
@@ -832,30 +914,7 @@ function importJSON(file) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
-      if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error('Ungültiges Format');
-      state.nodes = data.nodes;
-      state.edges = data.edges;
-      state.nextId =
-        data.nextId ||
-        Math.max(
-          0,
-          ...data.nodes.map((n) => parseInt(n.id.slice(1)) || 0),
-          ...data.edges.map((ed) => parseInt(ed.id.slice(1)) || 0),
-        ) + 1;
-      state.notation = 'chen';
-      state.snapToGrid = !!data.snapToGrid;
-      state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
-      state.edges.forEach((edge) => {
-        edge.edgeType = inferEdgeType(edge);
-      });
-      const titleInput = document.getElementById('erm-title-input');
-      if (titleInput) titleInput.value = state.diagramTitle || '';
-      clearSelection();
-      if (window.Diagram) window.Diagram.renderAll();
-      if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
-      if (window.Diagram?.centerView) window.Diagram.centerView();
-      if (window.RelModel) window.RelModel.syncFromDiagram();
-      persistStateDebounced();
+      if (!applyErmPayload(data, true)) throw new Error('Ungültiges Format');
     } catch (err) {
       window.App?.showAlertModal?.(`Fehler beim Importieren: ${err.message}`, 'Import fehlgeschlagen');
     }
@@ -1017,30 +1076,7 @@ function loadErmFromFile(filename) {
       return res.json();
     })
     .then((data) => {
-      if (!Array.isArray(data.nodes) || !Array.isArray(data.edges)) throw new Error('Ungültiges Format');
-      state.nodes = data.nodes;
-      state.edges = data.edges;
-      state.nextId =
-        data.nextId ||
-        Math.max(
-          0,
-          ...data.nodes.map((n) => parseInt(n.id.slice(1)) || 0),
-          ...data.edges.map((ed) => parseInt(ed.id.slice(1)) || 0),
-        ) + 1;
-      state.notation = 'chen';
-      state.snapToGrid = !!data.snapToGrid;
-      state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
-      state.edges.forEach((edge) => {
-        edge.edgeType = inferEdgeType(edge);
-      });
-      const titleInput = document.getElementById('erm-title-input');
-      if (titleInput) titleInput.value = state.diagramTitle || '';
-      clearSelection();
-      if (window.Diagram) window.Diagram.renderAll();
-      if (window.Diagram?.setSnapToGrid) window.Diagram.setSnapToGrid(state.snapToGrid);
-      if (window.Diagram?.centerView) window.Diagram.centerView();
-      if (window.RelModel) window.RelModel.syncFromDiagram();
-      persistStateDebounced();
+      if (!applyErmPayload(data, true)) throw new Error('Ungültiges Format');
     });
 }
 
@@ -1173,24 +1209,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   async function startQuestWithConfirm(mode) {
     if (!window.Quest) return;
-    if (state.nodes.length > 0) {
-      const decision = await window.App?.showAppModal?.({
-        title: 'Quest starten',
-        message: 'Soll das aktuelle ER-Modell gelöscht werden?',
-        mode: 'confirm',
-        confirmLabel: 'Mit Löschen starten',
-        cancelLabel: 'Abbrechen',
-        extraLabel: 'Ohne Löschen starten',
-        extraVariant: 'primary',
-        buttonOrder: ['cancel', 'extra', 'confirm'],
-      });
+    const title = mode === 'experten' ? 'Expertenquests starten' : 'Grundlagenquests starten';
+    const decision = await window.App?.showAppModal?.({
+      title,
+      message:
+        'Die Quest-Reihe wird gestartet. Alle bisher angezeigten Modelle werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
+      mode: 'confirm',
+      confirmLabel: 'Starten',
+      cancelLabel: 'Abbrechen',
+    });
+    if (!decision) return;
 
-      if (decision === false) return;
-      if (decision === true) {
-        clearDiagramSilent();
-      }
-    }
+    window.App?.onBeforeQuestChange?.(window.Quest.state);
     window.Quest.startQuestSeries(mode);
+    const quest = window.Quest.getCurrentQuest?.();
+    await window.App?.onQuestChanged?.(quest, window.Quest.state);
     closeQuestDropdownMenu();
   }
 
@@ -1216,22 +1249,32 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!window.Quest) return;
       const decision = await window.App?.showAppModal?.({
         title: 'Relationenmodell – Grundlagen',
-        message: 'Das Schule-ER-Modell wird geladen und die Seitenleiste geöffnet.',
+        message:
+          'Die Quest-Reihe wird gestartet. Alle bisher angezeigten Modelle werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
         mode: 'confirm',
-        confirmLabel: 'ERM laden und starten',
+        confirmLabel: 'Starten',
         cancelLabel: 'Abbrechen',
       });
       if (!decision) return;
       closeQuestDropdownMenu();
+
+      window.App?.onBeforeQuestChange?.(window.Quest.state);
+      window.Quest.startQuestSeries('relmodel-grundlagen');
+
+      const relmodelKey = getQuestWorkStorageKey('relmodel-grundlagen', 1);
+      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(relmodelKey);
       try {
         await loadErmFromFile('00_schule.json');
       } catch (err) {
         window.App?.showAlertModal?.('Das ER-Modell konnte nicht geladen werden.', 'Fehler');
         return;
       }
-      if (window.RelModel) window.RelModel.reset();
+      if (!window.RelModel?.loadFromStorage?.(relmodelKey) && window.RelModel) {
+        window.RelModel.reset();
+      }
+      if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(false);
       state.diagramLocked = true;
-      window.Quest.startQuestSeries('relmodel-grundlagen');
+      window.Quest.renderPanel();
     });
   }
 
@@ -1241,30 +1284,21 @@ document.addEventListener('DOMContentLoaded', () => {
     relmodelExpertenBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       if (!window.Quest) return;
-      if (state.nodes.length > 0) {
-        const decision = await window.App?.showAppModal?.({
-          title: 'Relationenmodell – Experten',
-          message: 'Das aktuelle Diagramm und die Relationen werden gelöscht.',
-          mode: 'confirm',
-          confirmLabel: 'Alles löschen und starten',
-          cancelLabel: 'Abbrechen',
-        });
-        if (!decision) return;
-      }
+      const decision = await window.App?.showAppModal?.({
+        title: 'Relationenmodell – Experten',
+        message:
+          'Die Quest-Reihe wird gestartet. Alle bisher angezeigten Modelle werden gelöscht. Falls vorhanden, wird der letzte Arbeitsstand der aktuellen Aufgabe automatisch geladen.',
+        mode: 'confirm',
+        confirmLabel: 'Starten',
+        cancelLabel: 'Abbrechen',
+      });
+      if (!decision) return;
       closeQuestDropdownMenu();
-      clearDiagramSilent();
-      if (window.RelModel) window.RelModel.reset();
-      state.diagramLocked = true;
+
+      window.App?.onBeforeQuestChange?.(window.Quest.state);
       window.Quest.startQuestSeries('relmodel-experten');
-      // Auto-load ERM für den ersten Quest
       const firstQuest = window.Quest.getCurrentQuest?.();
-      if (firstQuest?.jsonFile) {
-        try {
-          await loadErmFromFile(firstQuest.jsonFile);
-        } catch (_) {}
-        if (window.RelModel) window.RelModel.reset();
-        if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
-      }
+      await window.App?.onQuestChanged?.(firstQuest, window.Quest.state);
     });
   }
 
@@ -1285,14 +1319,23 @@ document.addEventListener('DOMContentLoaded', () => {
     questResetBtn.addEventListener('click', async () => {
       if (!window.Quest || !window.Quest.resetCurrentSeriesProgress) return;
       const confirmed = await window.App?.showConfirmModal?.(
-        'Soll der Fortschritt der aktuellen Quest-Reihe zurückgesetzt werden?',
+        'Soll der Fortschritt der aktuellen Quest-Reihe zurückgesetzt werden? Alle bisherigen Arbeitsst\u00e4nde werden gel\u00f6scht.',
         'Quest-Reihe zurücksetzen',
       );
       if (confirmed) {
-        window.Quest.resetCurrentSeriesProgress();
-        // Re-load ERM für Relmodel-Experten nach Reset
         const qMode = window.Quest.state?.questMode || '';
-        if (qMode === 'relmodel-experten') {
+
+        window.Quest.resetCurrentSeriesProgress();
+
+        // Leere/reload Modelle je nach Quest-Modus
+        if (qMode === 'grundlagen' || qMode === 'experten') {
+          // Leere ERM-Diagramm für Grundlagen und Experten
+          clearDiagramSilent();
+        } else if (qMode === 'relmodel-grundlagen') {
+          // Leere Relationenmodell für Relmodel-Grundlagen
+          if (window.RelModel) window.RelModel.reset();
+        } else if (qMode === 'relmodel-experten') {
+          // Reload ERM und leere Relationenmodell für Relmodel-Experten
           const quest = window.Quest.getCurrentQuest?.();
           if (quest?.jsonFile) {
             try {
@@ -1310,6 +1353,58 @@ document.addEventListener('DOMContentLoaded', () => {
   // Quest Circle Click Handlers – Bestätigung nur bei noch nicht abgeschlossenen Aufgaben
   const questPanel = document.getElementById('quest-panel');
   if (questPanel) {
+    const switchQuestWithGuards = async (questNum) => {
+      if (!window.Quest) return false;
+      const currentQuestNum = Number(window.Quest.state.currentQuestNumber);
+      if (isNaN(questNum) || isNaN(currentQuestNum) || questNum === currentQuestNum) return false;
+
+      const qMode = window.Quest.state?.questMode || '';
+      const isCompleted = window.Quest.state.completedQuests.includes(questNum);
+      const maxQuests = window.Quest.getMaxQuests?.(qMode) || 0;
+
+      // Letzte Aufgabe: Kann nur gestartet werden, wenn alle Vorgänger abgeschlossen sind
+      if (questNum === maxQuests && !isCompleted) {
+        const allPreviousCompleted = Array.from({ length: maxQuests - 1 }, (_, i) => i + 1).every((n) =>
+          window.Quest.state.completedQuests.includes(n),
+        );
+        if (!allPreviousCompleted) {
+          await window.App?.showAppModal?.({
+            title: 'Letzte Aufgabe gesperrt',
+            message:
+              'Du kannst die Abschlussaufgabe erst starten, wenn du alle vorherigen Aufgaben abgeschlossen hast.',
+            mode: 'alert',
+            confirmLabel: 'OK',
+          });
+          return false;
+        }
+      }
+
+      if (!isCompleted && qMode !== 'relmodel-experten' && qMode !== 'experten') {
+        const solvedNumbers = window.Quest.state.completedQuests
+          .map((n) => Number(n))
+          .filter((n) => Number.isFinite(n));
+        const lastSolvedQuest = solvedNumbers.length > 0 ? Math.max(...solvedNumbers) : 0;
+        const skippedCount = Math.max(0, questNum - lastSolvedQuest - 1);
+        if (skippedCount > 0) {
+          const confirmed = await window.App?.showConfirmModal?.(
+            `Zu Aufgabe ${questNum} springen? Dabei werden ${skippedCount} Aufgabe(n) übersprungen.`,
+            'Aufgabe wechseln',
+          );
+          if (!confirmed) return false;
+        }
+      }
+
+      window.Quest.jumpToQuest(questNum);
+
+      if (window.App?.onQuestChanged) {
+        const nextQuest = window.Quest.getQuestByNumber?.(qMode, questNum) || window.Quest.getCurrentQuest?.();
+        await window.App.onQuestChanged(nextQuest, window.Quest.state);
+      }
+
+      window.Quest.renderPanel();
+      return true;
+    };
+
     questPanel.addEventListener('click', async (e) => {
       const manualCheckBtn = e.target.closest('#btn-quest-check-manual');
       if (manualCheckBtn && window.Quest?.validateCurrentQuest) {
@@ -1324,43 +1419,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      const manualNextBtn = e.target.closest('#btn-quest-next-manual');
+      if (manualNextBtn && window.Quest) {
+        e.preventDefault();
+        const currentQuestNum = Number(window.Quest.state.currentQuestNumber);
+        const qMode = window.Quest.state?.questMode || '';
+        const total = window.Quest.getMaxQuests?.(qMode) || 0;
+        if (!isNaN(currentQuestNum) && currentQuestNum < total) {
+          await switchQuestWithGuards(currentQuestNum + 1);
+        }
+        return;
+      }
+
       const circle = e.target.closest('.quest-circle');
       if (!circle || !window.Quest) return;
       const questNum = parseInt(circle.getAttribute('data-quest-number'), 10);
-      const currentQuestNum = Number(window.Quest.state.currentQuestNumber);
-      if (isNaN(questNum) || isNaN(currentQuestNum) || questNum === currentQuestNum) return;
-
-      const isCompleted = window.Quest.state.completedQuests.includes(questNum);
-      if (!isCompleted) {
-        const solvedNumbers = window.Quest.state.completedQuests
-          .map((n) => Number(n))
-          .filter((n) => Number.isFinite(n));
-        const lastSolvedQuest = solvedNumbers.length > 0 ? Math.max(...solvedNumbers) : 0;
-        const skippedCount = Math.max(0, questNum - lastSolvedQuest - 1);
-        if (skippedCount > 0) {
-          const confirmed = await window.App?.showConfirmModal?.(
-            `Zu Aufgabe ${questNum} springen? Dabei werden ${skippedCount} Aufgabe(n) übersprungen.`,
-            'Aufgabe wechseln',
-          );
-          if (!confirmed) return;
-        }
-      }
-
-      window.Quest.jumpToQuest(questNum);
-      // Auto-load ERM für Relmodel-Experten
-      const qMode = window.Quest.state?.questMode || '';
-      if (qMode === 'relmodel-experten') {
-        const quest = window.Quest.getQuestByNumber?.(qMode, questNum);
-        if (quest?.jsonFile) {
-          try {
-            await loadErmFromFile(quest.jsonFile);
-          } catch (_) {}
-          if (window.RelModel) window.RelModel.reset();
-          if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
-          state.diagramLocked = true;
-        }
-      }
-      window.Quest.renderPanel();
+      await switchQuestWithGuards(questNum);
     });
   }
   // Tooltip migration + global floating tooltip manager
@@ -1573,15 +1647,68 @@ window.App = {
     this.showTopToast?.('Das ER-Modell ist während der Quest gesperrt.');
   },
 
-  onQuestChanged(quest, questState) {
-    if (questState.questMode === 'relmodel-experten' && quest?.jsonFile) {
-      loadErmFromFile(quest.jsonFile)
-        .then(() => {
-          if (window.RelModel) window.RelModel.reset();
-          if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
-          state.diagramLocked = true;
-        })
-        .catch(() => {});
+  onBeforeQuestChange(questState) {
+    const mode = questState?.questMode || '';
+    const currentNumber = Number(questState?.currentQuestNumber || 1);
+    const storageKey = getQuestWorkStorageKey(mode, currentNumber);
+    if (!storageKey) return;
+
+    if (mode === 'grundlagen' || mode === 'experten') {
+      saveErmSnapshot(storageKey);
+      return;
+    }
+
+    if (mode === 'relmodel-grundlagen' || mode === 'relmodel-experten') {
+      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+      if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
+    }
+  },
+
+  async onQuestChanged(quest, questState) {
+    const mode = questState?.questMode || '';
+    const questNumber = Number(quest?.number || questState?.currentQuestNumber || 1);
+    const storageKey = getQuestWorkStorageKey(mode, questNumber);
+
+    if (mode === 'grundlagen') {
+      if (!loadErmSnapshot(storageKey)) {
+        try {
+          await loadErmFromFile('00_schule.json');
+        } catch (_) {
+          clearDiagramSilent();
+        }
+        saveErmSnapshot(storageKey);
+      }
+      state.diagramLocked = false;
+      return;
+    }
+
+    if (mode === 'experten') {
+      if (!loadErmSnapshot(storageKey)) {
+        clearDiagramSilent();
+        saveErmSnapshot(storageKey);
+      }
+      state.diagramLocked = false;
+      return;
+    }
+
+    if (mode === 'relmodel-experten') {
+      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+      if (quest?.jsonFile) {
+        try {
+          await loadErmFromFile(quest.jsonFile);
+        } catch (_) {}
+      }
+
+      const loaded = window.RelModel?.loadFromStorage?.(storageKey);
+      if (!loaded && window.RelModel) window.RelModel.reset();
+      if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+      state.diagramLocked = true;
+      return;
+    }
+
+    if (mode === 'relmodel-grundlagen' && storageKey) {
+      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+      state.diagramLocked = true;
     }
   },
 
@@ -1722,6 +1849,17 @@ window.App = {
       checkBtn.textContent = quest.number === total ? 'Abschließen' : 'Überprüfen';
 
       actions.appendChild(checkBtn);
+
+      const isCurrentCompleted = (questState.completedQuests || []).includes(quest.number);
+      if (isRelmodelExperten && isCurrentCompleted && quest.number < total) {
+        const nextBtn = document.createElement('button');
+        nextBtn.id = 'btn-quest-next-manual';
+        nextBtn.type = 'button';
+        nextBtn.className = 'quest-btn quest-btn-menu';
+        nextBtn.textContent = 'Nächste Aufgabe';
+        actions.appendChild(nextBtn);
+      }
+
       content.appendChild(actions);
     }
 

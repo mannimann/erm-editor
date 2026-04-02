@@ -484,11 +484,12 @@
   let _syncDebounceTimer = null;
   const SYNC_DEBOUNCE_MS = 180;
   const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
+  let _persistKey = RELMODEL_PERSIST_KEY;
 
   function persistStudentRelations() {
     try {
       localStorage.setItem(
-        RELMODEL_PERSIST_KEY,
+        _persistKey,
         JSON.stringify({
           studentRelations: _studentRelations,
           nextId: _nextId,
@@ -499,17 +500,17 @@
     }
   }
 
-  function loadStudentRelations() {
+  function loadStudentRelations(storageKey = _persistKey) {
     try {
-      const raw = localStorage.getItem(RELMODEL_PERSIST_KEY);
+      const raw = localStorage.getItem(storageKey);
       if (!raw) return false;
       const data = JSON.parse(raw);
-      if (Array.isArray(data.studentRelations) && data.studentRelations.length > 0) {
-        _studentRelations = data.studentRelations;
-        if (typeof data.nextId === 'number' && data.nextId > _nextId) _nextId = data.nextId;
-        return true;
-      }
-      return false;
+      if (!Array.isArray(data.studentRelations)) return false;
+      _studentRelations = data.studentRelations;
+      _nextId = 1;
+      if (typeof data.nextId === 'number' && data.nextId > _nextId) _nextId = data.nextId;
+      ensureStudentIds();
+      return true;
     } catch (_e) {
       return false;
     }
@@ -547,7 +548,7 @@
     _studentRelations = [];
     _solution = [];
     try {
-      localStorage.removeItem(RELMODEL_PERSIST_KEY);
+      localStorage.removeItem(_persistKey);
     } catch (_e) {}
     document.getElementById('feedback-area').innerHTML = '';
     document.getElementById('solution-display').style.display = 'none';
@@ -1312,7 +1313,7 @@
       if (!confirmed) return;
       _studentRelations = [];
       try {
-        localStorage.removeItem(RELMODEL_PERSIST_KEY);
+        localStorage.removeItem(_persistKey);
       } catch (_e) {}
       document.getElementById('feedback-area').innerHTML = '';
       renderStudentForm();
@@ -1436,6 +1437,29 @@
       ensureStudentIds();
       persistStudentRelations();
       renderStudentForm();
+    },
+    getPersistKey: () => _persistKey,
+    setPersistKey: (key) => {
+      _persistKey = key || RELMODEL_PERSIST_KEY;
+    },
+    saveToStorage: (key) => {
+      const previous = _persistKey;
+      _persistKey = key || previous;
+      persistStudentRelations();
+      _persistKey = previous;
+    },
+    loadFromStorage: (key) => {
+      const storageKey = key || _persistKey;
+      const loaded = loadStudentRelations(storageKey);
+      if (!loaded) return false;
+      renderStudentForm();
+      return true;
+    },
+    clearStorage: (key) => {
+      const storageKey = key || _persistKey;
+      try {
+        localStorage.removeItem(storageKey);
+      } catch (_e) {}
     },
     isDrawerOpen: () => {
       const drawer = document.getElementById('relmodel-drawer');

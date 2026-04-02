@@ -1017,7 +1017,9 @@
     // Debounced Quest Validation – nur wenn Panel aktiv
     if (questValidateTimeout) clearTimeout(questValidateTimeout);
     questValidateTimeout = setTimeout(() => {
-      if (window.Quest?.state?.questsPanelVisible) {
+      const mode = window.Quest?.state?.questMode;
+      const shouldAutoValidate = mode === 'grundlagen' || mode === 'experten';
+      if (window.Quest?.state?.questsPanelVisible && shouldAutoValidate) {
         window.Quest.validateCurrentQuest();
       }
       questValidateTimeout = null;

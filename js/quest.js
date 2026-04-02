@@ -1121,7 +1121,14 @@
       objective: `<p>Öffne die Relationenmodell-Seitenleiste, um mit der Überführung zu beginnen.</p>
         <p>Klicke dazu auf den Button <strong>„🗃 Relationenmodell"</strong> oben rechts in der Tab-Leiste.</p>`,
       validator: function () {
-        if (!window.RelModel?.isDrawerOpen?.()) {
+        // Suche nach dem Drawer UI-Element selbst und prüfe mehrere Möglichkeiten
+        const drawer = document.getElementById('relmodel-drawer');
+        if (!drawer)
+          return { passed: false, error: 'Öffne die Relationenmodell-Seitenleiste über den Button oben rechts.' };
+
+        // Prüfe ob Drawer sichtbar ist
+        const isVisible = !drawer.classList.contains('collapsed') && drawer.offsetHeight > 0;
+        if (!isVisible) {
           return { passed: false, error: 'Öffne die Relationenmodell-Seitenleiste über den Button oben rechts.' };
         }
         return { passed: true };
@@ -1480,6 +1487,14 @@
 
       this.state.questsPanelVisible = true;
       this.persist();
+
+      // Unterdrücke initiale Validierung für ERM-Grundlagen und -Experten
+      if (mode === 'grundlagen' || mode === 'experten') {
+        if (window.App?.suppressQuestCheck) {
+          window.App.suppressQuestCheck(1000);
+        }
+      }
+
       this.renderPanel();
       // UI: Aktualisiere Badge/Dot-Anzeigen im Menü
       if (window.App?.updateQuestDots) window.App.updateQuestDots();
@@ -1546,9 +1561,7 @@
           // Manuelle Wiederholung: Erfolg anzeigen, aber Fortschritt nicht verändern
           if (isAlreadyCompleted && forceRecheck) {
             window.App?.showQuestSuccessModal?.(quest.number, () => {
-              if (this.progressToNextQuest()) {
-                this.renderPanel();
-              }
+              this.renderPanel();
             });
             return { passed: true };
           }
@@ -1558,8 +1571,11 @@
 
           // Modal → nächste Quest laden
           window.App?.showQuestSuccessModal?.(quest.number, () => {
-            this.progressToNextQuest();
+            if (this.state.questMode !== 'relmodel-experten') {
+              this.progressToNextQuest();
+            }
             this.renderPanel();
+            if (window.App?.updateQuestDots) window.App.updateQuestDots();
           });
         } else {
           // Keine untere Feedback-Leiste nutzen; bei manuellem Check stattdessen Modal-Hinweis.
@@ -1589,6 +1605,9 @@
     progressToNextQuest: function () {
       const maxQuests = this.getMaxQuests();
       if (this.state.currentQuestNumber < maxQuests) {
+        if (window.App?.onBeforeQuestChange) {
+          window.App.onBeforeQuestChange(this.state);
+        }
         this.state.currentQuestNumber += 1;
         const nextNumber = this.state.currentQuestNumber;
         if (!this.state.unlockedQuests.includes(nextNumber)) {
@@ -1606,6 +1625,9 @@
     },
 
     jumpToQuest: function (number) {
+      if (window.App?.onBeforeQuestChange) {
+        window.App.onBeforeQuestChange(this.state);
+      }
       this.state.currentQuestNumber = number;
       if (!this.state.unlockedQuests.includes(number)) {
         this.state.unlockedQuests.push(number);
@@ -1637,6 +1659,37 @@
 
     resetCurrentSeriesProgress: function () {
       if (!this.state.questMode) return;
+
+      // Lösche alle Arbeitsststände für diese Questreihe aus localStorage
+      const mode = this.state.questMode;
+      const prefix = 'erm-editor-quest-work-v1';
+      const maxQuests = this.getMaxQuests();
+
+      // Für Grundlagen und Relmodel-Grundlagen: eine Key löschen
+      if (mode === 'grundlagen') {
+        localStorage.removeItem(`${prefix}:erm:grundlagen`);
+      } else if (mode === 'relmodel-grundlagen') {
+        localStorage.removeItem(`${prefix}:relmodel:grundlagen`);
+        // Lösche auch alle Relationen-Speiche
+        if (window.RelModel?.clearStorage) {
+          window.RelModel.clearStorage(`${prefix}:relmodel:grundlagen`);
+        }
+      }
+      // Für Experten und Relmodel-Experten: alle Quest-Keys löschen
+      else if (mode === 'experten') {
+        for (let i = 1; i <= maxQuests; i++) {
+          localStorage.removeItem(`${prefix}:erm:experten:q${i}`);
+        }
+      } else if (mode === 'relmodel-experten') {
+        for (let i = 1; i <= maxQuests; i++) {
+          localStorage.removeItem(`${prefix}:relmodel:experten:q${i}`);
+          // Lösche auch alle Relationen-Speicher für diese Quest
+          if (window.RelModel?.clearStorage) {
+            window.RelModel.clearStorage(`${prefix}:relmodel:experten:q${i}`);
+          }
+        }
+      }
+
       this.state.currentQuestNumber = 1;
       this.state.completedQuests = [];
       this.state.unlockedQuests = [1];

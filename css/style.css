@@ -2233,6 +2233,7 @@ body.is-resizing-drawer {
 
 .quest-actions.quest-actions-visible {
   display: flex;
+  gap: 10px;
 }
 
 .quest-btn {
