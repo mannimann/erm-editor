@@ -1363,6 +1363,10 @@
       window.App?.showAlertModal?.('Es sind keine Relationen zum Exportieren vorhanden.', 'Export nicht möglich');
       return;
     }
+
+    // Merke, welche Relationen Fehler haben (damit sie nachher wieder in Edit-Modus gehen)
+    const relationIdsWithErrors = _studentRelations.filter((rel) => rel.inlineError).map((rel) => rel.id);
+
     // Alle Relationen in den Preview-Modus setzen
     _studentRelations.forEach((rel) => {
       removeEmptyAttrs(rel);
@@ -1376,6 +1380,25 @@
         window.App?.showAlertModal?.('html2canvas ist nicht verfügbar.', 'Export fehlgeschlagen');
         return;
       }
+
+      // Temporärer CSS für Export: Buttons verstecken, Fehler verstecken und Breite optimieren
+      const styleId = 'relmodel-export-style-' + Date.now();
+      const styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      styleEl.textContent = `
+        #student-relations-list {
+          width: fit-content;
+          max-width: 900px;
+        }
+        .relation-card-actions {
+          display: none !important;
+        }
+        .relation-inline-error {
+          display: none !important;
+        }
+      `;
+      document.head.appendChild(styleEl);
+
       html2canvas(area, { backgroundColor: '#ffffff', scale: 2 })
         .then((canvas) => {
           canvas.toBlob((blob) => {
@@ -1393,6 +1416,21 @@
         })
         .catch(() => {
           window.App?.showAlertModal?.('PNG-Export fehlgeschlagen. Bitte versuche es erneut.', 'Export fehlgeschlagen');
+        })
+        .finally(() => {
+          // Temporärer CSS entfernen
+          const style = document.getElementById(styleId);
+          if (style) style.remove();
+
+          // Relationen mit Fehlern zurück in den Edit-Modus setzen
+          _studentRelations.forEach((rel) => {
+            if (relationIdsWithErrors.includes(rel.id)) {
+              rel.isEditing = true;
+            }
+          });
+
+          // Seite neu rendern um original-Zustand wiederherzustellen
+          renderStudentForm();
         });
     }, 100);
   }

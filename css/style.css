@@ -455,7 +455,7 @@ body.is-resizing-drawer {
   box-shadow:
     0 14px 30px rgba(2, 6, 23, 0.4),
     0 1px 0 rgba(148, 163, 184, 0.08) inset;
-  z-index: 40;
+  z-index: 1002;
 }
 
 .tab-dropdown-item {
@@ -1468,7 +1468,7 @@ body.is-resizing-drawer {
   border-color: #3b82f6;
 }
 .attr-pk-checkbox {
-  cursor: pointer;
+  cursor: pointer !important;
   flex-shrink: 0;
 }
 .attr-pk-label {
@@ -1476,9 +1476,10 @@ body.is-resizing-drawer {
   color: #64748b;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: pointer;
 }
 .attr-fk-checkbox {
-  cursor: pointer;
+  cursor: pointer !important;
   accent-color: #2563eb;
   flex-shrink: 0;
 }
@@ -1487,6 +1488,7 @@ body.is-resizing-drawer {
   color: #2563eb;
   white-space: nowrap;
   flex-shrink: 0;
+  cursor: pointer;
 }
 .btn-del-attr {
   background: transparent;

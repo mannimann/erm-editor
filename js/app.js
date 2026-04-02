@@ -511,6 +511,10 @@ function initTabs() {
     if (open) {
       relmodelDrawer.style.width = `${clampDrawerWidth(lastOpenWidth)}px`;
       if (window.RelModel) window.RelModel.syncFromDiagram();
+      // Trigger Quest-Validierung wenn Drawer während relmodel-grundlagen geöffnet wird
+      if (window.Quest?.state?.questMode === 'relmodel-grundlagen' && window.Quest?.state?.questsPanelVisible) {
+        setTimeout(() => window.Quest.validateCurrentQuest(), 100);
+      }
     }
 
     syncBackdrop();
@@ -1380,17 +1384,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (!isCompleted && qMode !== 'relmodel-experten' && qMode !== 'experten') {
-        const solvedNumbers = window.Quest.state.completedQuests
-          .map((n) => Number(n))
-          .filter((n) => Number.isFinite(n));
-        const lastSolvedQuest = solvedNumbers.length > 0 ? Math.max(...solvedNumbers) : 0;
-        const skippedCount = Math.max(0, questNum - lastSolvedQuest - 1);
-        if (skippedCount > 0) {
-          const confirmed = await window.App?.showConfirmModal?.(
-            `Zu Aufgabe ${questNum} springen? Dabei werden ${skippedCount} Aufgabe(n) übersprungen.`,
-            'Aufgabe wechseln',
-          );
-          if (!confirmed) return false;
+        const isGrundlagen = qMode === 'grundlagen' || qMode === 'relmodel-grundlagen';
+        if (isGrundlagen && !window.Quest.state.unlockedQuests.includes(questNum)) {
+          await window.App?.showAppModal?.({
+            title: 'Aufgabe gesperrt',
+            message: 'Schließe zuerst die vorherigen Aufgaben ab, bevor du zu dieser Aufgabe springst.',
+            mode: 'alert',
+            confirmLabel: 'OK',
+          });
+          return false;
+        }
+        if (!isGrundlagen) {
+          const solvedNumbers = window.Quest.state.completedQuests
+            .map((n) => Number(n))
+            .filter((n) => Number.isFinite(n));
+          const lastSolvedQuest = solvedNumbers.length > 0 ? Math.max(...solvedNumbers) : 0;
+          const skippedCount = Math.max(0, questNum - lastSolvedQuest - 1);
+          if (skippedCount > 0) {
+            const confirmed = await window.App?.showConfirmModal?.(
+              `Zu Aufgabe ${questNum} springen? Dabei werden ${skippedCount} Aufgabe(n) übersprungen.`,
+              'Aufgabe wechseln',
+            );
+            if (!confirmed) return false;
+          }
         }
       }
 
