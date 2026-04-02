@@ -1,0 +1,7 @@
+json struktur bei erm aufräumen
+- chen entfernen (veralteter hinweis)
+- 1:n zwischen entitätsklassen und attributen nicht nötig -> vereinfachen
+
+auto-layout überarbeiten
+positionierung der kardinalitäten überarbeiten (immer auf gleicher seite der linie bei einer Beziehung)
+Breite des textes ER-Diagramm in titelleiste an breite der seitenleiste anpassen

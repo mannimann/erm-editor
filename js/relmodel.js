@@ -39,6 +39,33 @@
     return normalizeAttrToken(name);
   }
 
+  /**
+   * Prüft ob ein Schüler-FK-Name einem Lösungs-FK-Name entspricht
+   * (exakt oder mit Prä-/Postfix, getrennt durch - oder _).
+   * Arbeitet auf Rohnamen (vor Normalisierung).
+   */
+  function fkRawNameMatches(studentRaw, solutionRaw) {
+    const sNorm = normAttr(studentRaw);
+    const solNorm = normAttr(solutionRaw);
+    if (sNorm === solNorm) return true;
+    if (solNorm.length < 2) return false;
+    // Rohnamen (lowercase, FK-Marker entfernt, aber - und _ bleiben)
+    const sRaw = stripForeignKeyMarker(studentRaw).toLowerCase().trim();
+    const solRawClean = stripForeignKeyMarker(solutionRaw).toLowerCase().trim();
+    if (sRaw.length <= solRawClean.length) return false;
+    // Postfix: "schülernr_fk" enthält "schülernr" + Trennzeichen danach
+    if (sRaw.startsWith(solRawClean)) {
+      const sep = sRaw[solRawClean.length];
+      if (sep === '-' || sep === '_') return true;
+    }
+    // Präfix: "fk_schülernr" enthält "schülernr" + Trennzeichen davor
+    if (sRaw.endsWith(solRawClean)) {
+      const sep = sRaw[sRaw.length - solRawClean.length - 1];
+      if (sep === '-' || sep === '_') return true;
+    }
+    return false;
+  }
+
   function sortAttrsPrimaryFirst(attrs) {
     return attrs.sort((a, b) => {
       if (!!a.isPk !== !!b.isPk) return a.isPk ? -1 : 1;
@@ -98,6 +125,17 @@
       return 'Jede Relation benötigt einen Primärschlüssel.';
     }
 
+    // Doppelte Attributnamen prüfen
+    const seen = new Map();
+    for (const attr of rel.attrs) {
+      const name = normAttr(attr.name);
+      if (!name) continue;
+      if (seen.has(name)) {
+        return `Das Attribut „${(attr.name || '').trim()}" ist doppelt vorhanden.`;
+      }
+      seen.set(name, true);
+    }
+
     return '';
   }
 
@@ -110,6 +148,7 @@
    * Gibt Array von { name, attrs: [{ name, isPk, isFk }] } zurück.
    */
   function generateSolution(state) {
+    _oneToOneInfos = [];
     const { nodes, edges } = state;
 
     // Hilfsfunktionen
@@ -434,29 +473,29 @@
         // Eigene Beziehungsattribute in N-Seite
         relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(nSide.name), rel.name, a.name));
       } else if (type === '1:1') {
-        // FS auf der Seite mit min=0 (wenn Min-Max) oder einfach Seite 0→Seite 1 (Chen)
-        let targetEntity = null;
-        let sourceEntity = null;
+        // 1:1-Beziehung: Standard-Richtung wählen, aber beide Richtungen werden beim Check akzeptiert
+        const ids = entityEdges.map((e) => (e.fromId === rel.id ? e.toId : e.fromId));
+        const sourceEntity = getNode(ids[0]);
+        const targetEntity = getNode(ids[1]);
 
-        entityEdges.forEach((e) => {
-          const entityId = e.fromId === rel.id ? e.toId : e.fromId;
-          const entity = getNode(entityId);
-          const min = 0; // Chen 1:1 → feste Reihenfolge
-          if (min === 0 && !targetEntity) targetEntity = entity;
-          else if (!sourceEntity) sourceEntity = entity;
-        });
+        if (sourceEntity && targetEntity) {
+          const srcPk = getPkAttr(sourceEntity.id);
+          const tgtPk = getPkAttr(targetEntity.id);
+          if (srcPk) {
+            addAttr(ensureEntityRelation(targetEntity.name), srcPk, false, true, sourceEntity.name);
+          }
+          relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(targetEntity.name), rel.name, a.name));
 
-        if (!targetEntity || !sourceEntity) {
-          const ids = entityEdges.map((e) => (e.fromId === rel.id ? e.toId : e.fromId));
-          sourceEntity = getNode(ids[0]);
-          targetEntity = getNode(ids[1]);
+          // Metadata für bidirektionale Prüfung speichern
+          _oneToOneInfos.push({
+            sourceEntityName: sourceEntity.name,
+            targetEntityName: targetEntity.name,
+            sourcePk: srcPk,
+            targetPk: tgtPk,
+            relAttrNames: relAttrs.map((a) => a.name),
+            relationshipName: rel.name,
+          });
         }
-
-        const srcPk = getPkAttr(sourceEntity.id);
-        if (srcPk) {
-          addAttr(ensureEntityRelation(targetEntity.name), srcPk, false, true, sourceEntity.name);
-        }
-        relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(targetEntity.name), rel.name, a.name));
       }
     });
 
@@ -471,6 +510,27 @@
         isFk: !!attr.isFk,
       }));
     });
+
+    // Aufgelöste FK-Namen in _oneToOneInfos nachtragen
+    _oneToOneInfos.forEach((info) => {
+      const targetRel = relations.find(
+        (r) => normalizeRelationToken(r.name) === normalizeRelationToken(info.targetEntityName),
+      );
+      if (targetRel && info.sourcePk) {
+        // Finde den FK in der Lösung, der vom sourcePk abstammt
+        const resolvedFk = targetRel.attrs.find(
+          (a) =>
+            a.isFk &&
+            (normAttr(a.name) === normAttr(info.sourcePk) ||
+              normAttr(a.name).endsWith(normAttr(info.sourcePk)) ||
+              normAttr(a.name).startsWith(normAttr(info.sourcePk))),
+        );
+        if (resolvedFk) {
+          info.resolvedSourceFkName = resolvedFk.name;
+        }
+      }
+    });
+
     return relations;
   }
 
@@ -480,6 +540,7 @@
 
   let _studentRelations = []; // [{ id, name, attrs:[{ id, name, isPk, isFk }], isEditing }]
   let _solution = [];
+  let _oneToOneInfos = []; // Metadata über 1:1-Beziehungen für bidirektionale Prüfung
   let _nextId = 1;
   let _syncDebounceTimer = null;
   const SYNC_DEBOUNCE_MS = 180;
@@ -934,6 +995,91 @@
   // PRÜFUNG
   // ======================================================================
 
+  /**
+   * Erstellt eine angepasste Lösung, die bei 1:1-Beziehungen die vom Schüler gewählte
+   * Richtung berücksichtigt. Gibt { solution, bothDirectionErrors } zurück.
+   */
+  function getAdjustedSolution() {
+    const solution = _solution.map((rel) => ({
+      ...rel,
+      attrs: rel.attrs.map((a) => ({ ...a })),
+    }));
+    const bothDirectionErrors = [];
+    const altDirectionAttrs = {}; // { sourceEntityName: studentAttrName }
+
+    _oneToOneInfos.forEach((info) => {
+      const {
+        sourceEntityName,
+        targetEntityName,
+        sourcePk,
+        targetPk,
+        relAttrNames,
+        relationshipName,
+        resolvedSourceFkName,
+      } = info;
+      if (!sourcePk || !targetPk) return;
+
+      const studTarget = _studentRelations.find(
+        (r) => normalizeRelationToken(r.name) === normalizeRelationToken(targetEntityName),
+      );
+      const studSource = _studentRelations.find(
+        (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
+      );
+
+      // Standard-Richtung: FK(sourcePk) in target – prüfe sowohl den Original-PK als auch den aufgelösten FK-Namen
+      const hasStandard = studTarget?.attrs.some(
+        (a) =>
+          a.isFk &&
+          (fkRawNameMatches(a.name, sourcePk) ||
+            (resolvedSourceFkName && fkRawNameMatches(a.name, resolvedSourceFkName))),
+      );
+      // Alternative Richtung: FK(targetPk) in source
+      // Konstruiere den erwarteten FK-Namen für alternative Richtung: z.B. "e-id"
+      const altFkName = `${targetEntityName}-${targetPk}`;
+      const altAttr = studSource?.attrs.find((a) => !a.isFk && fkRawNameMatches(a.name, altFkName));
+      const hasAlt = !!altAttr;
+
+      if (hasStandard && hasAlt) {
+        bothDirectionErrors.push(
+          `@@REL:${relationshipName}@@Bei der 1:1-Beziehung „${relationshipName}" wurde der Fremdschlüssel in <strong>beide</strong> Richtungen eingetragen. ` +
+            `Wähle eine Richtung: entweder in „${sourceEntityName}" oder in „${targetEntityName}".`,
+        );
+      } else if (hasAlt && !hasStandard) {
+        // Speichere den erkannten Student-Attribut-Namen
+        if (altAttr) {
+          altDirectionAttrs[sourceEntityName] = altAttr.name;
+        }
+        // Schüler hat alternative Richtung gewählt → Lösung anpassen
+        const adjTarget = solution.find(
+          (r) => normalizeRelationToken(r.name) === normalizeRelationToken(targetEntityName),
+        );
+        const adjSource = solution.find(
+          (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
+        );
+        if (adjTarget && adjSource && altAttr) {
+          // FK aus target entfernen (nutze aufgelösten Namen falls vorhanden)
+          const fkNameToRemove = resolvedSourceFkName || sourcePk;
+          adjTarget.attrs = adjTarget.attrs.filter(
+            (a) =>
+              !(a.isFk && (normAttr(a.name) === normAttr(fkNameToRemove) || normAttr(a.name) === normAttr(sourcePk))),
+          );
+          // Beziehungsattribute aus target entfernen
+          relAttrNames.forEach((raName) => {
+            adjTarget.attrs = adjTarget.attrs.filter((a) => normAttr(a.name) !== normAttr(raName));
+          });
+          // FK in source einfügen – nutze den tatsächlichen Student-Attribut-Namen
+          adjSource.attrs.push({ name: altAttr.name, isPk: false, isFk: true });
+          // Beziehungsattribute in source einfügen
+          relAttrNames.forEach((raName) => {
+            adjSource.attrs.push({ name: raName, isPk: false, isFk: false });
+          });
+        }
+      }
+    });
+
+    return { solution, bothDirectionErrors, altDirectionAttrs };
+  }
+
   function checkInput() {
     // Lösung immer aktuell aus dem ERM berechnen
     // _solution = generateSolution(window.AppState.state);
@@ -946,6 +1092,9 @@
       return { passed: false };
     }
 
+    // Angepasste Lösung: berücksichtigt vom Schüler gewählte 1:1-Richtung
+    const { solution, bothDirectionErrors, altDirectionAttrs } = getAdjustedSolution();
+
     const missingRelations = [];
     const extraRelations = [];
     const missingAttrs = [];
@@ -953,14 +1102,14 @@
     const pkErrors = [];
     const pkWarnings = [];
     const fkWarnings = [];
-    const fkOverWarnings = [];
+    const fkOverWarnings = [...bothDirectionErrors];
     const missingNmRelations = [];
 
-    const solutionNames = _solution.map((r) => normalizeRelationToken(r.name));
+    const solutionNames = solution.map((r) => normalizeRelationToken(r.name));
     const studentNames = _studentRelations.map((r) => normalizeRelationToken(r.name));
 
     // Prüfe, ob die Relation aus einer n:m-Beziehung stammt
-    _solution.forEach((rel) => {
+    solution.forEach((rel) => {
       const isNm = rel._kind === 'mn';
       const sn = normalizeRelationToken(rel.name);
       if (!studentNames.includes(sn)) {
@@ -976,7 +1125,7 @@
         extraRelations.push(`Relation <strong>${sn}</strong> ist nicht Teil der erwarteten Lösung.`);
     });
 
-    _solution.forEach((solRel) => {
+    solution.forEach((solRel) => {
       const studRel = _studentRelations.find(
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(solRel.name),
       );
@@ -986,21 +1135,24 @@
       // - Kann: alle Fremdschlüssel-Attribute aus der Lösung
       const solAttrs = solRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
       const solFkAttrs = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
-      // Studierende: alle Attribute, die nicht als Fremdschlüssel markiert sind ODER die in der Lösung als Fremdschlüssel vorgesehen sind
-      const studAttrs = studRel.attrs
-        .filter((a) => !a.isFk || solFkAttrs.includes(normAttr(a.name)))
-        .map((a) => normAttr(a.name));
+      const solFkRawNames = solRel.attrs.filter((a) => a.isFk).map((a) => a.name);
+      // Studierende: nur Nicht-FK-Attribute für die Extra-Attribut-Prüfung
+      // FK-Attribute werden separat im FK-Abschnitt validiert (inkl. Prä-/Postfix)
+      const studAttrs = studRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
       // Pflicht-Attribute müssen vorhanden sein (egal ob als Fremdschlüssel markiert oder nicht)
       solAttrs.forEach((sa) => {
         const exists = studRel.attrs.some((a) => normAttr(a.name) === sa);
         if (!exists) missingAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> fehlt.`);
       });
       // Überflüssig sind nur Attribute, die weder Pflicht noch Kann sind
+      // und auch nicht per Prä-/Postfix einem Lösungs-FK entsprechen
       studAttrs.forEach((sa) => {
-        if (sa && !solAttrs.includes(sa) && !solFkAttrs.includes(sa))
-          extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> ist nicht erwartet.`);
+        if (!sa || solAttrs.includes(sa) || solFkAttrs.includes(sa)) return;
+        const rawName = (studRel.attrs.find((a) => !a.isFk && normAttr(a.name) === sa) || {}).name || '';
+        const matchesFk = solFkRawNames.some((sf) => fkRawNameMatches(rawName, sf));
+        if (!matchesFk) extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> ist nicht erwartet.`);
       });
-      // Primärschlüssel-Prüfung wie gehabt
+      // Primärschlüssel-Prüfung
       const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
       solPks.forEach((pk) => {
@@ -1011,30 +1163,39 @@
         if (!solPks.includes(pk))
           pkWarnings.push(`@@REL:${solRel.name}@@<em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`);
       });
-      // Fremdschlüssel-Prüfung wie gehabt
-      const solFks = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
-      const studFks = studRel.attrs.filter((a) => !!a.isFk).map((a) => normAttr(a.name));
-      // Fehlende Fremdschlüssel-Markierungen
-      solFks.forEach((fk) => {
-        if (!studFks.includes(fk))
-          fkWarnings.push(`@@REL:${solRel.name}@@<em>${fk}</em> sollte als Fremdschlüssel (FS) markiert sein.`);
-      });
-      // Überflüssige Fremdschlüssel-Markierungen (nur wenn das Attribut in der Lösung KEIN Fremdschlüssel ist)
-      studFks.forEach((fk) => {
-        if (!solFks.includes(fk)) {
-          // Prüfe, ob das Attribut in der Lösung als Pflichtattribut existiert
-          const isPflicht = solAttrs.includes(fk);
-          if (isPflicht) {
-            fkOverWarnings.push(`@@REL:${solRel.name}@@<em>${fk}</em> ist kein erwarteter Fremdschlüssel (FS).`);
-          } else {
-            // Attribut ist komplett überflüssig (wird schon oben gemeldet)
+      // Fremdschlüssel-Prüfung mit Prä-/Postfix-Unterstützung (Trennzeichen - oder _ erforderlich)
+      // Fehlende Fremdschlüssel-Markierungen (Rohnamen-Vergleich mit Prä-/Postfix)
+      const solFkRawAttrs = solRel.attrs.filter((a) => a.isFk);
+      const studFkRawAttrs = studRel.attrs.filter((a) => !!a.isFk);
+      solFkRawAttrs.forEach((solFkAttr) => {
+        const matched = studFkRawAttrs.some((sf) => fkRawNameMatches(sf.name, solFkAttr.name));
+        if (!matched) {
+          // Prüfe ob ein nicht-markiertes Attribut per Prä-/Postfix dem FK entspricht
+          let unmatchedAttr = studRel.attrs.find((a) => !a.isFk && fkRawNameMatches(a.name, solFkAttr.name));
+          // Falls alternative Richtung erkannt wurde, nutze den gespeicherten Student-Attribut-Namen
+          if (!unmatchedAttr && altDirectionAttrs[solRel.name]) {
+            unmatchedAttr = { name: altDirectionAttrs[solRel.name] };
           }
+          const displayName = unmatchedAttr ? unmatchedAttr.name : solFkAttr.name;
+          fkWarnings.push(
+            `@@REL:${solRel.name}@@<em>${displayName}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
+          );
+        }
+      });
+      // Überflüssige Fremdschlüssel-Markierungen
+      studFkRawAttrs.forEach((studFkAttr) => {
+        const matched = solFkRawAttrs.some((sf) => fkRawNameMatches(studFkAttr.name, sf.name));
+        if (!matched) {
+          fkOverWarnings.push(
+            `@@REL:${solRel.name}@@<em>${(studFkAttr.name || '').trim()}</em> ist kein erwarteter Fremdschlüssel (FS).`,
+          );
         }
       });
     });
 
     const hasErrors = missingRelations.length || missingAttrs.length || pkErrors.length;
-    const hasWarnings = extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length;
+    const hasWarnings =
+      extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length || fkOverWarnings.length;
     if (!hasErrors && !hasWarnings) {
       showFeedback('success', '✅ Sehr gut! Deine Überführung ist vollständig und korrekt.');
       return { passed: true };
@@ -1247,6 +1408,9 @@
         if (!err) {
           sortAttrsPrimaryFirst(rel.attrs);
           rel.isEditing = false;
+          clearInlineError(rel);
+        } else {
+          rel.inlineError = err;
         }
         // unfertige Karten bleiben offen
       });
