@@ -5,7 +5,6 @@
 
 // ---- Globaler App-Zustand ----
 const state = {
-  notation: 'chen',
   snapToGrid: true,
   diagramTitle: 'er-diagramm',
   nodes: [], // { id, type, x, y, name, isPrimaryKey }
@@ -22,9 +21,6 @@ function genId() {
 // ---- Hilfsfunktionen ----
 function getNodeById(id) {
   return state.nodes.find((n) => n.id === id) || null;
-}
-function getEdgeById(id) {
-  return state.edges.find((e) => e.id === id) || null;
 }
 
 function getConnectedNodes(nodeId, edgeType) {
@@ -191,7 +187,6 @@ function applyErmPayload(data, shouldPersist = true) {
       ...data.nodes.map((n) => parseInt(String(n.id || '').slice(1), 10) || 0),
       ...data.edges.map((ed) => parseInt(String(ed.id || '').slice(1), 10) || 0),
     ) + 1;
-  state.notation = 'chen';
   state.snapToGrid = !!data.snapToGrid;
   state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
   state.edges.forEach((edge) => {
@@ -1097,7 +1092,6 @@ function loadErmFromFile(filename) {
 
 // ---- Bootstrap ----
 document.addEventListener('DOMContentLoaded', () => {
-  state.notation = 'chen';
   const hadPersistedData = loadPersistedState();
   initTabs();
   initPropertiesPanel();
@@ -2314,7 +2308,6 @@ window.AppState = {
   state,
   genId,
   getNodeById,
-  getEdgeById,
   isEntityNameTaken,
   getOwningNodeForAttribute,
   isOwnerAttributeNameTaken,

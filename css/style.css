@@ -176,8 +176,8 @@ body.is-resizing-drawer {
 #app-title {
   font-size: 1.15rem;
   font-weight: 700;
-  width: var(--toolbar-width);
-  flex: 0 0 var(--toolbar-width);
+  width: calc(var(--toolbar-width) - 16px);
+  flex: 0 0 calc(var(--toolbar-width) - 16px);
   text-align: center;
   white-space: nowrap;
   overflow: hidden;

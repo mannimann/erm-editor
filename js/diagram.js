@@ -1616,15 +1616,6 @@
     return edge.fromId === relationshipId ? edge.toId : edge.fromId;
   }
 
-  function getRelationshipNodeIdFromEdge(edge) {
-    if (!edge || !isRelationshipEdge(edge)) return null;
-    const fromNode = byId(edge.fromId);
-    const toNode = byId(edge.toId);
-    if (fromNode?.type === 'relationship') return fromNode.id;
-    if (toNode?.type === 'relationship') return toNode.id;
-    return null;
-  }
-
   function attributeBelongsToRelationship(attributeId) {
     const edge = S().edges.find(
       (e) => e.edgeType === 'attribute' && (e.fromId === attributeId || e.toId === attributeId),
