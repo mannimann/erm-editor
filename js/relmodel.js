@@ -1036,7 +1036,8 @@
       // Alternative Richtung: FK(targetPk) in source
       // Konstruiere den erwarteten FK-Namen für alternative Richtung: z.B. "e-id"
       const altFkName = `${targetEntityName}-${targetPk}`;
-      const altAttr = studSource?.attrs.find((a) => !a.isFk && fkRawNameMatches(a.name, altFkName));
+      // Alternative Richtung auch dann erkennen, wenn der FK bereits markiert wurde (z. B. e-id↑)
+      const altAttr = studSource?.attrs.find((a) => fkRawNameMatches(a.name, altFkName));
       const hasAlt = !!altAttr;
 
       if (hasStandard && hasAlt) {
@@ -1133,35 +1134,48 @@
       // Für die Attribut-Prüfung:
       // - Pflicht: alle Nicht-Fremdschlüssel-Attribute aus der Lösung
       // - Kann: alle Fremdschlüssel-Attribute aus der Lösung
-      const solAttrs = solRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
+      const solNonFkAttrs = solRel.attrs.filter((a) => !a.isFk);
+      const solAttrs = solNonFkAttrs.map((a) => normAttr(a.name));
       const solFkAttrs = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
       const solFkRawNames = solRel.attrs.filter((a) => a.isFk).map((a) => a.name);
-      // Studierende: nur Nicht-FK-Attribute für die Extra-Attribut-Prüfung
-      // FK-Attribute werden separat im FK-Abschnitt validiert (inkl. Prä-/Postfix)
-      const studAttrs = studRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
       // Pflicht-Attribute müssen vorhanden sein (egal ob als Fremdschlüssel markiert oder nicht)
-      solAttrs.forEach((sa) => {
+      solNonFkAttrs.forEach((solAttr) => {
+        const sa = normAttr(solAttr.name);
         const exists = studRel.attrs.some((a) => normAttr(a.name) === sa);
-        if (!exists) missingAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> fehlt.`);
+        if (!exists) missingAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${(solAttr.name || '').trim()}</em> fehlt.`);
       });
       // Überflüssig sind nur Attribute, die weder Pflicht noch Kann sind
       // und auch nicht per Prä-/Postfix einem Lösungs-FK entsprechen
-      studAttrs.forEach((sa) => {
-        if (!sa || solAttrs.includes(sa) || solFkAttrs.includes(sa)) return;
-        const rawName = (studRel.attrs.find((a) => !a.isFk && normAttr(a.name) === sa) || {}).name || '';
-        const matchesFk = solFkRawNames.some((sf) => fkRawNameMatches(rawName, sf));
-        if (!matchesFk) extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${sa}</em> ist nicht erwartet.`);
-      });
+      studRel.attrs
+        .filter((a) => !a.isFk)
+        .forEach((studAttr) => {
+          const sa = normAttr(studAttr.name);
+          if (!sa || solAttrs.includes(sa) || solFkAttrs.includes(sa)) return;
+          const rawName = studAttr.name || '';
+          const matchesFk = solFkRawNames.some((sf) => fkRawNameMatches(rawName, sf));
+          if (!matchesFk)
+            extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${(rawName || '').trim()}</em> ist nicht erwartet.`);
+        });
       // Primärschlüssel-Prüfung
-      const solPks = solRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
-      const studPks = studRel.attrs.filter((a) => a.isPk).map((a) => normAttr(a.name));
-      solPks.forEach((pk) => {
-        if (!studPks.includes(pk))
-          pkErrors.push(`@@REL:${solRel.name}@@<em>${pk}</em> sollte als Primärschlüssel (PS) markiert sein.`);
+      const solPkAttrs = solRel.attrs.filter((a) => a.isPk);
+      const studPkAttrs = studRel.attrs.filter((a) => a.isPk);
+      const solPks = solPkAttrs.map((a) => normAttr(a.name));
+      const studPks = studPkAttrs.map((a) => normAttr(a.name));
+      solPkAttrs.forEach((pkAttr) => {
+        const pk = normAttr(pkAttr.name);
+        if (!studPks.includes(pk)) {
+          pkErrors.push(
+            `@@REL:${solRel.name}@@<em>${(pkAttr.name || '').trim()}</em> sollte als Primärschlüssel (PS) markiert sein.`,
+          );
+        }
       });
-      studPks.forEach((pk) => {
-        if (!solPks.includes(pk))
-          pkWarnings.push(`@@REL:${solRel.name}@@<em>${pk}</em> ist kein erwarteter Primärschlüssel (PS).`);
+      studPkAttrs.forEach((pkAttr) => {
+        const pk = normAttr(pkAttr.name);
+        if (!solPks.includes(pk)) {
+          pkWarnings.push(
+            `@@REL:${solRel.name}@@<em>${(pkAttr.name || '').trim()}</em> ist kein erwarteter Primärschlüssel (PS).`,
+          );
+        }
       });
       // Fremdschlüssel-Prüfung mit Prä-/Postfix-Unterstützung (Trennzeichen - oder _ erforderlich)
       // Fehlende Fremdschlüssel-Markierungen (Rohnamen-Vergleich mit Prä-/Postfix)
