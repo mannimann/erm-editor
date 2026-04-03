@@ -1,3 +1,0 @@
-positionierung der kardinalitäten überarbeiten (immer auf gleicher seite der linie bei einer Beziehung)
-
-json vorlagen layout verbessern

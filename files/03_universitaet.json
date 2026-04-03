@@ -5,170 +5,170 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 130,
-      "y": 375,
+      "x": 120,
+      "y": 340,
       "name": "Student"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 570,
-      "y": 95,
+      "x": 520,
+      "y": 100,
       "name": "Vorlesung"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 570,
-      "y": 375,
+      "x": 520,
+      "y": 340,
       "name": "Professor"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Belegung"
     },
     {
       "id": "s5",
       "type": "attribute",
-      "x": 280,
-      "y": 434,
+      "x": 240,
+      "y": 440,
       "name": "Matrikelnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s6",
       "type": "attribute",
-      "x": -20,
-      "y": 414,
+      "x": -40,
+      "y": 420,
       "name": "Vorname",
       "isPrimaryKey": false
     },
     {
       "id": "s7",
       "type": "attribute",
-      "x": 120,
-      "y": 474,
+      "x": 100,
+      "y": 460,
       "name": "Nachname",
       "isPrimaryKey": false
     },
     {
       "id": "s8",
       "type": "attribute",
-      "x": 0,
-      "y": 314,
+      "x": -80,
+      "y": 340,
       "name": "E-Mail",
       "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 740,
-      "y": 134,
+      "x": 640,
+      "y": 0,
       "name": "Vorlesungscode",
       "isPrimaryKey": true
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 740,
-      "y": 54,
+      "x": 500,
+      "y": -20,
       "name": "Titel",
       "isPrimaryKey": false
     },
     {
       "id": "s11",
       "type": "attribute",
-      "x": 680,
-      "y": -6,
+      "x": 380,
+      "y": 20,
       "name": "Kreditpunkte",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 500,
-      "y": -6,
+      "x": 720,
+      "y": 80,
       "name": "Wochenstunden",
       "isPrimaryKey": false
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 560,
-      "y": 474,
+      "x": 660,
+      "y": 440,
       "name": "ProfessorenKürzel",
       "isPrimaryKey": true
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 740,
-      "y": 454,
+      "x": 720,
+      "y": 360,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 740,
-      "y": 354,
+      "x": 480,
+      "y": 460,
       "name": "Fachgebiet",
       "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 140,
-      "y": -26,
+      "x": -20,
+      "y": 180,
       "name": "Belegnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": -20,
-      "y": 134,
+      "x": -40,
+      "y": 20,
       "name": "Semester",
       "isPrimaryKey": false
     },
     {
       "id": "s18",
       "type": "attribute",
-      "x": -20,
-      "y": 34,
+      "x": 100,
+      "y": -20,
       "name": "Status",
       "isPrimaryKey": false
     },
     {
       "id": "s19",
       "type": "attribute",
-      "x": 260,
-      "y": 14,
+      "x": -80,
+      "y": 100,
       "name": "Note",
       "isPrimaryKey": false
     },
     {
       "id": "s20",
       "type": "relationship",
-      "x": 575,
-      "y": 230,
+      "x": 520,
+      "y": 220,
       "name": "unterrichtet"
     },
     {
       "id": "s21",
       "type": "relationship",
-      "x": 375,
-      "y": 90,
+      "x": 320,
+      "y": 100,
       "name": "gilt für"
     },
     {
       "id": "s22",
       "type": "relationship",
-      "x": 135,
-      "y": 230,
+      "x": 120,
+      "y": 220,
       "name": "belegt"
     }
   ],

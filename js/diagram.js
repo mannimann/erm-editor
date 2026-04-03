@@ -181,6 +181,7 @@
   let activeModalCleanup = null;
   const viewState = { x: 0, y: 0, scale: 1 };
   let questValidateTimeout = null; // Debounce timer for quest validation
+  let autoLayoutVariantCounter = 0;
 
   const ZOOM_MIN = 0.35;
   const ZOOM_MAX = 3;
@@ -502,7 +503,7 @@
   }
 
   function buildRelationshipCornerAssignments() {
-    const OPPOSITE_ANGLE_THRESHOLD = (115 * Math.PI) / 180;
+    const OPPOSITE_ANGLE_THRESHOLD = (100 * Math.PI) / 180;
     const OPPOSITE_PENALTY = 1e8;
     const SMALL_ANGLE_OPPOSITE_PENALTY = 2e4;
     const assignments = new Map();
@@ -815,6 +816,86 @@
     };
   }
 
+  function pointToSegmentDistance(px, py, ax, ay, bx, by) {
+    const abx = bx - ax;
+    const aby = by - ay;
+    const abLenSq = abx * abx + aby * aby;
+    if (abLenSq < 0.0001) return Math.hypot(px - ax, py - ay);
+
+    const apx = px - ax;
+    const apy = py - ay;
+    const t = Math.max(0, Math.min(1, (apx * abx + apy * aby) / abLenSq));
+    const closestX = ax + abx * t;
+    const closestY = ay + aby * t;
+    return Math.hypot(px - closestX, py - closestY);
+  }
+
+  function pointToRectDistance(px, py, rect) {
+    const nx = clampValue(px, rect.x, rect.x + rect.w);
+    const ny = clampValue(py, rect.y, rect.y + rect.h);
+    return Math.hypot(px - nx, py - ny);
+  }
+
+  function segmentsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+    const orient = (px, py, qx, qy, rx, ry) => (qy - py) * (rx - qx) - (qx - px) * (ry - qy);
+    const onSeg = (px, py, qx, qy, rx, ry) =>
+      Math.min(px, qx) - 1e-9 <= rx &&
+      rx <= Math.max(px, qx) + 1e-9 &&
+      Math.min(py, qy) - 1e-9 <= ry &&
+      ry <= Math.max(py, qy) + 1e-9;
+
+    const o1 = orient(ax, ay, bx, by, cx, cy);
+    const o2 = orient(ax, ay, bx, by, dx, dy);
+    const o3 = orient(cx, cy, dx, dy, ax, ay);
+    const o4 = orient(cx, cy, dx, dy, bx, by);
+
+    if (o1 * o2 < 0 && o3 * o4 < 0) return true;
+    if (Math.abs(o1) <= 1e-9 && onSeg(ax, ay, bx, by, cx, cy)) return true;
+    if (Math.abs(o2) <= 1e-9 && onSeg(ax, ay, bx, by, dx, dy)) return true;
+    if (Math.abs(o3) <= 1e-9 && onSeg(cx, cy, dx, dy, ax, ay)) return true;
+    if (Math.abs(o4) <= 1e-9 && onSeg(cx, cy, dx, dy, bx, by)) return true;
+    return false;
+  }
+
+  function segmentIntersectsRect(ax, ay, bx, by, rect) {
+    const left = rect.x;
+    const right = rect.x + rect.w;
+    const top = rect.y;
+    const bottom = rect.y + rect.h;
+
+    const aInside = ax >= left && ax <= right && ay >= top && ay <= bottom;
+    const bInside = bx >= left && bx <= right && by >= top && by <= bottom;
+    if (aInside || bInside) return true;
+
+    return (
+      segmentsIntersect(ax, ay, bx, by, left, top, right, top) ||
+      segmentsIntersect(ax, ay, bx, by, right, top, right, bottom) ||
+      segmentsIntersect(ax, ay, bx, by, right, bottom, left, bottom) ||
+      segmentsIntersect(ax, ay, bx, by, left, bottom, left, top)
+    );
+  }
+
+  function segmentToRectDistance(ax, ay, bx, by, rect) {
+    if (segmentIntersectsRect(ax, ay, bx, by, rect)) return 0;
+
+    const corners = [
+      { x: rect.x, y: rect.y },
+      { x: rect.x + rect.w, y: rect.y },
+      { x: rect.x + rect.w, y: rect.y + rect.h },
+      { x: rect.x, y: rect.y + rect.h },
+    ];
+
+    let minDist = Math.min(pointToRectDistance(ax, ay, rect), pointToRectDistance(bx, by, rect));
+    corners.forEach((c) => {
+      minDist = Math.min(minDist, pointToSegmentDistance(c.x, c.y, ax, ay, bx, by));
+    });
+    return minDist;
+  }
+
+  function rectsTouchOrOverlap(a, b) {
+    return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+  }
+
   function boxesOverlap(a, b, padding = 18) {
     return !(
       a.x + a.w + padding <= b.x ||
@@ -877,6 +958,8 @@
   function autoArrangeDiagram() {
     // Auto-Layout soll bei jedem Klick Varianten erzeugen.
     setSnapToGrid(true);
+    autoLayoutVariantCounter += 1;
+    const layoutVariant = autoLayoutVariantCounter;
 
     const nodes = S().nodes;
     if (!nodes.length) return;
@@ -1003,6 +1086,26 @@
 
     const compactCells = cellPositions.slice(0, entities.length);
 
+    // Vary entity target cells across runs so the same entities do not repeatedly occupy
+    // almost identical positions.
+    const variantCells = compactCells.slice();
+    if (variantCells.length > 1) {
+      if (layoutVariant % 2 === 1) variantCells.reverse();
+      if (layoutVariant % 4 >= 2) {
+        variantCells.sort((a, b) => (a.col === b.col ? a.row - b.row : a.col - b.col));
+      }
+      const shift = (layoutVariant * 3) % variantCells.length;
+      if (shift > 0) {
+        const rotated = variantCells.slice(shift).concat(variantCells.slice(0, shift));
+        variantCells.length = 0;
+        variantCells.push(...rotated);
+      }
+      // Extra randomness for larger diagrams to avoid repeated placements.
+      if (entities.length >= 4 || layoutVariant % 3 === 0) {
+        shuffleInPlace(variantCells);
+      }
+    }
+
     const entityOrder = entities.slice();
     shuffleInPlace(entityOrder);
     entityOrder.sort((a, b) => {
@@ -1012,7 +1115,7 @@
     });
 
     entityOrder.forEach((entity, index) => {
-      const cell = compactCells[index];
+      const cell = variantCells[index] || compactCells[index];
       const snapped = clampPosition(entity.type, cell.x, cell.y);
       entity.x = snapped.x;
       entity.y = snapped.y;
@@ -1376,98 +1479,87 @@
     }
   }
 
-  function buildRelationshipLabelSideAssignments(relationshipCornerAssignments) {
-    const OFFSET = 30;
-    const LABEL_OFFSET = 16;
-    const ENTITY_CLEARANCE = 24;
+  function buildRelationshipLabelSideAssignments() {
     const sideAssignments = new Map();
-    const relationshipNodes = S().nodes.filter((node) => node.type === 'relationship');
-
-    relationshipNodes.forEach((relationshipNode) => {
-      const incidentEdges = S().edges.filter(
-        (edge) =>
-          isRelationshipEdge(edge) && (edge.fromId === relationshipNode.id || edge.toId === relationshipNode.id),
-      );
-      if (incidentEdges.length !== 2) return;
-
-      const edgeData = incidentEdges
-        .map((edge) => {
-          const entityId = edge.fromId === relationshipNode.id ? edge.toId : edge.fromId;
-          const entityNode = byId(entityId);
-          if (!entityNode || entityNode.type !== 'entity') return null;
-          const isSelfPair = getSelfPairEdges(relationshipNode.id, entityId).length === 2;
-          if (isSelfPair) return null;
-
-          const entityCenter = getNodeCenter(entityNode);
-          const relPoint =
-            relationshipCornerAssignments.get(`${edge.id}:${relationshipNode.id}`) ||
-            getEdgeEndpoint(relationshipNode, entityCenter.x, entityCenter.y);
-          const entityPoint = getEdgeEndpoint(entityNode, relPoint.x, relPoint.y);
-          const vx = entityPoint.x - relPoint.x;
-          const vy = entityPoint.y - relPoint.y;
-          const len = Math.sqrt(vx * vx + vy * vy) || 1;
-          const ux = vx / len;
-          const uy = vy / len;
-          const baseX = entityPoint.x - ux * OFFSET;
-          const baseY = entityPoint.y - uy * OFFSET;
-          const entityBounds = getNodeBounds(entityNode);
-          return { baseX, baseY, ux, uy, entityBounds };
-        })
-        .filter(Boolean);
-
-      if (edgeData.length !== 2) return;
-
-      const relCenter = getNodeCenter(relationshipNode);
-      const relBounds = getNodeBounds(relationshipNode);
-
-      const scoreForDirection = (dirX, dirY) => {
-        let score = 0;
-        edgeData.forEach(({ baseX, baseY, ux, uy, entityBounds }) => {
-          const normalA = { x: uy, y: -ux };
-          const normalB = { x: -uy, y: ux };
-          const dotA = normalA.x * dirX + normalA.y * dirY;
-          const dotB = normalB.x * dirX + normalB.y * dirY;
-          const chosen = dotA >= dotB ? normalA : normalB;
-          const normalX = chosen.x;
-          const normalY = chosen.y;
-          const preferred = {
-            x: baseX + normalX * LABEL_OFFSET,
-            y: baseY + normalY * LABEL_OFFSET,
-          };
-          const final = movePointToRectClearance(preferred, entityBounds, ENTITY_CLEARANCE, normalX, normalY);
-          const insideRel =
-            final.x >= relBounds.x - 8 &&
-            final.x <= relBounds.x + relBounds.w + 8 &&
-            final.y >= relBounds.y - 8 &&
-            final.y <= relBounds.y + relBounds.h + 8;
-          if (insideRel) score += 1e6;
-          const relToLabelX = final.x - relCenter.x;
-          const relToLabelY = final.y - relCenter.y;
-          const directionalProjection = relToLabelX * dirX + relToLabelY * dirY;
-          if (directionalProjection < 0) score += 1e5;
-          score += -directionalProjection * 100;
-          score += -Math.hypot(relToLabelX, relToLabelY);
-        });
-        return score;
-      };
-
-      const directionCandidates = [
-        { x: 1, y: 0 },
-        { x: -1, y: 0 },
-        { x: 0, y: -1 },
-        { x: 0, y: 1 },
-      ];
-      let bestDirection = directionCandidates[0];
-      let bestScore = Infinity;
-      directionCandidates.forEach((dir) => {
-        const dirScore = scoreForDirection(dir.x, dir.y);
-        if (dirScore < bestScore) {
-          bestScore = dirScore;
-          bestDirection = dir;
+    // Priority order for tie-breaking: top(0), right(1), bottom(2), left(3)
+    const cardinals = [
+      { x: 0, y: -1 },
+      { x: 1, y: 0 },
+      { x: 0, y: 1 },
+      { x: -1, y: 0 },
+    ];
+    const bestCardinalIdx = (vx, vy) => {
+      let idx = 0;
+      let best = -Infinity;
+      cardinals.forEach((c, i) => {
+        const d = c.x * vx + c.y * vy;
+        if (d > best + 1e-9) {
+          best = d;
+          idx = i;
         }
       });
-      sideAssignments.set(relationshipNode.id, bestDirection);
-    });
+      return idx;
+    };
+
+    S()
+      .nodes.filter((node) => node.type === 'relationship')
+      .forEach((relNode) => {
+        const incidentEdges = S().edges.filter(
+          (edge) => isRelationshipEdge(edge) && (edge.fromId === relNode.id || edge.toId === relNode.id),
+        );
+        if (incidentEdges.length !== 2) return;
+
+        const eIds = incidentEdges.map((e) => (e.fromId === relNode.id ? e.toId : e.fromId));
+        if (eIds[0] === eIds[1]) return;
+
+        const e0 = byId(eIds[0]);
+        const e1 = byId(eIds[1]);
+        if (!e0 || !e1 || e0.type !== 'entity' || e1.type !== 'entity') return;
+
+        const rc = getNodeCenter(relNode);
+
+        // Unit vectors from relationship center to each entity
+        const d0x = e0.x - rc.x,
+          d0y = e0.y - rc.y;
+        const d1x = e1.x - rc.x,
+          d1y = e1.y - rc.y;
+        const d0l = Math.hypot(d0x, d0y) || 1;
+        const d1l = Math.hypot(d1x, d1y) || 1;
+        const u0x = d0x / d0l,
+          u0y = d0y / d0l;
+        const u1x = d1x / d1l,
+          u1y = d1y / d1l;
+
+        // Sum of unit vectors; its opposite gives the large-sector bisector.
+        // This formula is symmetric (independent of entity ordering).
+        const sx = u0x + u1x,
+          sy = u0y + u1y;
+        const sl = Math.hypot(sx, sy);
+
+        let bx, by;
+        let cx, cy;
+        if (sl < 0.1) {
+          // Equal sectors (180°): force top/right priority exactly as requested.
+          if (Math.abs(u0x) >= Math.abs(u0y)) {
+            cx = 0;
+            cy = -1;
+          } else {
+            cx = 1;
+            cy = 0;
+          }
+          bx = cx;
+          by = cy;
+        } else {
+          // General case: large-sector bisector = opposite of average entity direction
+          bx = -sx / sl;
+          by = -sy / sl;
+          const cIdx = bestCardinalIdx(bx, by);
+          cx = cardinals[cIdx].x;
+          cy = cardinals[cIdx].y;
+        }
+
+        sideAssignments.set(relNode.id, { bx, by, cx, cy });
+      });
 
     return sideAssignments;
   }
@@ -1476,7 +1568,7 @@
     edgesLayer.innerHTML = '';
     nodesLayer.innerHTML = '';
     const relationshipCornerAssignments = buildRelationshipCornerAssignments();
-    const relationshipLabelSideAssignments = buildRelationshipLabelSideAssignments(relationshipCornerAssignments);
+    const relationshipLabelSideAssignments = buildRelationshipLabelSideAssignments();
     S().edges.forEach((edge) => renderEdge(edge, relationshipCornerAssignments, relationshipLabelSideAssignments));
     S().nodes.forEach(renderNode);
     if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
@@ -1691,43 +1783,54 @@
 
       let normalX = -uy;
       let normalY = ux;
-      const sharedSide =
-        relNodeForPair && pairSide === 0 ? relationshipLabelSideAssignments.get(relNodeForPair.id) : null;
 
-      if (sharedSide && Number.isFinite(sharedSide.x) && Number.isFinite(sharedSide.y)) {
-        const relPoint = relNodeForPair && fromNode.type === 'relationship' ? fp : tp;
-        const entPoint = relNodeForPair && fromNode.type === 'relationship' ? tp : fp;
-        const relDx = entPoint.x - relPoint.x;
-        const relDy = entPoint.y - relPoint.y;
-        const relLen = Math.sqrt(relDx * relDx + relDy * relDy) || 1;
-        const relUx = relDx / relLen;
-        const relUy = relDy / relLen;
-        const normalA = { x: relUy, y: -relUx };
-        const normalB = { x: -relUy, y: relUx };
-        const dotA = normalA.x * sharedSide.x + normalA.y * sharedSide.y;
-        const dotB = normalB.x * sharedSide.x + normalB.y * sharedSide.y;
-        const chosen = dotA >= dotB ? normalA : normalB;
-        normalX = chosen.x;
-        normalY = chosen.y;
-      } else if (isVerticalLine) {
-        // Senkrechte Linien: Kardinalitaet immer rechts von der Linie.
-        normalX = 1;
-        normalY = 0;
-      } else {
-        // If entity is directly above/below relationship, place labels outside left/right of the two lines.
-        if (isVerticalSelfPair) {
+      if (pairSide !== 0) {
+        if (isVerticalLine) {
+          normalX = 1;
+          normalY = 0;
+        } else if (isVerticalSelfPair) {
           normalX = pairSide;
           normalY = 0;
+        } else {
+          if (normalY > 0) {
+            normalX *= -1;
+            normalY *= -1;
+          }
+          if (pairSide > 0) {
+            normalX *= -1;
+            normalY *= -1;
+          }
         }
-
-        // Default label side: upper/left. Self-pair second edge gets flipped.
-        if (!isVerticalSelfPair && normalY > 0) {
-          normalX *= -1;
-          normalY *= -1;
-        }
-        if (!isVerticalSelfPair && pairSide > 0) {
-          normalX *= -1;
-          normalY *= -1;
+      } else {
+        const sideData = relNodeForPair ? relationshipLabelSideAssignments.get(relNodeForPair.id) : null;
+        if (sideData) {
+          const { bx: sbx, by: sby, cx: scx, cy: scy } = sideData;
+          const n1x = -uy,
+            n1y = ux;
+          const n2x = uy,
+            n2y = -ux;
+          const d1 = n1x * sbx + n1y * sby;
+          const d2 = n2x * sbx + n2y * sby;
+          if (Math.abs(d1 - d2) <= 1e-9) {
+            const c1 = n1x * scx + n1y * scy;
+            const c2 = n2x * scx + n2y * scy;
+            if (c1 >= c2) {
+              normalX = n1x;
+              normalY = n1y;
+            } else {
+              normalX = n2x;
+              normalY = n2y;
+            }
+          } else if (d1 > d2) {
+            normalX = n1x;
+            normalY = n1y;
+          } else {
+            normalX = n2x;
+            normalY = n2y;
+          }
+        } else {
+          normalX = -uy;
+          normalY = ux;
         }
       }
 
@@ -1740,6 +1843,103 @@
 
       const text = makeLabelText(finalPoint.x, finalPoint.y, label);
       edgesLayer.appendChild(text);
+
+      // If the rendered label touches its own edge line, push it farther away along the chosen normal.
+      try {
+        const MIN_LINE_CLEARANCE = 3;
+        const ENTITY_LABEL_PADDING = 2;
+        let current = { x: finalPoint.x, y: finalPoint.y };
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+          const bbox = text.getBBox();
+          if (!bbox || bbox.width <= 0 || bbox.height <= 0) break;
+
+          const labelRect = {
+            x: bbox.x - 1,
+            y: bbox.y - 1,
+            w: bbox.width + 2,
+            h: bbox.height + 2,
+          };
+          const lineDist = segmentToRectDistance(fp.x, fp.y, tp.x, tp.y, labelRect);
+          if (lineDist >= MIN_LINE_CLEARANCE) break;
+
+          const extra = MIN_LINE_CLEARANCE - lineDist + 4;
+          const pushedPoint = {
+            x: current.x + normalX * extra,
+            y: current.y + normalY * extra,
+          };
+          current = movePointToRectClearance(pushedPoint, entityBounds, ENTITY_CLEARANCE, normalX, normalY);
+          text.setAttribute('x', current.x);
+          text.setAttribute('y', current.y);
+        }
+
+        // Keep the full text box outside of the entity box (not just the anchor point).
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          const bbox = text.getBBox();
+          if (!bbox || bbox.width <= 0 || bbox.height <= 0) break;
+
+          const labelRect = {
+            x: bbox.x,
+            y: bbox.y,
+            w: bbox.width,
+            h: bbox.height,
+          };
+          const paddedEntityRect = {
+            x: entityBounds.x - ENTITY_LABEL_PADDING,
+            y: entityBounds.y - ENTITY_LABEL_PADDING,
+            w: entityBounds.w + ENTITY_LABEL_PADDING * 2,
+            h: entityBounds.h + ENTITY_LABEL_PADDING * 2,
+          };
+          if (!rectsTouchOrOverlap(labelRect, paddedEntityRect)) break;
+
+          const pushedPoint = {
+            x: current.x + normalX * 6,
+            y: current.y + normalY * 6,
+          };
+          current = movePointToRectClearance(pushedPoint, entityBounds, ENTITY_CLEARANCE, normalX, normalY);
+          text.setAttribute('x', current.x);
+          text.setAttribute('y', current.y);
+        }
+
+        // Hard safety fallback: if overlap still exists, force the label box out of the entity box.
+        for (let attempt = 0; attempt < 12; attempt += 1) {
+          const bbox = text.getBBox();
+          if (!bbox || bbox.width <= 0 || bbox.height <= 0) break;
+
+          const labelRect = { x: bbox.x, y: bbox.y, w: bbox.width, h: bbox.height };
+          const paddedEntityRect = {
+            x: entityBounds.x - ENTITY_LABEL_PADDING,
+            y: entityBounds.y - ENTITY_LABEL_PADDING,
+            w: entityBounds.w + ENTITY_LABEL_PADDING * 2,
+            h: entityBounds.h + ENTITY_LABEL_PADDING * 2,
+          };
+          if (!rectsTouchOrOverlap(labelRect, paddedEntityRect)) break;
+
+          const labelCx = labelRect.x + labelRect.w / 2;
+          const labelCy = labelRect.y + labelRect.h / 2;
+          const nearX = clampValue(labelCx, paddedEntityRect.x, paddedEntityRect.x + paddedEntityRect.w);
+          const nearY = clampValue(labelCy, paddedEntityRect.y, paddedEntityRect.y + paddedEntityRect.h);
+
+          let escapeX = labelCx - nearX;
+          let escapeY = labelCy - nearY;
+          let escapeLen = Math.hypot(escapeX, escapeY);
+          if (escapeLen < 0.0001) {
+            escapeX = normalX;
+            escapeY = normalY;
+            escapeLen = Math.hypot(escapeX, escapeY) || 1;
+          }
+
+          const push = 4;
+          const pushedPoint = {
+            x: current.x + (escapeX / escapeLen) * push,
+            y: current.y + (escapeY / escapeLen) * push,
+          };
+          current = movePointToRectClearance(pushedPoint, entityBounds, ENTITY_CLEARANCE, normalX, normalY);
+          text.setAttribute('x', current.x);
+          text.setAttribute('y', current.y);
+        }
+      } catch (err) {
+        // getBBox can fail in rare transient SVG states; keep initial position as fallback.
+      }
     }
 
     edgesLayer.appendChild(hit);

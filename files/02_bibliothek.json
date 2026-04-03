@@ -5,132 +5,132 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 590,
-      "y": 95,
+      "x": 120,
+      "y": 340,
       "name": "Mitglied"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 590,
-      "y": 375,
+      "x": 560,
+      "y": 340,
       "name": "Buch"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 130,
-      "y": 375,
+      "x": 560,
+      "y": 100,
       "name": "Exemplar"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Ausleihe"
     },
     {
       "id": "s5",
       "type": "attribute",
-      "x": 780,
-      "y": 114,
+      "x": 240,
+      "y": 440,
       "name": "Mitgliedsnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s6",
       "type": "attribute",
-      "x": 640,
-      "y": 194,
+      "x": 100,
+      "y": 460,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s7",
       "type": "attribute",
-      "x": 600,
-      "y": -26,
+      "x": -80,
+      "y": 340,
       "name": "Adresse",
       "isPrimaryKey": false
     },
     {
       "id": "s8",
       "type": "attribute",
-      "x": 460,
-      "y": 174,
+      "x": -40,
+      "y": 420,
       "name": "Telefonnummer",
       "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 580,
-      "y": 474,
+      "x": 720,
+      "y": 420,
       "name": "ISBN",
       "isPrimaryKey": true
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 440,
-      "y": 454,
+      "x": 580,
+      "y": 460,
       "name": "Titel",
       "isPrimaryKey": false
     },
     {
       "id": "s11",
       "type": "attribute",
-      "x": 580,
-      "y": 274,
+      "x": 440,
+      "y": 440,
       "name": "Autor",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 720,
-      "y": 454,
+      "x": 780,
+      "y": 340,
       "name": "Erscheinungsjahr",
       "isPrimaryKey": false
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 220,
-      "y": 454,
+      "x": 660,
+      "y": 0,
       "name": "Inventarnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 0,
-      "y": 314,
+      "x": 480,
+      "y": 0,
       "name": "Anschaffungsdatum",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 60,
-      "y": 454,
+      "x": 760,
+      "y": 60,
       "name": "Zustand",
       "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 280,
-      "y": 14,
+      "x": -80,
+      "y": 100,
       "name": "Ausleihnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 140,
-      "y": -26,
+      "x": 100,
+      "y": -20,
       "name": "Ausleihdatum",
       "isPrimaryKey": false
     },
@@ -138,37 +138,37 @@
       "id": "s18",
       "type": "attribute",
       "x": -40,
-      "y": 174,
+      "y": 20,
       "name": "Fälligkeitsdatum",
       "isPrimaryKey": false
     },
     {
       "id": "s19",
       "type": "attribute",
-      "x": -20,
-      "y": 94,
+      "x": 240,
+      "y": 0,
       "name": "Rückgabedatum",
       "isPrimaryKey": false
     },
     {
       "id": "s20",
       "type": "relationship",
-      "x": 355,
-      "y": 370,
+      "x": 560,
+      "y": 220,
       "name": "ist Exemplar von"
     },
     {
       "id": "s21",
       "type": "relationship",
-      "x": 355,
-      "y": 90,
+      "x": 120,
+      "y": 220,
       "name": "leiht aus"
     },
     {
       "id": "s22",
       "type": "relationship",
-      "x": 135,
-      "y": 230,
+      "x": 340,
+      "y": 100,
       "name": "wird ausgeliehen in"
     }
   ],

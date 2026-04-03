@@ -5,168 +5,168 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 130,
-      "y": 395,
+      "x": 560,
+      "y": 100,
       "name": "Künstler"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 550,
-      "y": 95,
+      "x": 120,
+      "y": 340,
       "name": "Bühne"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Auftritt"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 550,
-      "y": 415,
+      "x": 560,
+      "y": 340,
       "name": "Crewmitglied"
     },
     {
       "id": "s5",
       "type": "relationship",
-      "x": 135,
-      "y": 230,
+      "x": 340,
+      "y": 100,
       "name": "spielt"
     },
     {
       "id": "s6",
       "type": "relationship",
-      "x": 355,
-      "y": 90,
+      "x": 120,
+      "y": 220,
       "name": "findet statt auf"
     },
     {
       "id": "s7",
       "type": "relationship",
-      "x": 555,
-      "y": 250,
+      "x": 340,
+      "y": 340,
       "name": "betreut"
     },
     {
       "id": "s8",
       "type": "relationship",
-      "x": 355,
-      "y": 410,
+      "x": 560,
+      "y": 460,
       "name": "arbeitet ein"
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 220,
-      "y": 494,
+      "x": 600,
+      "y": -20,
       "name": "Künstlercode",
       "isPrimaryKey": true
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 80,
-      "y": 494,
+      "x": 740,
+      "y": 40,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s11",
       "type": "attribute",
-      "x": -20,
-      "y": 414,
+      "x": 440,
+      "y": 0,
       "name": "Genre",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 700,
-      "y": 14,
+      "x": 100,
+      "y": 440,
       "name": "Bühnenname",
       "isPrimaryKey": true
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 740,
-      "y": 94,
+      "x": -40,
+      "y": 400,
       "name": "Kapazität",
       "isPrimaryKey": false
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 560,
-      "y": -26,
+      "x": 240,
+      "y": 420,
       "name": "Bereich",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 140,
-      "y": -26,
+      "x": -20,
+      "y": 180,
       "name": "Bühnenname",
       "isPrimaryKey": true
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 280,
-      "y": 14,
+      "x": -80,
+      "y": 100,
       "name": "Datum",
       "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 0,
-      "y": -26,
+      "x": -40,
+      "y": 20,
       "name": "Startzeit",
       "isPrimaryKey": true
     },
     {
       "id": "s18",
       "type": "attribute",
-      "x": -40,
-      "y": 134,
+      "x": 100,
+      "y": -20,
       "name": "Endzeit",
       "isPrimaryKey": false
     },
     {
       "id": "s19",
       "type": "attribute",
-      "x": -40,
-      "y": 54,
+      "x": 240,
+      "y": 0,
       "name": "Status",
       "isPrimaryKey": false
     },
     {
       "id": "s20",
       "type": "attribute",
-      "x": 720,
-      "y": 374,
+      "x": 660,
+      "y": 240,
       "name": "Crewnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s21",
       "type": "attribute",
-      "x": 720,
-      "y": 474,
+      "x": 740,
+      "y": 300,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s22",
       "type": "attribute",
-      "x": 560,
-      "y": 514,
+      "x": 740,
+      "y": 380,
       "name": "Rolle",
       "isPrimaryKey": false
     }

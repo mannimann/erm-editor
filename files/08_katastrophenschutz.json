@@ -5,71 +5,71 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 550,
-      "y": 95,
+      "x": 520,
+      "y": 340,
       "name": "Einsatzkraft"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 550,
-      "y": 395,
+      "x": 520,
+      "y": 100,
       "name": "Team"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Einsatz"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 130,
-      "y": 395,
+      "x": 120,
+      "y": 340,
       "name": "Fahrzeug"
     },
     {
       "id": "s5",
       "type": "relationship",
-      "x": 555,
-      "y": 230,
+      "x": 460,
+      "y": 220,
       "name": "gehört zu"
     },
     {
       "id": "s6",
       "type": "relationship",
-      "x": 715,
-      "y": 230,
+      "x": 600,
+      "y": 220,
       "name": "leitet"
     },
     {
       "id": "s7",
       "type": "relationship",
-      "x": 355,
-      "y": 90,
+      "x": 520,
+      "y": 460,
       "name": "arbeitet ein"
     },
     {
       "id": "s8",
       "type": "relationship",
-      "x": 335,
-      "y": 230,
+      "x": 320,
+      "y": 100,
       "name": "bearbeitet"
     },
     {
       "id": "s9",
       "type": "relationship",
-      "x": 135,
-      "y": 250,
+      "x": 120,
+      "y": 220,
       "name": "nutzt"
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 500,
-      "y": -66,
+      "x": 720,
+      "y": 300,
       "name": "Funkrufname",
       "isPrimaryKey": true
     },
@@ -77,111 +77,111 @@
       "id": "s11",
       "type": "attribute",
       "x": 720,
-      "y": 14,
+      "y": 380,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 760,
-      "y": 94,
+      "x": 340,
+      "y": 380,
       "name": "Qualifikation",
       "isPrimaryKey": false
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 660,
-      "y": -66,
+      "x": 340,
+      "y": 300,
       "name": "Telefonnummer",
       "isPrimaryKey": false
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 480,
-      "y": 474,
+      "x": 580,
+      "y": -20,
       "name": "Teamname",
       "isPrimaryKey": true
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 640,
-      "y": 474,
+      "x": 440,
+      "y": 0,
       "name": "Standort",
       "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 720,
-      "y": 394,
+      "x": 700,
+      "y": 20,
       "name": "Bereitschaftsstufe",
       "isPrimaryKey": false
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 260,
-      "y": 14,
+      "x": -60,
+      "y": 180,
       "name": "Einsatzgebiet",
       "isPrimaryKey": true
     },
     {
       "id": "s18",
       "type": "attribute",
-      "x": 140,
-      "y": -26,
+      "x": -100,
+      "y": 80,
       "name": "Datum",
       "isPrimaryKey": true
     },
     {
       "id": "s19",
       "type": "attribute",
-      "x": 20,
-      "y": 14,
+      "x": -20,
+      "y": 0,
       "name": "Startzeit",
       "isPrimaryKey": true
     },
     {
       "id": "s20",
       "type": "attribute",
-      "x": 60,
-      "y": 174,
+      "x": 120,
+      "y": -20,
       "name": "Priorität",
       "isPrimaryKey": false
     },
     {
       "id": "s21",
       "type": "attribute",
-      "x": -40,
-      "y": 114,
+      "x": 260,
+      "y": 0,
       "name": "Lagebild",
       "isPrimaryKey": false
     },
     {
       "id": "s22",
       "type": "attribute",
-      "x": 60,
-      "y": 474,
+      "x": -60,
+      "y": 360,
       "name": "Kennzeichen",
       "isPrimaryKey": true
     },
     {
       "id": "s23",
       "type": "attribute",
-      "x": -20,
-      "y": 374,
+      "x": 200,
+      "y": 440,
       "name": "Fahrzeugtyp",
       "isPrimaryKey": false
     },
     {
       "id": "s24",
       "type": "attribute",
-      "x": 220,
-      "y": 474,
+      "x": 40,
+      "y": 440,
       "name": "Kapazität",
       "isPrimaryKey": false
     }

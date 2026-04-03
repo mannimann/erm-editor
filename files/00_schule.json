@@ -5,128 +5,128 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 130,
-      "y": 375,
+      "x": 560,
+      "y": 100,
       "name": "Schüler",
       "isPrimaryKey": false
     },
     {
       "id": "s2",
       "type": "attribute",
-      "x": 220,
-      "y": 454,
+      "x": 560,
+      "y": 0,
       "name": "SchülerNr",
       "isPrimaryKey": true
     },
     {
       "id": "s4",
       "type": "attribute",
-      "x": 320,
-      "y": 374,
+      "x": 760,
+      "y": 80,
       "name": "Nachname",
       "isPrimaryKey": false
     },
     {
       "id": "s6",
       "type": "attribute",
-      "x": 60,
-      "y": 454,
+      "x": 700,
+      "y": 20,
       "name": "Vorname",
       "isPrimaryKey": false
     },
     {
       "id": "s8",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Klasse",
       "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 80,
-      "y": 14,
+      "x": 120,
+      "y": 0,
       "name": "Parallelklasse",
       "isPrimaryKey": true
     },
     {
       "id": "s23",
       "type": "relationship",
-      "x": 215,
-      "y": 230,
+      "x": 340,
+      "y": 60,
       "name": "geht in",
       "isPrimaryKey": false
     },
     {
       "id": "s28",
       "type": "entity",
-      "x": 550,
-      "y": 95,
+      "x": 120,
+      "y": 340,
       "name": "Lehrer",
       "isPrimaryKey": false
     },
     {
       "id": "s29",
       "type": "attribute",
-      "x": 640,
-      "y": 14,
+      "x": -20,
+      "y": 420,
       "name": "Lehrer-Kürzel",
       "isPrimaryKey": true
     },
     {
       "id": "s31",
       "type": "relationship",
-      "x": 355,
-      "y": 90,
+      "x": 120,
+      "y": 220,
       "name": "unterrichtet",
       "isPrimaryKey": false
     },
     {
       "id": "s36",
       "type": "attribute",
-      "x": 360,
-      "y": 14,
+      "x": -40,
+      "y": 220,
       "name": "Fach",
       "isPrimaryKey": false
     },
     {
       "id": "s39",
       "type": "relationship",
-      "x": 55,
-      "y": 230,
+      "x": 340,
+      "y": 140,
       "name": "ist Klassensprecher",
       "isPrimaryKey": false
     },
     {
       "id": "s42",
       "type": "attribute",
-      "x": -40,
-      "y": 94,
+      "x": -20,
+      "y": 20,
       "name": "Klassenstufe",
       "isPrimaryKey": true
     },
     {
       "id": "s44",
       "type": "attribute",
-      "x": 640,
-      "y": 174,
+      "x": 120,
+      "y": 440,
       "name": "Vorname",
       "isPrimaryKey": false
     },
     {
       "id": "s46",
       "type": "attribute",
-      "x": 720,
-      "y": 94,
+      "x": 260,
+      "y": 420,
       "name": "Nachname",
       "isPrimaryKey": false
     },
     {
       "id": "s48",
       "type": "relationship",
-      "x": -65,
-      "y": 370,
+      "x": 560,
+      "y": 220,
       "name": "ist befreundet mit",
       "isPrimaryKey": false
     }

@@ -5,212 +5,212 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 520,
+      "y": 100,
       "name": "Dozent"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 490,
-      "y": 215,
+      "x": 520,
+      "y": 280,
       "name": "Student"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 870,
-      "y": 95,
+      "x": 920,
+      "y": 100,
       "name": "Hilfskraft"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 130,
-      "y": 355,
+      "x": 120,
+      "y": 100,
       "name": "Vorlesung"
     },
     {
       "id": "s5",
       "type": "entity",
-      "x": 550,
-      "y": 435,
+      "x": 120,
+      "y": 460,
       "name": "Seminar"
     },
     {
       "id": "s6",
       "type": "relationship",
-      "x": 135,
-      "y": 230,
+      "x": 320,
+      "y": 100,
       "name": "hält"
     },
     {
       "id": "s7",
       "type": "relationship",
-      "x": 495,
-      "y": 30,
+      "x": 720,
+      "y": 100,
       "name": "hat Hilfskraft"
     },
     {
       "id": "s8",
       "type": "relationship",
-      "x": 715,
-      "y": 170,
+      "x": 720,
+      "y": 220,
       "name": "ist"
     },
     {
       "id": "s9",
       "type": "relationship",
-      "x": 335,
-      "y": 390,
+      "x": 100,
+      "y": 280,
       "name": "gehört zu"
     },
     {
       "id": "s10",
       "type": "relationship",
-      "x": 815,
-      "y": 290,
+      "x": 920,
+      "y": 460,
       "name": "leitet"
     },
     {
       "id": "s11",
       "type": "relationship",
-      "x": 315,
-      "y": 250,
+      "x": 320,
+      "y": 220,
       "name": "nimmt teil an"
     },
     {
       "id": "s12",
       "type": "relationship",
-      "x": 515,
-      "y": 310,
+      "x": 320,
+      "y": 340,
       "name": "nimmt teil an"
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 140,
-      "y": -26,
+      "x": 360,
+      "y": 0,
       "name": "Dozentenkürzel",
       "isPrimaryKey": true
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": -40,
-      "y": 114,
+      "x": 640,
+      "y": 0,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 0,
-      "y": 14,
+      "x": 500,
+      "y": -20,
       "name": "Fachgebiet",
       "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 660,
-      "y": 234,
+      "x": 700,
+      "y": 340,
       "name": "Matrikelnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 360,
-      "y": 134,
+      "x": 600,
+      "y": 400,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s18",
       "type": "attribute",
-      "x": 500,
-      "y": 114,
+      "x": 460,
+      "y": 400,
       "name": "Telefonnummer",
       "isPrimaryKey": false
     },
     {
       "id": "s19",
       "type": "attribute",
-      "x": 640,
-      "y": 134,
+      "x": 520,
+      "y": 200,
       "name": "E-Mail",
       "isPrimaryKey": false
     },
     {
       "id": "s20",
       "type": "attribute",
-      "x": 880,
-      "y": -26,
+      "x": 900,
+      "y": -20,
       "name": "HiwiNummer",
       "isPrimaryKey": true
     },
     {
       "id": "s21",
       "type": "attribute",
-      "x": 720,
-      "y": -6,
+      "x": 1100,
+      "y": 80,
       "name": "Wochenstunden",
       "isPrimaryKey": false
     },
     {
       "id": "s22",
       "type": "attribute",
-      "x": 1040,
-      "y": 14,
+      "x": 1060,
+      "y": 0,
       "name": "Vertragsbeginn",
       "isPrimaryKey": false
     },
     {
       "id": "s23",
       "type": "attribute",
-      "x": 40,
-      "y": 454,
+      "x": -40,
+      "y": 20,
       "name": "Vorlesungscode",
       "isPrimaryKey": true
     },
     {
       "id": "s24",
       "type": "attribute",
-      "x": 160,
-      "y": 494,
+      "x": -80,
+      "y": 100,
       "name": "Titel",
       "isPrimaryKey": false
     },
     {
       "id": "s25",
       "type": "attribute",
-      "x": -40,
-      "y": 374,
+      "x": -20,
+      "y": 180,
       "name": "Credits",
       "isPrimaryKey": false
     },
     {
       "id": "s26",
       "type": "attribute",
-      "x": 440,
-      "y": 514,
+      "x": 60,
+      "y": 560,
       "name": "Seminarnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s27",
       "type": "attribute",
-      "x": 740,
-      "y": 454,
+      "x": -60,
+      "y": 500,
       "name": "Wochentag",
       "isPrimaryKey": false
     },
     {
       "id": "s28",
       "type": "attribute",
-      "x": 620,
-      "y": 514,
+      "x": 220,
+      "y": 540,
       "name": "Raum",
       "isPrimaryKey": false
     }

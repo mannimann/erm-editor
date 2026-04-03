@@ -5,169 +5,169 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 510,
-      "y": 335,
+      "x": 520,
+      "y": 340,
       "name": "Patient"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 30,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Arzt"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 510,
-      "y": 95,
+      "x": 520,
+      "y": 100,
       "name": "Behandlung"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 30,
-      "y": 335,
+      "x": 120,
+      "y": 340,
       "name": "Station"
     },
     {
       "id": "s5",
       "type": "attribute",
-      "x": 380,
-      "y": 414,
+      "x": 480,
+      "y": 460,
       "name": "Versicherungsnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s6",
       "type": "attribute",
-      "x": 540,
-      "y": 434,
+      "x": 640,
+      "y": 440,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s7",
       "type": "attribute",
-      "x": 680,
-      "y": 374,
+      "x": 720,
+      "y": 380,
       "name": "Geburtsdatum",
       "isPrimaryKey": false
     },
     {
       "id": "s8",
       "type": "attribute",
-      "x": 680,
-      "y": 294,
+      "x": 700,
+      "y": 300,
       "name": "Adresse",
       "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": -120,
-      "y": 34,
+      "x": 60,
+      "y": 0,
       "name": "Personalnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 160,
-      "y": 14,
+      "x": -60,
+      "y": 60,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s11",
       "type": "attribute",
-      "x": 20,
-      "y": -26,
+      "x": -60,
+      "y": 140,
       "name": "Fachbereich",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 520,
-      "y": -26,
+      "x": 380,
+      "y": 0,
       "name": "Behandlungsnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 660,
-      "y": -6,
+      "x": 540,
+      "y": -20,
       "name": "Datum",
       "isPrimaryKey": false
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 700,
-      "y": 74,
+      "x": 660,
+      "y": 20,
       "name": "Diagnose",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 380,
-      "y": 14,
+      "x": 720,
+      "y": 80,
       "name": "Medikation",
       "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": -20,
-      "y": 414,
+      "x": -60,
+      "y": 380,
       "name": "Stationscode",
       "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 120,
-      "y": 414,
+      "x": 40,
+      "y": 440,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s18",
       "type": "attribute",
-      "x": -120,
-      "y": 334,
+      "x": 200,
+      "y": 440,
       "name": "Bettenzahl",
       "isPrimaryKey": false
     },
     {
       "id": "s19",
       "type": "relationship",
-      "x": 275,
-      "y": 90,
+      "x": 320,
+      "y": 100,
       "name": "führt durch"
     },
     {
       "id": "s20",
       "type": "relationship",
-      "x": 515,
-      "y": 210,
+      "x": 520,
+      "y": 220,
       "name": "erhält"
     },
     {
       "id": "s21",
       "type": "relationship",
-      "x": 35,
-      "y": 210,
+      "x": 120,
+      "y": 220,
       "name": "arbeitet auf"
     },
     {
       "id": "s22",
       "type": "relationship",
-      "x": 275,
-      "y": 330,
+      "x": 320,
+      "y": 340,
       "name": "liegt auf"
     }
   ],

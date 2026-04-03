@@ -5,131 +5,131 @@
     {
       "id": "s1",
       "type": "entity",
-      "x": 550,
-      "y": 95,
+      "x": 520,
+      "y": 100,
       "name": "Mitglied"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 130,
-      "y": 95,
+      "x": 120,
+      "y": 100,
       "name": "Kurs"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 130,
-      "y": 375,
+      "x": 120,
+      "y": 340,
       "name": "Trainer"
     },
     {
       "id": "s4",
       "type": "relationship",
-      "x": 355,
-      "y": 90,
+      "x": 320,
+      "y": 100,
       "name": "belegt"
     },
     {
       "id": "s5",
       "type": "relationship",
-      "x": 135,
-      "y": 230,
+      "x": 120,
+      "y": 220,
       "name": "leitet"
     },
     {
       "id": "s6",
       "type": "attribute",
-      "x": 700,
-      "y": 174,
+      "x": 540,
+      "y": 0,
       "name": "Mitgliedsnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s7",
       "type": "attribute",
-      "x": 540,
-      "y": 194,
+      "x": 700,
+      "y": 40,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s8",
       "type": "attribute",
-      "x": 700,
-      "y": 34,
+      "x": 720,
+      "y": 140,
       "name": "Telefonnummer",
       "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 560,
-      "y": -6,
+      "x": 580,
+      "y": 200,
       "name": "E-Mail",
       "isPrimaryKey": false
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 200,
-      "y": -26,
+      "x": -80,
+      "y": 120,
       "name": "Kurscode",
       "isPrimaryKey": true
     },
     {
       "id": "s11",
       "type": "attribute",
-      "x": -60,
-      "y": 114,
+      "x": 160,
+      "y": -20,
       "name": "Titel",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": -40,
-      "y": 34,
+      "x": 0,
+      "y": -20,
       "name": "Schwierigkeitsstufe",
       "isPrimaryKey": false
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": 60,
-      "y": -26,
+      "x": -80,
+      "y": 40,
       "name": "Maximalplätze",
       "isPrimaryKey": false
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 60,
-      "y": 454,
+      "x": 0,
+      "y": 420,
       "name": "Trainerkürzel",
       "isPrimaryKey": true
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": 240,
-      "y": 454,
+      "x": 160,
+      "y": 440,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 300,
-      "y": 374,
+      "x": 280,
+      "y": 400,
       "name": "Lizenz",
       "isPrimaryKey": false
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 360,
-      "y": -6,
+      "x": 320,
+      "y": 20,
       "name": "Anmeldedatum",
       "isPrimaryKey": false
     },
@@ -137,7 +137,7 @@
       "id": "s18",
       "type": "attribute",
       "x": -40,
-      "y": 234,
+      "y": 220,
       "name": "Wochentag",
       "isPrimaryKey": false
     }
