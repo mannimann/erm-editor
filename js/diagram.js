@@ -209,15 +209,9 @@
 
   function maybeSnapPosition(type, x, y) {
     if (!isSnapToGridEnabled()) return { x, y };
-    const size = getNodeSize(type);
-    const centerX = x + size.w / 2;
-    const centerY = y + size.h / 2;
-    const snappedCenterX = snapValue(centerX);
-    const snappedCenterY = snapValue(centerY);
-    return {
-      x: snappedCenterX - size.w / 2,
-      y: snappedCenterY - size.h / 2,
-    };
+    const snappedX = snapValue(x);
+    const snappedY = snapValue(y);
+    return { x: snappedX, y: snappedY };
   }
 
   function setSnapToGrid(enabled) {
@@ -370,22 +364,7 @@
   }
 
   function getNodeCenter(node) {
-    switch (node.type) {
-      case 'entity': {
-        const visual = getNodeVisual(node);
-        return { x: node.x + visual.w / 2, y: node.y + visual.h / 2 };
-      }
-      case 'attribute': {
-        const attrSize = getAttributeEllipseSize(node);
-        return { x: node.x + attrSize.rx, y: node.y + attrSize.ry };
-      }
-      case 'relationship': {
-        const visual = getNodeVisual(node);
-        return { x: node.x + visual.w / 2, y: node.y + visual.h / 2 };
-      }
-      default:
-        return { x: node.x, y: node.y };
-    }
+    return { x: node.x, y: node.y };
   }
 
   function isEntityNameTaken(name, excludeId = null) {
@@ -473,10 +452,10 @@
   function getRelationshipCorners(node) {
     const visual = getNodeVisual(node);
     return [
-      { index: 0, x: node.x + visual.w / 2, y: node.y },
-      { index: 1, x: node.x + visual.w, y: node.y + visual.h / 2 },
-      { index: 2, x: node.x + visual.w / 2, y: node.y + visual.h },
-      { index: 3, x: node.x, y: node.y + visual.h / 2 },
+      { index: 0, x: node.x, y: node.y - visual.h / 2 },
+      { index: 1, x: node.x + visual.w / 2, y: node.y },
+      { index: 2, x: node.x, y: node.y + visual.h / 2 },
+      { index: 3, x: node.x - visual.w / 2, y: node.y },
     ];
   }
 
@@ -743,13 +722,13 @@
     return t;
   }
 
-  function makePrimaryKeyDecoration(text, centerX, centerY) {
+  function makePrimaryKeyDecoration(text, rx, ry) {
     const width = Math.max(8, (text || '').trim().length * 7.1);
     const underline = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    underline.setAttribute('x1', centerX - width / 2);
-    underline.setAttribute('x2', centerX + width / 2);
-    underline.setAttribute('y1', centerY + 10);
-    underline.setAttribute('y2', centerY + 10);
+    underline.setAttribute('x1', -width / 2);
+    underline.setAttribute('x2', width / 2);
+    underline.setAttribute('y1', 8);
+    underline.setAttribute('y2', 8);
     underline.setAttribute('stroke', '#1e293b');
     underline.setAttribute('stroke-width', '2.5');
     underline.setAttribute('stroke-linecap', 'round');
@@ -771,14 +750,14 @@
   function getNodeBounds(node) {
     if (node.type === 'entity') {
       const visual = getNodeVisual(node);
-      return { x: node.x, y: node.y, w: visual.w, h: visual.h };
+      return { x: node.x - visual.w / 2, y: node.y - visual.h / 2, w: visual.w, h: visual.h };
     }
     if (node.type === 'attribute') {
       const attrSize = getAttributeEllipseSize(node);
-      return { x: node.x, y: node.y, w: attrSize.w, h: attrSize.h };
+      return { x: node.x - attrSize.rx, y: node.y - attrSize.ry, w: attrSize.w, h: attrSize.h };
     }
     const visual = getNodeVisual(node);
-    return { x: node.x, y: node.y, w: visual.w, h: visual.h };
+    return { x: node.x - visual.w / 2, y: node.y - visual.h / 2, w: visual.w, h: visual.h };
   }
 
   function clampValue(value, min, max) {
@@ -865,7 +844,7 @@
   }
 
   function autoArrangeDiagram() {
-    // Aktiviere Snap-to-Grid automatisch
+    // Auto-Layout soll bei jedem Klick Varianten erzeugen.
     setSnapToGrid(true);
 
     const nodes = S().nodes;
@@ -874,6 +853,41 @@
     const entities = nodes.filter((node) => node.type === 'entity');
     const relationships = nodes.filter((node) => node.type === 'relationship');
     const attributes = nodes.filter((node) => node.type === 'attribute');
+
+    const shuffleInPlace = (arr) => {
+      for (let i = arr.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = arr[i];
+        arr[i] = arr[j];
+        arr[j] = temp;
+      }
+      return arr;
+    };
+
+    const getCenterFromCandidate = (type, x, y) => {
+      return { x, y };
+    };
+
+    const segmentsIntersect = (a, b, c, d) => {
+      const orient = (p, q, r) => (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      const onSegment = (p, q, r) =>
+        q.x <= Math.max(p.x, r.x) + 0.001 &&
+        q.x >= Math.min(p.x, r.x) - 0.001 &&
+        q.y <= Math.max(p.y, r.y) + 0.001 &&
+        q.y >= Math.min(p.y, r.y) - 0.001;
+
+      const o1 = orient(a, b, c);
+      const o2 = orient(a, b, d);
+      const o3 = orient(c, d, a);
+      const o4 = orient(c, d, b);
+
+      if (Math.sign(o1) !== Math.sign(o2) && Math.sign(o3) !== Math.sign(o4)) return true;
+      if (Math.abs(o1) < 0.001 && onSegment(a, c, b)) return true;
+      if (Math.abs(o2) < 0.001 && onSegment(a, d, b)) return true;
+      if (Math.abs(o3) < 0.001 && onSegment(c, a, d)) return true;
+      if (Math.abs(o4) < 0.001 && onSegment(c, b, d)) return true;
+      return false;
+    };
 
     const attributeCountByParent = new Map();
     S().edges.forEach((edge) => {
@@ -887,14 +901,19 @@
     });
     const maxAttributesPerParent =
       attributeCountByParent.size > 0 ? Math.max(...Array.from(attributeCountByParent.values())) : 0;
-    const attrDensityBoost = Math.min(140, Math.max(0, maxAttributesPerParent - 4) * 18);
+
+    const entityDegree = new Map();
+    entities.forEach((entity) => entityDegree.set(entity.id, 0));
+    relationships.forEach((relationship) => {
+      const relEdges = getRelationshipEntityEdges(relationship.id);
+      relEdges.forEach((edge) => {
+        const entityId = edge.fromId === relationship.id ? edge.toId : edge.fromId;
+        entityDegree.set(entityId, (entityDegree.get(entityId) || 0) + 1);
+      });
+    });
 
     const occupiedBounds = [];
-    const entityCols = Math.max(1, Math.ceil(Math.sqrt(Math.max(1, entities.length))));
-    const entityGapX = 420 + attrDensityBoost;
-    const entityGapY = 280 + Math.round(attrDensityBoost * 0.7);
-    const startX = 120;
-    const startY = 100;
+    const relationshipSegments = [];
     const reserveNode = (node, padding = 18) => {
       const candidateBounds = getNodeBounds(node);
       const overlaps = occupiedBounds.some((bounds) => boxesOverlap(candidateBounds, bounds, padding));
@@ -902,7 +921,6 @@
         occupiedBounds.push(candidateBounds);
         return;
       }
-
       const moved = findNonOverlappingPlacement(node.type, node.x, node.y, occupiedBounds, padding);
       node.x = moved.position.x;
       node.y = moved.position.y;
@@ -924,69 +942,170 @@
       occupiedBounds.push(placed.bounds);
     };
 
-    // Phase 1: place entities
-    entities
-      .slice()
-      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de', { sensitivity: 'base' }))
-      .forEach((entity, index) => {
-        const row = Math.floor(index / entityCols);
-        const col = index % entityCols;
-        placeNode(entity, startX + col * entityGapX, startY + row * entityGapY, 20);
-      });
+    const entityCount = Math.max(1, entities.length);
+    // Kompakter, moeglichst quadratischer Block: 4 Entitaeten => 2x2 statt 3x2.
+    const entityCols = Math.max(1, Math.ceil(Math.sqrt(entityCount)));
+    const entityRows = Math.max(1, Math.ceil(entityCount / entityCols));
+    const maxEntityWidth = Math.max(...entities.map((entity) => getNodeVisual(entity).w), NODE_ENTITY_W);
+    const maxEntityHeight = Math.max(...entities.map((entity) => getNodeVisual(entity).h), NODE_ENTITY_H);
+    const maxRelationshipWidth = Math.max(...relationships.map((rel) => getNodeVisual(rel).w), NODE_REL_W);
+    const maxRelationshipHeight = Math.max(...relationships.map((rel) => getNodeVisual(rel).h), NODE_REL_H);
+    const toEvenGridStep = (value) => Math.ceil(value / (GRID_SIZE * 2)) * (GRID_SIZE * 2);
 
-    const relFallbackY = startY + Math.max(1, Math.ceil(entities.length / entityCols)) * entityGapY + 140;
-    const pairPlacementCount = new Map();
+    // Feste, gleichmäßige Abstände: in der Mitte muss ein Beziehungsknoten Platz finden.
+    const entityGapX = toEvenGridStep(maxEntityWidth + maxRelationshipWidth + 120);
+    const entityGapY = toEvenGridStep(maxEntityHeight + maxRelationshipHeight + 110 + maxAttributesPerParent * 2);
+    const startX = 120;
+    const startY = 100;
 
-    // Phase 2: place relationships between entities
-    relationships.forEach((relationship, index) => {
+    const cellPositions = [];
+    for (let row = 0; row < entityRows; row += 1) {
+      for (let col = 0; col < entityCols; col += 1) {
+        cellPositions.push({
+          x: startX + col * entityGapX,
+          y: startY + row * entityGapY,
+          row,
+          col,
+        });
+      }
+    }
+
+    const compactCells = cellPositions.slice(0, entities.length);
+
+    const entityOrder = entities.slice();
+    shuffleInPlace(entityOrder);
+    entityOrder.sort((a, b) => {
+      const degreeDiff = (entityDegree.get(b.id) || 0) - (entityDegree.get(a.id) || 0);
+      if (degreeDiff !== 0) return degreeDiff;
+      return Math.random() - 0.5;
+    });
+
+    entityOrder.forEach((entity, index) => {
+      const cell = compactCells[index];
+      const snapped = clampPosition(entity.type, cell.x, cell.y);
+      entity.x = snapped.x;
+      entity.y = snapped.y;
+      occupiedBounds.push(getNodeBounds(entity));
+    });
+
+    const relFallbackY = startY + entityRows * entityGapY + 140;
+    const shuffledRelationships = shuffleInPlace(relationships.slice());
+    shuffledRelationships.forEach((relationship, index) => {
       const relVisual = getNodeVisual(relationship);
-      const connectedEntityEdges = getRelationshipEntityEdges(relationship.id);
-      const connectedEntities = connectedEntityEdges
+      const relEdges = getRelationshipEntityEdges(relationship.id);
+      const connectedEntities = relEdges
         .map((edge) => byId(edge.fromId === relationship.id ? edge.toId : edge.fromId))
         .filter((node) => !!node && node.type === 'entity');
 
       if (connectedEntities.length >= 2) {
-        const first = connectedEntities[0];
-        const second = connectedEntities[1];
-        const firstCenter = getNodeCenter(first);
-        const secondCenter = getNodeCenter(second);
+        const entityCenters = connectedEntities.map((entity) => getNodeCenter(entity));
+        const centroid = entityCenters.reduce((acc, center) => ({ x: acc.x + center.x, y: acc.y + center.y }), {
+          x: 0,
+          y: 0,
+        });
+        centroid.x /= entityCenters.length;
+        centroid.y /= entityCenters.length;
 
-        const pairKey = [first.id, second.id].sort().join('|');
-        const pairIndex = pairPlacementCount.get(pairKey) || 0;
-        pairPlacementCount.set(pairKey, pairIndex + 1);
-
-        // Platziere Beziehungen moeglichst auf der geraden Verbindungslinie.
+        const firstCenter = entityCenters[0];
+        const secondCenter = entityCenters[1];
         const vx = secondCenter.x - firstCenter.x;
         const vy = secondCenter.y - firstCenter.y;
         const dist = Math.sqrt(vx * vx + vy * vy) || 1;
         const ux = vx / dist;
         const uy = vy / dist;
+        const nx = -uy;
+        const ny = ux;
+        const randomPhase = Math.random() * Math.PI * 2;
 
-        const lineStep = 48;
-        const rawOffset = pairIndex * lineStep;
-        const maxOffset = Math.max(0, dist / 2 - Math.max(relVisual.w, relVisual.h));
-        const clampedOffset = Math.min(rawOffset, maxOffset);
-        const side = pairIndex % 2 === 0 ? 1 : -1;
+        const midpoint = {
+          x: (firstCenter.x + secondCenter.x) / 2,
+          y: (firstCenter.y + secondCenter.y) / 2,
+        };
 
-        const relCenterX = (firstCenter.x + secondCenter.x) / 2 + ux * clampedOffset * side;
-        const relCenterY = (firstCenter.y + secondCenter.y) / 2 + uy * clampedOffset * side;
+        const candidateCenters = [
+          midpoint,
+          { x: centroid.x, y: centroid.y },
+          { x: centroid.x + nx * 60, y: centroid.y + ny * 60 },
+          { x: centroid.x - nx * 60, y: centroid.y - ny * 60 },
+          { x: centroid.x + nx * 110, y: centroid.y + ny * 110 },
+          { x: centroid.x - nx * 110, y: centroid.y - ny * 110 },
+          { x: centroid.x + ux * 70, y: centroid.y + uy * 70 },
+          { x: centroid.x - ux * 70, y: centroid.y - uy * 70 },
+          {
+            x: centroid.x + Math.cos(randomPhase) * 90,
+            y: centroid.y + Math.sin(randomPhase) * 90,
+          },
+        ];
 
-        // Berechne obere linke Ecke aus dem Mittelpunkt
-        const relPos = clampPosition(relationship.type, relCenterX - relVisual.w / 2, relCenterY - relVisual.h / 2);
-        relationship.x = relPos.x;
-        relationship.y = relPos.y;
-        reserveNode(relationship, 24);
+        let bestPos = null;
+        let bestScore = Number.POSITIVE_INFINITY;
+        candidateCenters.forEach((candidateCenter) => {
+          const snapped = clampPosition('relationship', candidateCenter.x, candidateCenter.y);
+          const bounds = getNodeBounds({ type: 'relationship', x: snapped.x, y: snapped.y });
+          const relCenter = snapped;
+
+          let score = 0;
+          if (occupiedBounds.some((b) => boxesOverlap(bounds, b, 22))) score += 8000;
+
+          connectedEntities.forEach((entity) => {
+            const entityCenter = getNodeCenter(entity);
+            const dx = relCenter.x - entityCenter.x;
+            const dy = relCenter.y - entityCenter.y;
+            score += Math.sqrt(dx * dx + dy * dy) * 0.9;
+
+            relationshipSegments.forEach((segment) => {
+              if (
+                segmentsIntersect(
+                  { x: relCenter.x, y: relCenter.y },
+                  { x: entityCenter.x, y: entityCenter.y },
+                  segment.a,
+                  segment.b,
+                )
+              ) {
+                score += 1400;
+              }
+            });
+          });
+
+          const toMidX = relCenter.x - midpoint.x;
+          const toMidY = relCenter.y - midpoint.y;
+          score += Math.sqrt(toMidX * toMidX + toMidY * toMidY) * 0.45;
+          score += Math.random() * 12;
+          if (score < bestScore) {
+            bestScore = score;
+            bestPos = snapped;
+          }
+        });
+
+        const finalPlacement = findNonOverlappingPlacement(
+          relationship.type,
+          bestPos ? bestPos.x : centroid.x,
+          bestPos ? bestPos.y : centroid.y,
+          occupiedBounds,
+          22,
+        );
+        relationship.x = finalPlacement.position.x;
+        relationship.y = finalPlacement.position.y;
+        occupiedBounds.push(finalPlacement.bounds);
+
+        const relationshipCenter = getNodeCenter(relationship);
+        connectedEntities.forEach((entity) => {
+          relationshipSegments.push({
+            a: { x: relationshipCenter.x, y: relationshipCenter.y },
+            b: getNodeCenter(entity),
+          });
+        });
         return;
       }
 
       if (connectedEntities.length === 1) {
         const entityCenter = getNodeCenter(connectedEntities[0]);
-        const orbit = 165 + index * 6;
-        const angle = (-Math.PI / 2 + (index % 6) * (Math.PI / 3)) % (Math.PI * 2);
+        const orbit = 160 + Math.random() * 70;
+        const angle = Math.random() * Math.PI * 2;
         const relPos = clampPosition(
           relationship.type,
-          entityCenter.x + Math.cos(angle) * orbit - relVisual.w / 2,
-          entityCenter.y + Math.sin(angle) * orbit - relVisual.h / 2,
+          entityCenter.x + Math.cos(angle) * orbit,
+          entityCenter.y + Math.sin(angle) * orbit,
         );
         relationship.x = relPos.x;
         relationship.y = relPos.y;
@@ -996,7 +1115,9 @@
 
       const row = Math.floor(index / entityCols);
       const col = index % entityCols;
-      const relPos = clampPosition(relationship.type, startX + col * entityGapX, relFallbackY + row * entityGapY);
+      const centerX = startX + col * entityGapX + (Math.random() - 0.5) * 60;
+      const centerY = relFallbackY + row * entityGapY + (Math.random() - 0.5) * 60;
+      const relPos = clampPosition(relationship.type, centerX, centerY);
       relationship.x = relPos.x;
       relationship.y = relPos.y;
       reserveNode(relationship, 24);
@@ -1022,7 +1143,21 @@
       attrsByParent.get(parentId).push(attr);
     });
 
-    // Phase 3: place attributes last
+    const layoutAnchorNodes = entities.concat(relationships);
+    const layoutCenter = layoutAnchorNodes.length
+      ? layoutAnchorNodes.reduce(
+          (acc, node) => {
+            const c = getNodeCenter(node);
+            return { x: acc.x + c.x, y: acc.y + c.y };
+          },
+          { x: 0, y: 0 },
+        )
+      : { x: startX, y: startY };
+    if (layoutAnchorNodes.length) {
+      layoutCenter.x /= layoutAnchorNodes.length;
+      layoutCenter.y /= layoutAnchorNodes.length;
+    }
+
     attrsByParent.forEach((attrs, parentId) => {
       const parentNode = byId(parentId);
       if (!parentNode) return;
@@ -1030,11 +1165,7 @@
       const parentCandidates = nodes.filter((n) => n.type === parentNode.type);
       let currentAttr = null;
       const isClosestToOwnParent = (candidatePos) => {
-        const attrSize = getAttributeEllipseSize(currentAttr || 'Attribut');
-        const candidateCenter = {
-          x: candidatePos.x + attrSize.rx,
-          y: candidatePos.y + attrSize.ry,
-        };
+        const candidateCenter = candidatePos;
         const ownCenter = getNodeCenter(parentNode);
         const ownDistSq = (candidateCenter.x - ownCenter.x) ** 2 + (candidateCenter.y - ownCenter.y) ** 2;
 
@@ -1047,45 +1178,95 @@
         }
         return true;
       };
-      const baseRadius = parentNode.type === 'relationship' ? 120 : 112;
-      const radius = baseRadius + Math.max(0, attrs.length - 6) * 10;
-      const radiusOffsets = [0, 12, 24, 36, 52, 70, 90, 112];
-      const angleOffsets = [0, 0.2, -0.2, 0.38, -0.38, 0.56, -0.56];
+
+      // Primäres Ziel: konstante sichtbare Linienlaenge (Rand-zu-Rand), nicht Mittelpunktabstand.
+      const desiredLineLength = (parentNode.type === 'relationship' ? 68 : 76) + Math.max(0, attrs.length - 10) * 2;
+      const lineLengthOffsets = [0, 6, -6, 12, -12, 18, -18, 26, -26];
+      const hemisphereSpan = Math.PI * 0.9;
+      const hemisphereSteps = Math.max(20, attrs.length * 7);
+      const fullCircleSteps = Math.max(30, attrs.length * 10);
+      const parentVisual = getNodeVisual(parentNode);
+      const parentHalfW = parentVisual.w / 2;
+      const parentHalfH = parentVisual.h / 2;
+      let outwardAngle = Math.atan2(center.y - layoutCenter.y, center.x - layoutCenter.x);
+      if (Math.abs(center.x - layoutCenter.x) < 0.001 && Math.abs(center.y - layoutCenter.y) < 0.001) {
+        outwardAngle = -Math.PI / 2;
+      }
+
+      const rayDistanceToParentBoundary = (angle) => {
+        const ux = Math.cos(angle);
+        const uy = Math.sin(angle);
+        const absUx = Math.abs(ux);
+        const absUy = Math.abs(uy);
+        const tx = absUx < 0.0001 ? Number.POSITIVE_INFINITY : parentHalfW / absUx;
+        const ty = absUy < 0.0001 ? Number.POSITIVE_INFINITY : parentHalfH / absUy;
+        return Math.min(tx, ty);
+      };
+
+      const rayDistanceToAttributeBoundary = (attrSize, angle) => {
+        const ux = Math.cos(angle);
+        const uy = Math.sin(angle);
+        const denom = (ux * ux) / (attrSize.rx * attrSize.rx) + (uy * uy) / (attrSize.ry * attrSize.ry);
+        if (denom <= 0.000001) return Math.max(attrSize.rx, attrSize.ry);
+        return 1 / Math.sqrt(denom);
+      };
+
       attrs
         .slice()
         .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de', { sensitivity: 'base' }))
         .forEach((attr, index) => {
           currentAttr = attr;
-          const baseAngle = -Math.PI / 2 + (index / Math.max(1, attrs.length)) * Math.PI * 2;
+          const spreadRatio = attrs.length <= 1 ? 0.5 : index / (attrs.length - 1);
+          const baseAngle = outwardAngle - hemisphereSpan / 2 + spreadRatio * hemisphereSpan;
           let placed = false;
 
-          // Prefer close positions around the parent before allowing farther fallback.
-          for (let r = 0; r < radiusOffsets.length && !placed; r += 1) {
-            for (let a = 0; a < angleOffsets.length; a += 1) {
-              const angle = baseAngle + angleOffsets[a];
-              const rCandidate = radius + radiusOffsets[r];
+          for (let r = 0; r < lineLengthOffsets.length && !placed; r += 1) {
+            for (let step = 0; step < hemisphereSteps; step += 1) {
+              const localOffset = (step / Math.max(1, hemisphereSteps - 1) - 0.5) * hemisphereSpan;
+              const angle = baseAngle + localOffset;
               const attrSize = getAttributeEllipseSize(attr);
-              const x = center.x + Math.cos(angle) * rCandidate - attrSize.rx;
-              const y = center.y + Math.sin(angle) * rCandidate - attrSize.ry;
-              const pos = tryPlaceNodeAt(attr.type, x, y, 12, isClosestToOwnParent);
+              const parentBoundary = rayDistanceToParentBoundary(angle);
+              const attrBoundary = rayDistanceToAttributeBoundary(attrSize, angle);
+              const rCandidate = parentBoundary + desiredLineLength + lineLengthOffsets[r] + attrBoundary;
+              const x = center.x + Math.cos(angle) * rCandidate;
+              const y = center.y + Math.sin(angle) * rCandidate;
+              const pos = tryPlaceNodeAt(attr.type, x, y, 10, isClosestToOwnParent);
               if (!pos) continue;
               attr.x = pos.x;
               attr.y = pos.y;
               placed = true;
               break;
             }
+
+            for (let step = 0; step < fullCircleSteps && !placed; step += 1) {
+              const angle = outwardAngle + (step / fullCircleSteps) * Math.PI * 2;
+              const attrSize = getAttributeEllipseSize(attr);
+              const parentBoundary = rayDistanceToParentBoundary(angle);
+              const attrBoundary = rayDistanceToAttributeBoundary(attrSize, angle);
+              const rCandidate = parentBoundary + desiredLineLength + lineLengthOffsets[r] + attrBoundary;
+              const x = center.x + Math.cos(angle) * rCandidate;
+              const y = center.y + Math.sin(angle) * rCandidate;
+              const pos = tryPlaceNodeAt(attr.type, x, y, 10, isClosestToOwnParent);
+              if (!pos) continue;
+              attr.x = pos.x;
+              attr.y = pos.y;
+              placed = true;
+            }
           }
 
           if (!placed) {
             const attrSize = getAttributeEllipseSize(attr);
-            const fallbackX = center.x + Math.cos(baseAngle) * (radius + 84) - attrSize.rx;
-            const fallbackY = center.y + Math.sin(baseAngle) * (radius + 84) - attrSize.ry;
+            const parentBoundary = rayDistanceToParentBoundary(baseAngle);
+            const attrBoundary = rayDistanceToAttributeBoundary(attrSize, baseAngle);
+            const fallbackRadius = parentBoundary + desiredLineLength + 24 + attrBoundary;
+            const fallbackX = center.x + Math.cos(baseAngle) * fallbackRadius;
+            const fallbackY = center.y + Math.sin(baseAngle) * fallbackRadius;
             const constrained = findConstrainedPlacement(
               attr.type,
               fallbackX,
               fallbackY,
               occupiedBounds,
-              12,
+              10,
               isClosestToOwnParent,
             );
             if (constrained) {
@@ -1095,23 +1276,27 @@
               placed = true;
             }
 
-            // Absolute fallback: keep layout running but stay as close to the own parent as possible.
             if (!placed) {
-              const forced = clampPosition(attr.type, fallbackX, fallbackY);
-              attr.x = forced.x;
-              attr.y = forced.y;
-              reserveNode(attr, 12);
+              const lastTry = findNonOverlappingPlacement(attr.type, fallbackX, fallbackY, occupiedBounds, 10);
+              attr.x = lastTry.position.x;
+              attr.y = lastTry.position.y;
+              occupiedBounds.push(lastTry.bounds);
             }
           }
         });
     });
 
     if (orphanAttributes.length > 0) {
-      const orphanY = relFallbackY + entityGapY * 1.4;
+      const orphanY = relFallbackY + entityGapY * 1.35;
       orphanAttributes.forEach((attr, index) => {
         const row = Math.floor(index / entityCols);
         const col = index % entityCols;
-        placeNode(attr, startX + col * entityGapX, orphanY + row * entityGapY - 18, 12);
+        placeNode(
+          attr,
+          startX + col * entityGapX + (Math.random() - 0.5) * 42,
+          orphanY + row * entityGapY + (Math.random() - 0.5) * 28,
+          12,
+        );
       });
     }
 
@@ -1198,17 +1383,19 @@
     if (node.type === 'entity') {
       const visual = getNodeVisual(node);
       shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      shape.setAttribute('x', -visual.w / 2);
+      shape.setAttribute('y', -visual.h / 2);
       shape.setAttribute('width', visual.w);
       shape.setAttribute('height', visual.h);
       shape.setAttribute('fill', isSelected ? '#bfdbfe' : '#dbeafe');
       shape.setAttribute('stroke', '#2563eb');
       shape.setAttribute('stroke-width', '2');
-      textEl = makeText(visual.w / 2, visual.h / 2, visual.displayLines || visual.displayName || 'Entitätsklasse');
+      textEl = makeText(0, 0, visual.displayLines || visual.displayName || 'Entitätsklasse');
     } else if (node.type === 'attribute') {
       const attrSize = getAttributeEllipseSize(node);
       shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-      shape.setAttribute('cx', attrSize.rx);
-      shape.setAttribute('cy', attrSize.ry);
+      shape.setAttribute('cx', '0');
+      shape.setAttribute('cy', '0');
       shape.setAttribute('rx', attrSize.rx);
       shape.setAttribute('ry', attrSize.ry);
       shape.setAttribute('fill', isSelected ? '#fde68a' : '#fef3c7');
@@ -1216,8 +1403,8 @@
       shape.setAttribute('stroke-width', '2');
 
       textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      textEl.setAttribute('x', attrSize.rx);
-      textEl.setAttribute('y', attrSize.ry);
+      textEl.setAttribute('x', '0');
+      textEl.setAttribute('y', '0');
       textEl.setAttribute('text-anchor', 'middle');
       textEl.setAttribute('dominant-baseline', 'middle');
       textEl.setAttribute('font-size', '13');
@@ -1231,14 +1418,11 @@
     } else {
       const visual = getNodeVisual(node);
       shape = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-      shape.setAttribute(
-        'points',
-        `${visual.w / 2},0 ${visual.w},${visual.h / 2} ${visual.w / 2},${visual.h} 0,${visual.h / 2}`,
-      );
+      shape.setAttribute('points', `0,-${visual.h / 2} ${visual.w / 2},0 0,${visual.h / 2} -${visual.w / 2},0`);
       shape.setAttribute('fill', isSelected ? '#bbf7d0' : '#dcfce7');
       shape.setAttribute('stroke', '#16a34a');
       shape.setAttribute('stroke-width', '2');
-      textEl = makeText(visual.w / 2, visual.h / 2, visual.displayLines || visual.displayName || 'Beziehung');
+      textEl = makeText(0, 0, visual.displayLines || visual.displayName || 'Beziehung');
     }
 
     if (isSelected) {
@@ -1247,8 +1431,6 @@
     }
 
     const hit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    hit.setAttribute('x', -5);
-    hit.setAttribute('y', -5);
     const bbox =
       node.type === 'entity'
         ? {
@@ -1264,6 +1446,8 @@
               w: getNodeVisual(node).w + 10,
               h: getNodeVisual(node).h + 10,
             };
+    hit.setAttribute('x', -bbox.w / 2);
+    hit.setAttribute('y', -bbox.h / 2);
     hit.setAttribute('width', bbox.w);
     hit.setAttribute('height', bbox.h);
     hit.setAttribute('fill', 'transparent');
@@ -2104,18 +2288,18 @@
     let fw;
     if (node.type === 'entity') {
       const visual = getNodeVisual(node);
-      cx = node.x + visual.w / 2;
-      cy = node.y + visual.h / 2;
+      cx = node.x;
+      cy = node.y;
       fw = visual.w - 10;
     } else if (node.type === 'attribute') {
       const attrSize = getAttributeEllipseSize(node);
-      cx = node.x + attrSize.rx;
-      cy = node.y + attrSize.ry;
+      cx = node.x;
+      cy = node.y;
       fw = attrSize.w - 10;
     } else {
       const visual = getNodeVisual(node);
-      cx = node.x + visual.w / 2;
-      cy = node.y + visual.h / 2;
+      cx = node.x;
+      cy = node.y;
       fw = visual.w - 20;
     }
 
