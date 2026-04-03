@@ -489,7 +489,22 @@
     return t > 0.02 && t < 0.98 && u > 0.02 && u < 0.98;
   }
 
+  function angleBetweenDirections(ax, ay, bx, by, cx, cy) {
+    const v1x = bx - ax;
+    const v1y = by - ay;
+    const v2x = cx - ax;
+    const v2y = cy - ay;
+    const l1 = Math.sqrt(v1x * v1x + v1y * v1y) || 1;
+    const l2 = Math.sqrt(v2x * v2x + v2y * v2y) || 1;
+    const dot = (v1x * v2x + v1y * v2y) / (l1 * l2);
+    const clamped = Math.max(-1, Math.min(1, dot));
+    return Math.acos(clamped);
+  }
+
   function buildRelationshipCornerAssignments() {
+    const OPPOSITE_ANGLE_THRESHOLD = (115 * Math.PI) / 180;
+    const OPPOSITE_PENALTY = 1e8;
+    const SMALL_ANGLE_OPPOSITE_PENALTY = 2e4;
     const assignments = new Map();
     const relationshipNodes = S().nodes.filter((node) => node.type === 'relationship');
 
@@ -603,7 +618,23 @@
             0,
           );
 
-          const score = crossings * 1e12 + totalDist;
+          let oppositePenalty = 0;
+          if (n === 2 && edgeData[0].otherId !== edgeData[1].otherId) {
+            const angle = angleBetweenDirections(
+              relCenter.x,
+              relCenter.y,
+              edgeData[0].cx,
+              edgeData[0].cy,
+              edgeData[1].cx,
+              edgeData[1].cy,
+            );
+            const shouldPreferOpposite = angle >= OPPOSITE_ANGLE_THRESHOLD;
+            const isOppositePair = Math.abs(candidate[0].corner.index - candidate[1].corner.index) === 2;
+            if (shouldPreferOpposite && !isOppositePair) oppositePenalty += OPPOSITE_PENALTY;
+            if (!shouldPreferOpposite && isOppositePair) oppositePenalty += SMALL_ANGLE_OPPOSITE_PENALTY;
+          }
+
+          const score = crossings * 1e12 + oppositePenalty + totalDist;
           if (score < bestScore) {
             bestScore = score;
             bestAssignment = candidate;
@@ -1345,11 +1376,108 @@
     }
   }
 
+  function buildRelationshipLabelSideAssignments(relationshipCornerAssignments) {
+    const OFFSET = 30;
+    const LABEL_OFFSET = 16;
+    const ENTITY_CLEARANCE = 24;
+    const sideAssignments = new Map();
+    const relationshipNodes = S().nodes.filter((node) => node.type === 'relationship');
+
+    relationshipNodes.forEach((relationshipNode) => {
+      const incidentEdges = S().edges.filter(
+        (edge) =>
+          isRelationshipEdge(edge) && (edge.fromId === relationshipNode.id || edge.toId === relationshipNode.id),
+      );
+      if (incidentEdges.length !== 2) return;
+
+      const edgeData = incidentEdges
+        .map((edge) => {
+          const entityId = edge.fromId === relationshipNode.id ? edge.toId : edge.fromId;
+          const entityNode = byId(entityId);
+          if (!entityNode || entityNode.type !== 'entity') return null;
+          const isSelfPair = getSelfPairEdges(relationshipNode.id, entityId).length === 2;
+          if (isSelfPair) return null;
+
+          const entityCenter = getNodeCenter(entityNode);
+          const relPoint =
+            relationshipCornerAssignments.get(`${edge.id}:${relationshipNode.id}`) ||
+            getEdgeEndpoint(relationshipNode, entityCenter.x, entityCenter.y);
+          const entityPoint = getEdgeEndpoint(entityNode, relPoint.x, relPoint.y);
+          const vx = entityPoint.x - relPoint.x;
+          const vy = entityPoint.y - relPoint.y;
+          const len = Math.sqrt(vx * vx + vy * vy) || 1;
+          const ux = vx / len;
+          const uy = vy / len;
+          const baseX = entityPoint.x - ux * OFFSET;
+          const baseY = entityPoint.y - uy * OFFSET;
+          const entityBounds = getNodeBounds(entityNode);
+          return { baseX, baseY, ux, uy, entityBounds };
+        })
+        .filter(Boolean);
+
+      if (edgeData.length !== 2) return;
+
+      const relCenter = getNodeCenter(relationshipNode);
+      const relBounds = getNodeBounds(relationshipNode);
+
+      const scoreForDirection = (dirX, dirY) => {
+        let score = 0;
+        edgeData.forEach(({ baseX, baseY, ux, uy, entityBounds }) => {
+          const normalA = { x: uy, y: -ux };
+          const normalB = { x: -uy, y: ux };
+          const dotA = normalA.x * dirX + normalA.y * dirY;
+          const dotB = normalB.x * dirX + normalB.y * dirY;
+          const chosen = dotA >= dotB ? normalA : normalB;
+          const normalX = chosen.x;
+          const normalY = chosen.y;
+          const preferred = {
+            x: baseX + normalX * LABEL_OFFSET,
+            y: baseY + normalY * LABEL_OFFSET,
+          };
+          const final = movePointToRectClearance(preferred, entityBounds, ENTITY_CLEARANCE, normalX, normalY);
+          const insideRel =
+            final.x >= relBounds.x - 8 &&
+            final.x <= relBounds.x + relBounds.w + 8 &&
+            final.y >= relBounds.y - 8 &&
+            final.y <= relBounds.y + relBounds.h + 8;
+          if (insideRel) score += 1e6;
+          const relToLabelX = final.x - relCenter.x;
+          const relToLabelY = final.y - relCenter.y;
+          const directionalProjection = relToLabelX * dirX + relToLabelY * dirY;
+          if (directionalProjection < 0) score += 1e5;
+          score += -directionalProjection * 100;
+          score += -Math.hypot(relToLabelX, relToLabelY);
+        });
+        return score;
+      };
+
+      const directionCandidates = [
+        { x: 1, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: -1 },
+        { x: 0, y: 1 },
+      ];
+      let bestDirection = directionCandidates[0];
+      let bestScore = Infinity;
+      directionCandidates.forEach((dir) => {
+        const dirScore = scoreForDirection(dir.x, dir.y);
+        if (dirScore < bestScore) {
+          bestScore = dirScore;
+          bestDirection = dir;
+        }
+      });
+      sideAssignments.set(relationshipNode.id, bestDirection);
+    });
+
+    return sideAssignments;
+  }
+
   function renderAll() {
     edgesLayer.innerHTML = '';
     nodesLayer.innerHTML = '';
     const relationshipCornerAssignments = buildRelationshipCornerAssignments();
-    S().edges.forEach((edge) => renderEdge(edge, relationshipCornerAssignments));
+    const relationshipLabelSideAssignments = buildRelationshipLabelSideAssignments(relationshipCornerAssignments);
+    S().edges.forEach((edge) => renderEdge(edge, relationshipCornerAssignments, relationshipLabelSideAssignments));
     S().nodes.forEach(renderNode);
     if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
 
@@ -1463,7 +1591,7 @@
     nodesLayer.appendChild(g);
   }
 
-  function renderEdge(edge, relationshipCornerAssignments) {
+  function renderEdge(edge, relationshipCornerAssignments, relationshipLabelSideAssignments) {
     const fromNode = byId(edge.fromId);
     const toNode = byId(edge.toId);
     if (!fromNode || !toNode) return;
@@ -1563,9 +1691,26 @@
 
       let normalX = -uy;
       let normalY = ux;
+      const sharedSide =
+        relNodeForPair && pairSide === 0 ? relationshipLabelSideAssignments.get(relNodeForPair.id) : null;
 
-      // Senkrechte Linien: Kardinalitaet immer rechts von der Linie.
-      if (isVerticalLine) {
+      if (sharedSide && Number.isFinite(sharedSide.x) && Number.isFinite(sharedSide.y)) {
+        const relPoint = relNodeForPair && fromNode.type === 'relationship' ? fp : tp;
+        const entPoint = relNodeForPair && fromNode.type === 'relationship' ? tp : fp;
+        const relDx = entPoint.x - relPoint.x;
+        const relDy = entPoint.y - relPoint.y;
+        const relLen = Math.sqrt(relDx * relDx + relDy * relDy) || 1;
+        const relUx = relDx / relLen;
+        const relUy = relDy / relLen;
+        const normalA = { x: relUy, y: -relUx };
+        const normalB = { x: -relUy, y: relUx };
+        const dotA = normalA.x * sharedSide.x + normalA.y * sharedSide.y;
+        const dotB = normalB.x * sharedSide.x + normalB.y * sharedSide.y;
+        const chosen = dotA >= dotB ? normalA : normalB;
+        normalX = chosen.x;
+        normalY = chosen.y;
+      } else if (isVerticalLine) {
+        // Senkrechte Linien: Kardinalitaet immer rechts von der Linie.
         normalX = 1;
         normalY = 0;
       } else {
