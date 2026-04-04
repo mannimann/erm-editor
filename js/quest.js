@@ -1316,7 +1316,17 @@
       number: 10,
       title: '🎉 Abschluss',
       theory: `<p><strong>Glückwunsch!</strong> Du hast die Überführung des ER-Modells in ein Relationenmodell erfolgreich abgeschlossen!</p>
-        <p>Du beherrschst jetzt: Relationen anlegen, Attribute übernehmen, Primärschlüssel setzen, 1:n-Beziehungen auflösen (FS auf n-Seite), 1:1-Beziehungen auflösen, n:m-Beziehungen in Hilfsrelationen auflösen, Beziehungsattribute übernehmen und Selbstbeziehungen modellieren.</p>`,
+        <p><strong>Du beherrschst jetzt:</strong></p>
+        <ul>
+          <li>Relationen anlegen</li>
+          <li>Attribute übernehmen</li>
+          <li>Primärschlüssel setzen</li>
+          <li>1:n-Beziehungen auflösen (FS auf n-Seite)</li>
+          <li>1:1-Beziehungen auflösen</li>
+          <li>n:m-Beziehungen in Hilfsrelationen auflösen</li>
+          <li>Beziehungsattribute übernehmen</li>
+          <li>Selbstbeziehungen modellieren</li>
+        </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
           <li>Klicke auf <strong>„JSON-Export"</strong> in der Seitenleiste und speichere die Datei</li>
@@ -1718,6 +1728,9 @@
     },
 
     hidePanel: function () {
+      if (window.App?.onQuestPanelClosing) {
+        window.App.onQuestPanelClosing(this.state);
+      }
       this.state.questsPanelVisible = false;
       if (window.AppState?.state) window.AppState.state.diagramLocked = false;
       this.persist();

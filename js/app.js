@@ -156,6 +156,7 @@ function buildPersistPayload() {
 }
 
 const QUEST_WORK_PREFIX = 'erm-editor-quest-work-v1';
+const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
 
 function getQuestWorkStorageKey(mode, questNumber) {
   const q = Number(questNumber) || 1;
@@ -241,7 +242,8 @@ function persistStateDebounced(delay = 260) {
     persistStateNow();
 
     const qMode = window.Quest?.state?.questMode || '';
-    if (qMode === 'grundlagen' || qMode === 'experten') {
+    const isQuestVisible = !!window.Quest?.state?.questsPanelVisible;
+    if ((qMode === 'grundlagen' || qMode === 'experten') && isQuestVisible) {
       const qNumber = window.Quest?.state?.currentQuestNumber || 1;
       saveErmSnapshot(getQuestWorkStorageKey(qMode, qNumber));
     }
@@ -1222,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const decision = await window.App?.showAppModal?.({
       title,
       message:
-        'Die Quest-Reihe wird gestartet. Alle bisher angezeigten Modelle werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
+        'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
       mode: 'confirm',
       confirmLabel: 'Starten',
       cancelLabel: 'Abbrechen',
@@ -1230,6 +1232,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!decision) return;
 
     window.App?.onBeforeQuestChange?.(window.Quest.state);
+
+    // Beim Start von ERM-Questreihen soll das Relationenmodell immer geleert sein.
+    // Wichtig: Erst den ggf. aktiven Quest-Stand sichern (onBeforeQuestChange),
+    // dann auf den normalen Persist-Key wechseln und nur den normalen RelModel-Stand leeren.
+    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(RELMODEL_PERSIST_KEY);
+    if (window.RelModel?.reset) window.RelModel.reset();
+    if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(false);
+
     window.Quest.startQuestSeries(mode);
     const quest = window.Quest.getCurrentQuest?.();
     await window.App?.onQuestChanged?.(quest, window.Quest.state);
@@ -1259,7 +1269,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const decision = await window.App?.showAppModal?.({
         title: 'Relationenmodell – Grundlagen',
         message:
-          'Die Quest-Reihe wird gestartet. Alle bisher angezeigten Modelle werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
+          'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
         mode: 'confirm',
         confirmLabel: 'Starten',
         cancelLabel: 'Abbrechen',
@@ -1296,7 +1306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const decision = await window.App?.showAppModal?.({
         title: 'Relationenmodell – Experten',
         message:
-          'Die Quest-Reihe wird gestartet. Alle bisher angezeigten Modelle werden gelöscht. Falls vorhanden, wird der letzte Arbeitsstand der aktuellen Aufgabe automatisch geladen.',
+          'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird der letzte Arbeitsstand der aktuellen Aufgabe automatisch geladen.',
         mode: 'confirm',
         confirmLabel: 'Starten',
         cancelLabel: 'Abbrechen',
@@ -1432,9 +1442,12 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         if (window.App?.isQuestCheckSuppressed?.()) return;
         const qMode = window.Quest.state?.questMode || '';
+        const currentQuestNumber = Number(window.Quest.state?.currentQuestNumber || 1);
         if (qMode.startsWith('relmodel-')) {
-          if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
-          if (window.RelModel?.triggerCheck) window.RelModel.triggerCheck();
+          const shouldAutoOpenDrawer = !(qMode === 'relmodel-grundlagen' && currentQuestNumber === 1);
+          const shouldTriggerRelmodelCheck = !(qMode === 'relmodel-grundlagen' && currentQuestNumber === 1);
+          if (shouldAutoOpenDrawer && window.RelModel?.openDrawer) window.RelModel.openDrawer();
+          if (shouldTriggerRelmodelCheck && window.RelModel?.triggerCheck) window.RelModel.triggerCheck();
         }
         window.Quest.validateCurrentQuest(true);
         return;
@@ -1670,6 +1683,8 @@ window.App = {
 
   onBeforeQuestChange(questState) {
     const mode = questState?.questMode || '';
+    const isVisible = !!questState?.questsPanelVisible;
+    if (!mode || !isVisible) return;
     const currentNumber = Number(questState?.currentQuestNumber || 1);
     const storageKey = getQuestWorkStorageKey(mode, currentNumber);
     if (!storageKey) return;
@@ -1682,6 +1697,27 @@ window.App = {
     if (mode === 'relmodel-grundlagen' || mode === 'relmodel-experten') {
       if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
       if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
+    }
+  },
+
+  onQuestPanelClosing(questState) {
+    const mode = questState?.questMode || '';
+    const currentNumber = Number(questState?.currentQuestNumber || 1);
+    const storageKey = getQuestWorkStorageKey(mode, currentNumber);
+    if (!storageKey) return;
+
+    if (mode === 'grundlagen' || mode === 'experten') {
+      saveErmSnapshot(storageKey);
+      persistStateNow();
+      return;
+    }
+
+    if (mode === 'relmodel-grundlagen' || mode === 'relmodel-experten') {
+      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+      if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
+      persistStateNow();
+      if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(RELMODEL_PERSIST_KEY);
+      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(RELMODEL_PERSIST_KEY);
     }
   },
 
