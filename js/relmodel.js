@@ -66,6 +66,34 @@
     return false;
   }
 
+  /**
+   * Prüft ob ein Schüler-Attributname dem Basis-PK einer Selbstbeziehung entspricht.
+   * Erlaubt exakten Treffer oder Prä-/Postfix mit - oder _ als Trennzeichen (Affix min. 2 Zeichen).
+   */
+  function selfRefFkRawNameMatchesBase(studentRaw, basePkRaw) {
+    const sNorm = normAttr(studentRaw);
+    const baseNorm = normAttr(basePkRaw);
+    if (sNorm === baseNorm) return true;
+    const sRaw = stripForeignKeyMarker(studentRaw).toLowerCase().trim();
+    const baseRawClean = stripForeignKeyMarker(basePkRaw).toLowerCase().trim();
+    // Postfix: base + sep + affix
+    if (sRaw.startsWith(baseRawClean) && sRaw.length > baseRawClean.length + 1) {
+      const sep = sRaw[baseRawClean.length];
+      if (sep === '-' || sep === '_') return true;
+    }
+    // Direkter numerischer Postfix ohne Trennzeichen: base + Ziffernfolge (z. B. schülernr1, schülernr2)
+    if (sRaw.startsWith(baseRawClean) && sRaw.length > baseRawClean.length) {
+      const suffix = sRaw.slice(baseRawClean.length);
+      if (/^\d+$/.test(suffix)) return true;
+    }
+    // Präfix: affix + sep + base
+    if (sRaw.endsWith(baseRawClean) && sRaw.length > baseRawClean.length + 1) {
+      const sep = sRaw[sRaw.length - baseRawClean.length - 1];
+      if (sep === '-' || sep === '_') return true;
+    }
+    return false;
+  }
+
   function sortAttrsPrimaryFirst(attrs) {
     return attrs.sort((a, b) => {
       if (!!a.isPk !== !!b.isPk) return a.isPk ? -1 : 1;
@@ -194,10 +222,17 @@
       return 'M:N';
     }
 
-    // Primärschlüssel einer Entität (Attributname)
+    // Primärschlüssel einer Entität (erster Attributname, Fallback)
     function getPkAttr(entityId) {
       const attrs = getAttrs(entityId).filter((a) => a.isPrimaryKey);
       return attrs.length > 0 ? attrs[0].name : null;
+    }
+
+    // Alle Primärschlüssel-Attributnamen einer Entität (für Verbundschlüssel)
+    function getPkAttrs(entityId) {
+      return getAttrs(entityId)
+        .filter((a) => a.isPrimaryKey)
+        .map((a) => a.name);
     }
 
     // Ergebnis-Relationen (als Map: key → { name, attrs })
@@ -432,15 +467,17 @@
           if (entity && pk) {
             addAttr(mnRel, pk + '1', true, true, entity.name + '1');
             addAttr(mnRel, pk + '2', true, true, entity.name + '2');
+            mnRel._hasSelfRefFks = true;
+            mnRel._selfRefBasePk = pk;
           }
         } else {
-          // Normale M:N-Beziehung
-          entityEdges.forEach((e, idx) => {
+          // Normale M:N-Beziehung: alle PK-Attribute der beteiligten Entitäten als FK übernehmen
+          entityEdges.forEach((e) => {
             const entityId = e.fromId === rel.id ? e.toId : e.fromId;
             const entity = getNode(entityId);
             if (!entity) return;
-            const pk = getPkAttr(entityId);
-            if (pk) addAttr(mnRel, pk, true, true, entity.name);
+            const pks = getPkAttrs(entityId);
+            pks.forEach((pk) => addAttr(mnRel, pk, true, true, entity.name));
           });
         }
         relAttrs.forEach((a) => addRelationshipAttr(mnRel, rel.name, a.name));
@@ -465,11 +502,11 @@
           nSide = getNode(ids[1]);
         }
 
-        const onePk = getPkAttr(oneSide.id);
-        if (onePk) {
-          // FS in N-Seite eintragen (FS markiert, kein PS)
-          addAttr(ensureEntityRelation(nSide.name), onePk, false, true, oneSide.name);
-        }
+        // Alle PK-Attribute der 1-Seite (Verbundschlüssel) als FK in N-Seite eintragen
+        const onePks = getPkAttrs(oneSide.id);
+        onePks.forEach((pk) => {
+          addAttr(ensureEntityRelation(nSide.name), pk, false, true, oneSide.name);
+        });
         // Eigene Beziehungsattribute in N-Seite
         relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(nSide.name), rel.name, a.name));
       } else if (type === '1:1') {
@@ -1156,6 +1193,28 @@
           if (!matchesFk)
             extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${(rawName || '').trim()}</em> ist nicht erwartet.`);
         });
+      // Selbstbeziehung: Prüfung mit Basis-PK und Prä-/Postfix-Logik (Trennzeichen - oder _)
+      if (solRel._hasSelfRefFks) {
+        const basePk = solRel._selfRefBasePk || '';
+        const validSelfFkAttrs = studRel.attrs.filter(
+          (a) => a.isPk && a.isFk && selfRefFkRawNameMatchesBase(a.name, basePk),
+        );
+        if (validSelfFkAttrs.length < 2) {
+          pkErrors.push(
+            `@@REL:${solRel.name}@@Markiere mindestens 2 Attribute als PS und FS, die auf „${basePk}" basieren (z. B. ${basePk}-2 oder ${basePk}2).`,
+          );
+        }
+        // Überflüssige PS+FS-Attribute (nicht zum Basis-PK passend)
+        studRel.attrs
+          .filter((a) => (a.isPk || a.isFk) && !selfRefFkRawNameMatchesBase(a.name, basePk))
+          .forEach((a) => {
+            pkWarnings.push(
+              `@@REL:${solRel.name}@@<em>${(a.name || '').trim()}</em> passt nicht zum erwarteten Basis-Primärschlüssel „${basePk}".`,
+            );
+          });
+        return;
+      }
+
       // Primärschlüssel-Prüfung
       const solPkAttrs = solRel.attrs.filter((a) => a.isPk);
       const studPkAttrs = studRel.attrs.filter((a) => a.isPk);
