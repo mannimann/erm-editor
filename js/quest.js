@@ -1116,7 +1116,7 @@
       id: 1,
       number: 1,
       title: 'Seitenleiste öffnen',
-      theory: `<p><strong>Relationenmodell:</strong> Im Relationenmodell werden Daten in Tabellen (Relationen) organisiert. Jede Tabelle hat Spalten (Attribute) und Zeilen (Tupel). Primärschlüssel identifizieren jede Zeile eindeutig.</p>
+      theory: `<p><strong>Relationenmodell:</strong> Im Relationenmodell werden Daten in Tabellen (Relationen) organisiert. Jede Tabelle hat Spalten (Attribute) und Zeilen (Datensätze). Primärschlüssel identifizieren jede Zeile eindeutig.</p>
         <p>Die Überführung eines ER-Modells in ein Relationenmodell ist ein wichtiger Schritt beim Datenbank-Entwurf.</p>`,
       objective: `<p>Öffne die Relationenmodell-Seitenleiste, um mit der Überführung zu beginnen.</p>
         <p>Klicke dazu auf den Button <strong>„🗃 Relationenmodell"</strong> oben rechts in der Tab-Leiste.</p>`,
@@ -1210,6 +1210,7 @@
       number: 5,
       title: '1:n-Beziehung „geht in"',
       theory: `<p><strong>1:n-Beziehung auflösen:</strong> Bei einer 1:n-Beziehung wird der Primärschlüssel der 1-Seite als <strong>Fremdschlüssel (FS)</strong> in die Relation der n-Seite aufgenommen.</p>
+        <p>Wichtig: Hat die 1-Seite einen <strong>Verbundschlüssel</strong>, wird <strong>immer der gesamte Primärschlüssel</strong> als Fremdschlüssel übernommen, also <strong>alle</strong> beteiligten Attribute.</p>
         <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Klassenstufe, Parallelklasse) wird als FS in die Relation Schüler aufgenommen.</p>`,
       objective: `<p>Löse die 1:n-Beziehung „geht in" (Schüler n : 1 Klasse) auf.</p>
         <p>Füge bei der Relation <strong>„Schüler"</strong> die Fremdschlüssel <strong>„Klassenstufe"</strong> und <strong>„Parallelklasse"</strong> hinzu und markiere sie als <strong>Fremdschlüssel (FS)</strong>.</p>`,
@@ -1229,7 +1230,8 @@
       id: 6,
       number: 6,
       title: '1:1-Beziehung „ist Klassensprecher"',
-      theory: `<p><strong>1:1-Beziehung auflösen:</strong> Bei einer 1:1-Beziehung wird der Primärschlüssel einer Seite als Fremdschlüssel in die andere Seite aufgenommen. In welche Richtung ist frei wählbar.</p>`,
+      theory: `<p><strong>1:1-Beziehung auflösen:</strong> Bei einer 1:1-Beziehung wird der Primärschlüssel <em>einer</em> Seite als Fremdschlüssel in die <em>andere</em> Seite aufgenommen.</p>
+        <p>Die Richtung ist frei wählbar – entweder Seite A bekommt den Fremdschlüssel von B, oder umgekehrt. <br><strong>Wichtig:</strong> Es wird immer nur <strong>eine</strong> Richtung gewählt, nicht beide gleichzeitig.</p>`,
       objective: `<p>Löse die 1:1-Beziehung „ist Klassensprecher" (Schüler 1 : 1 Klasse) auf.</p>
         <p>Füge bei der Relation <strong>„Klasse"</strong> den Fremdschlüssel <strong>„SchülerNr"</strong> hinzu und markiere ihn als <strong>FS</strong>.</p>
         <p><em>Alternativ könntest du auch Klassenstufe + Parallelklasse als FS in Schüler einfügen – hier verwenden wir die Variante mit SchülerNr in Klasse.</em></p>`,
@@ -1247,7 +1249,7 @@
       number: 7,
       title: 'n:m-Beziehung „unterrichtet"',
       theory: `<p><strong>n:m-Beziehung auflösen:</strong> Eine n:m-Beziehung kann nicht direkt in eine bestehende Relation aufgenommen werden. Stattdessen wird eine <strong>neue Hilfsrelation</strong> (auch: Zwischentabelle) erstellt.</p>
-        <p>Die Hilfsrelation erhält die Primärschlüssel beider beteiligten Entitätsklassen als Fremdschlüssel. Zusammen bilden diese den <strong>Verbundschlüssel</strong> (PS + FS) der Hilfsrelation.</p>`,
+        <p>Die Hilfsrelation erhält die Primärschlüssel beider beteiligten Entitätsklassen als <strong>Fremdschlüssel</strong>. Zusammen bilden diese den <strong>Primärschlüssel (Verbundschlüssel)</strong> der Hilfsrelation.</p>`,
       objective: `<p>Löse die n:m-Beziehung „unterrichtet" (Lehrer n : m Klasse) auf.</p>
         <ol>
           <li>Erstelle eine neue Relation <strong>„unterrichtet"</strong></li>
@@ -1273,7 +1275,8 @@
       number: 8,
       title: 'Beziehungsattribut „Fach"',
       theory: `<p><strong>Beziehungsattribute:</strong> Attribute, die im ER-Modell an einer Beziehung hängen, werden in die entsprechende Hilfsrelation (bei n:m) oder in die Relation der n-Seite (bei 1:n) übernommen.</p>
-        <p>Das Attribut „Fach" gehört zur Beziehung „unterrichtet" und wird daher in die Hilfsrelation „unterrichtet" aufgenommen.</p>`,
+        <p>Das Attribut „Fach" gehört zur Beziehung „unterrichtet" und wird daher in die Hilfsrelation „unterrichtet" aufgenommen.</p>
+        <p><strong>Faustregel:</strong> Beziehungsattribute wandern immer dorthin, wo auch die Fremdschlüssel hin wandern.</p>`,
       objective: `<p>Füge das Beziehungsattribut zur Hilfsrelation hinzu.</p>
         <p>Ergänze bei der Relation <strong>„unterrichtet"</strong> das Attribut <strong>„Fach"</strong>.</p>
         <p><em>Beziehungsattribute sind reguläre Attribute – kein PS und kein FS.</em></p>`,
@@ -1558,10 +1561,19 @@
             return { passed: true };
           }
 
-          // Manuelle Wiederholung: Erfolg anzeigen, aber Fortschritt nicht verändern
+          // Manuelle Wiederholung: Erfolg anzeigen, dann zur nächsten Quest navigieren
           if (isAlreadyCompleted && forceRecheck) {
             window.App?.showQuestSuccessModal?.(quest.number, () => {
+              const nextNumber = quest.number + 1;
+              if (nextNumber <= maxQuests && nextNumber !== this.state.currentQuestNumber) {
+                this.state.currentQuestNumber = nextNumber;
+                if (!this.state.unlockedQuests.includes(nextNumber)) {
+                  this.state.unlockedQuests.push(nextNumber);
+                }
+                this.persist();
+              }
               this.renderPanel();
+              if (window.App?.updateQuestDots) window.App.updateQuestDots();
             });
             return { passed: true };
           }
