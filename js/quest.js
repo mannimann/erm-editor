@@ -557,22 +557,10 @@
       id: 7,
       number: 7,
       title: 'Dritte Entitätsklasse',
-      theory: `<p><strong>Erweitern des Modells:</strong> Ein ER-Modell kann mehrere Entitätsklassen enthalten.</p>`,
-      objective: `<p>Erstelle eine neue Entitätsklasse mit dem Namen <strong>"Lehrer"</strong></p>`,
-      validator: function () {
-        if (countEntities() !== 3) return { passed: false, error: 'Du brauchst jetzt genau 3 Entitätsklassen' };
-        const lehrer = getEntityByName('Lehrer');
-        if (!lehrer) return { passed: false, error: 'Entitätsklasse "Lehrer" existiert nicht' };
-        return { passed: true };
-      },
-    },
-    {
-      id: 8,
-      number: 8,
-      title: 'Primärschlüssel für Lehrer',
-      theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen müssen einen Primärschlüssel haben. Für Lehrer verwenden wir ein kurzes Kürzel als Kennzeichnung (z.B. MUS, MAN, BER).</p>`,
+      theory: `<p><strong>Erweitern des Modells:</strong> Ein ER-Modell kann mehrere Entitätsklassen enthalten. Alle Entitätsklassen müssen einen Primärschlüssel haben. Für Lehrer verwenden wir ein kurzes Kürzel als Kennzeichnung (z.B. MUS, MAN, BER).</p>`,
       objective: `<ol>
-          <li>Erstelle drei Attribute bei der Entitätsklasse <strong>"Lehrer"</strong>:
+          <li>Erstelle eine neue Entitätsklasse mit dem Namen <strong>"Lehrer"</strong></li>
+          <li>Füge drei Attribute hinzu:
             <ul>
               <li><strong>"Lehrer-Kürzel"</strong></li>
               <li><strong>"Vorname"</strong></li>
@@ -582,6 +570,7 @@
           <li>Markiere nur <strong>"Lehrer-Kürzel"</strong> als Primärschlüssel</li>
         </ol>`,
       validator: function () {
+        if (countEntities() !== 3) return { passed: false, error: 'Du brauchst jetzt genau 3 Entitätsklassen' };
         const lehrer = getEntityByName('Lehrer');
         if (!lehrer) return { passed: false, error: 'Entitätsklasse "Lehrer" existiert nicht' };
         const attr = getAttributeByName(lehrer.id, 'Lehrer-Kürzel');
@@ -596,8 +585,8 @@
       },
     },
     {
-      id: 9,
-      number: 9,
+      id: 8,
+      number: 8,
       title: 'Zweite Beziehung',
       theory: `<p><strong>Mehrere Beziehungen:</strong> Entitätsklassen können mit mehreren anderen Entitätsklassen in Beziehung stehen.</p>
         <p><strong>Kardinalität:</strong> Beschreibt, wie viele Instanzen an jeder Seite beteiligt sind:</p>  
@@ -636,8 +625,8 @@
       },
     },
     {
-      id: 10,
-      number: 10,
+      id: 9,
+      number: 9,
       title: 'Beziehungsattribute',
       theory: `<p><strong>Beziehungsattribute:</strong> Auch Beziehungen können Attribute haben! Ein Beispiel: Die Beziehung "unterrichtet" kann das Attribut "Fach" besitzen, um das in dieser Klasse unterrichtete Fach festzuhalten.</p>`,
       objective: `<ol>
@@ -653,8 +642,8 @@
       },
     },
     {
-      id: 11,
-      number: 11,
+      id: 10,
+      number: 10,
       title: 'Weitere Beziehung ergänzen',
       theory: `<p><strong>Zusätzliche Beziehung:</strong> Zwischen denselben Entitätsklassen kann es mehrere unterschiedliche Beziehungen geben, wenn sie verschiedene Bedeutungen haben. Zwischen zwei Entitätsklassen sind also mehr als eine Beziehung möglich.</p>`,
       objective: `<ol>
@@ -687,8 +676,8 @@
       },
     },
     {
-      id: 12,
-      number: 12,
+      id: 11,
+      number: 11,
       title: 'Selbstbeziehung',
       theory: `<p><strong>Selbstbeziehung:</strong> Eine Entitätsklasse kann auch mit sich selbst in Beziehung stehen! Beide Seiten der Beziehung zeigen dann auf dieselbe Entitätsklasse.</p>
         <p><strong>Beispiel:</strong> Ein Schüler kann mit mehreren anderen Schülern befreundet sein – und ein anderer Schüler kann ebenfalls mit vielen befreundet sein. Das ist eine n:m-Selbstbeziehung innerhalb von "Schüler".</p>`,
@@ -729,8 +718,8 @@
       },
     },
     {
-      id: 13,
-      number: 13,
+      id: 12,
+      number: 12,
       title: '🎉 Abschluss',
       theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
         <p><strong>Du hast gelernt:</strong></p>
@@ -751,7 +740,7 @@
         </ol>
         <p>Danach kannst du die Expertenquests im Menü starten!</p>`,
       validator: function () {
-        // Quest 13 ist immer erfolgreich als Abschluss-Screen
+        // Quest 12 ist immer erfolgreich als Abschluss-Screen
         return { passed: true };
       },
     },
