@@ -47,7 +47,7 @@
       "type": "attribute",
       "x": 120,
       "y": 0,
-      "name": "Parallelklasse",
+      "name": "Bezeichnung",
       "isPrimaryKey": true
     },
     {
@@ -103,8 +103,8 @@
       "type": "attribute",
       "x": -20,
       "y": 20,
-      "name": "Klassenstufe",
-      "isPrimaryKey": true
+      "name": "Klassenraum",
+      "isPrimaryKey": false
     },
     {
       "id": "s44",

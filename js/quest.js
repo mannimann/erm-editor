@@ -488,29 +488,29 @@
     {
       id: 5,
       number: 5,
-      title: 'Verbundschlüssel',
-      theory: `<p><strong>Verbundschlüssel:</strong> Manchmal werden mehrere Attribute kombiniert, um eine Entität eindeutig zu identifizieren. Für Schulklassen verwenden wir Klassenstufe + Parallelklasse (z.B. 5a, 5b, 10c).</p>
-        <p>Diese beiden Attribute zusammen bilden den eindeutigen Identifier einer Klasse.</p>`,
+      title: 'Attribute für Klasse',
+      theory: `<p><strong>Konsistenz:</strong> Alle Entitätsklassen müssen einen Primärschlüssel haben. Für "Klasse" verwenden wir die Bezeichnung als eindeutiges Merkmal (z.B. 9a, 10c).</p>
+      <p><strong>Ausblick "Verbundschlüssel:"</strong> Manchmal werden mehrere Attribute kombiniert, um eine Entität eindeutig zu identifizieren. Man könnte die Bezeichnung aufspalten in Klassenstufe (z.B. 9, 10) + Parallelklasse (z.B. a, b, c). Diese beiden Attribute zusammen bilden den eindeutigen Identifier einer Klasse.</p>`,
       objective: `<ol>
           <li>Erstelle zwei Attribute bei der Entitätsklasse <strong>"Klasse"</strong>:
             <ul>
-              <li><strong>"Klassenstufe"</strong></li>
-              <li><strong>"Parallelklasse"</strong></li>
+              <li><strong>"Bezeichnung"</strong></li>
+              <li><strong>"Klassenraum"</strong></li>
             </ul>
           </li>
-          <li>Markiere <strong>BEIDE</strong> als Primärschlüssel</li>
+          <li>Markiere nur <strong>"Bezeichnung"</strong> als Primärschlüssel</li>
         </ol>`,
       validator: function () {
         const klasse = getEntityByName('Klasse');
         if (!klasse) return { passed: false, error: 'Entitätsklasse "Klasse" existiert nicht' };
-        const klassenstufe = getAttributeByName(klasse.id, 'Klassenstufe');
-        const parallelklasse = getAttributeByName(klasse.id, 'Parallelklasse');
-        if (!klassenstufe) return { passed: false, error: 'Attribut "Klassenstufe" fehlt' };
-        if (!parallelklasse) return { passed: false, error: 'Attribut "Parallelklasse" fehlt' };
-        if (!klassenstufe.isPrimaryKey)
-          return { passed: false, error: '"Klassenstufe" muss als Primärschlüssel markiert sein' };
-        if (!parallelklasse.isPrimaryKey)
-          return { passed: false, error: '"Parallelklasse" muss als Primärschlüssel markiert sein' };
+        const bezeichnung = getAttributeByName(klasse.id, 'Bezeichnung');
+        const klassenraum = getAttributeByName(klasse.id, 'Klassenraum');
+        if (!bezeichnung) return { passed: false, error: 'Attribut "Bezeichnung" fehlt' };
+        if (!klassenraum) return { passed: false, error: 'Attribut "Klassenraum" fehlt' };
+        if (!bezeichnung.isPrimaryKey)
+          return { passed: false, error: '"Bezeichnung" muss als Primärschlüssel markiert sein' };
+        if (klassenraum.isPrimaryKey)
+          return { passed: false, error: '"Klassenraum" darf nicht als Primärschlüssel markiert sein' };
         return { passed: true };
       },
     },
@@ -821,27 +821,28 @@
     {
       id: 3,
       number: 3,
-      title: 'Universität / Studiendekan',
-      szenario: `<p>Ein Universitätssystem soll so modelliert werden, dass klar sichtbar wird, welche Studenten an welchen Vorlesungen teilnehmen und welcher Professor die jeweilige Lehrveranstaltung verantwortet. Für die Studierenden sollen Matrikelnummer, Vorname, Nachname und E-Mail erfasst werden. Für jede Vorlesung werden Vorlesungscode, Titel, Kreditpunkte und Wochenstunden gespeichert. Professoren werden mit ProfessorenKürzel, Name und Fachgebiet geführt.</p>
-        <p>Damit die Teilnahme historisch nachvollziehbar bleibt, soll jede einzelne Teilnahme als eigener Vorgang erfasst werden. Dafür wird eine Belegung mit Belegnummer, Semester, Status und Note gespeichert. Ein Student kann im Laufe seines Studiums mehrere Belegungen haben, jede Belegung gehört aber genau zu einem Studenten (belegt). Eine Vorlesung kann in vielen Belegungen vorkommen, jede einzelne Belegung bezieht sich jedoch auf genau eine Vorlesung (gilt für). Ein Professor kann mehrere Vorlesungen unterrichten, während jede Vorlesung genau einem Professor zugeordnet ist (unterrichtet).</p>`,
+      title: 'Fußball-Turnier',
+      szenario: `<p>Ein Schulturnier soll so modelliert werden, dass klar sichtbar wird, welche Spieler in welchen Teams spielen, welcher Trainer welches Team betreut und welche Teams an welchen Spielen beteiligt sind. Für Spieler werden SpielerNr, Name und Position erfasst. Teams werden über Teamname eindeutig identifiziert; zusätzlich werden Altersklasse und Ort gespeichert. Spiele werden mit SpielID, Datum, Heimtore und Gasttore geführt. Trainer werden mit TrainerNr, Name und Lizenz verwaltet.</p>
+        <p>Damit die Organisation des Turniers nachvollziehbar bleibt, werden mehrere Beziehungen benötigt. Ein Trainer kann mehrere Teams trainieren, jedes Team hat jedoch genau einen Trainer (trainiert). Ein Spieler spielt in genau einem Team, während ein Team viele Spieler haben kann (spielt in). Zusätzlich wird die Teamführung erfasst: Ein Team hat genau einen Kapitän und ein Spieler kann Kapitän genau eines Teams sein (ist Kapitän). Auch die Spielteilnahmen sollen abgebildet werden: Ein Team kann viele Spiele bestreiten, und ein Spiel wird von mehreren Teams bestritten (bestreitet).</p>`,
       masterlösung: {
-        entities: ['Student', 'Vorlesung', 'Professor', 'Belegung'],
+        entities: ['Spieler', 'Team', 'Spiel', 'Trainer'],
         attributes: {
-          Student: ['Matrikelnummer', 'Vorname', 'Nachname', 'E-Mail'],
-          Vorlesung: ['Vorlesungscode', 'Titel', 'Kreditpunkte', 'Wochenstunden'],
-          Professor: ['ProfessorenKürzel', 'Name', 'Fachgebiet'],
-          Belegung: ['Belegnummer', 'Semester', 'Status', 'Note'],
+          Spieler: ['SpielerNr', 'Name', 'Position'],
+          Team: ['Teamname', 'Altersklasse', 'Ort'],
+          Spiel: ['SpielID', 'Datum', 'Heimtore', 'Gasttore'],
+          Trainer: ['TrainerNr', 'Name', 'Lizenz'],
         },
         primaryKeys: {
-          Student: 'Matrikelnummer',
-          Vorlesung: 'Vorlesungscode',
-          Professor: 'ProfessorenKürzel',
-          Belegung: 'Belegnummer',
+          Spieler: 'SpielerNr',
+          Team: 'Teamname',
+          Spiel: 'SpielID',
+          Trainer: 'TrainerNr',
         },
         relationships: [
-          { name: 'belegt', from: 'Student', to: 'Belegung', cardinality: '1:n' },
-          { name: 'gilt für', from: 'Vorlesung', to: 'Belegung', cardinality: '1:n' },
-          { name: 'unterrichtet', from: 'Professor', to: 'Vorlesung', cardinality: '1:n' },
+          { name: 'trainiert', from: 'Trainer', to: 'Team', cardinality: '1:n' },
+          { name: 'spielt in', from: 'Spieler', to: 'Team', cardinality: 'n:1' },
+          { name: 'ist Kapitän', from: 'Spieler', to: 'Team', cardinality: '1:1' },
+          { name: 'bestreitet', from: 'Team', to: 'Spiel', cardinality: 'n:m' },
         ],
       },
       validator: function () {
@@ -909,7 +910,7 @@
     {
       id: 6,
       number: 6,
-      title: 'Lehre und Hilfskräfte',
+      title: 'Universität',
       szenario: `<p>Eine Hochschule möchte ihre Lehrorganisation so modellieren, dass sichtbar wird, welche Dozenten welche Vorlesungen halten, welche Hilfskräfte sie dabei unterstützen und welche Seminare zu einer Vorlesung gehören. Für Dozent werden Dozentenkürzel, Name und Fachgebiet gespeichert. Für Student werden Matrikelnummer, Name, Telefonnummer und E-Mail erfasst. Nicht jeder Student arbeitet zusätzlich an der Hochschule, aber einige Studierende sind zugleich Hilfskraft. Für Hilfskraft sollen HiwiNummer, Wochenstunden und Vertragsbeginn gespeichert werden.</p>
         <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
         <p>Auch die Teilnahme der Studierenden soll abgebildet werden. Ein Student kann an mehreren Vorlesungen teilnehmen, und eine Vorlesung kann von vielen Studenten besucht werden (besucht). Dasselbe gilt für Seminare: Ein Student kann mehrere Seminare besuchen, und ein Seminar kann viele Studenten haben (nimmt teil an).</p>`,
@@ -1171,7 +1172,7 @@
       objective: `<p>Füge die Attribute der drei Entitätsklassen in die entsprechenden Relationen ein.</p>
         <ul>
           <li><strong>Schüler:</strong> SchülerNr, Vorname, Nachname</li>
-          <li><strong>Klasse:</strong> Klassenstufe, Parallelklasse</li>
+          <li><strong>Klasse:</strong> Bezeichnung, Klassenraum</li>
           <li><strong>Lehrer:</strong> Lehrer-Kürzel, Vorname, Nachname</li>
         </ul>`,
       validator: function () {
@@ -1179,7 +1180,7 @@
           if (!studentRelHasAttr('Schüler', attr))
             return { passed: false, error: `Attribut „${attr}" fehlt bei der Relation „Schüler".` };
         }
-        for (const attr of ['Klassenstufe', 'Parallelklasse']) {
+        for (const attr of ['Bezeichnung', 'Klassenraum']) {
           if (!studentRelHasAttr('Klasse', attr))
             return { passed: false, error: `Attribut „${attr}" fehlt bei der Relation „Klasse".` };
         }
@@ -1194,21 +1195,18 @@
       id: 4,
       number: 4,
       title: 'Primärschlüssel markieren',
-      theory: `<p><strong>Primärschlüssel (PS):</strong> Die Primärschlüssel aus dem ER-Modell werden auch im Relationenmodell als Primärschlüssel markiert. Sie identifizieren jede Zeile eindeutig.</p>
-        <p>Ein <strong>Verbundschlüssel</strong> besteht aus mehreren Attributen, die zusammen den Primärschlüssel bilden (z.B. Klassenstufe + Parallelklasse).</p>`,
+      theory: `<p><strong>Primärschlüssel (PS):</strong> Die Primärschlüssel aus dem ER-Modell werden auch im Relationenmodell als Primärschlüssel markiert. Sie identifizieren jeden Datensatz (Zeile in der Datenbank-Tabelle) eindeutig.</p>`,
       objective: `<p>Markiere die Primärschlüssel in den drei Relationen.</p>
         <ul>
           <li><strong>Schüler:</strong> SchülerNr (PS)</li>
-          <li><strong>Klasse:</strong> Klassenstufe + Parallelklasse (Verbundschlüssel, beide PS)</li>
+          <li><strong>Klasse:</strong> Bezeichnung (PS)</li>
           <li><strong>Lehrer:</strong> Lehrer-Kürzel (PS)</li>
         </ul>`,
       validator: function () {
         if (!studentRelAttrIsPk('Schüler', 'SchülerNr'))
           return { passed: false, error: '„SchülerNr" muss bei „Schüler" als Primärschlüssel markiert sein.' };
-        if (!studentRelAttrIsPk('Klasse', 'Klassenstufe'))
-          return { passed: false, error: '„Klassenstufe" muss bei „Klasse" als Primärschlüssel markiert sein.' };
-        if (!studentRelAttrIsPk('Klasse', 'Parallelklasse'))
-          return { passed: false, error: '„Parallelklasse" muss bei „Klasse" als Primärschlüssel markiert sein.' };
+        if (!studentRelAttrIsPk('Klasse', 'Bezeichnung'))
+          return { passed: false, error: '„Bezeichnung" muss bei „Klasse" als Primärschlüssel markiert sein.' };
         if (!studentRelAttrIsPk('Lehrer', 'Lehrer-Kürzel'))
           return { passed: false, error: '„Lehrer-Kürzel" muss bei „Lehrer" als Primärschlüssel markiert sein.' };
         return { passed: true };
@@ -1219,19 +1217,15 @@
       number: 5,
       title: '1:n-Beziehung „geht in"',
       theory: `<p><strong>1:n-Beziehung auflösen:</strong> Bei einer 1:n-Beziehung wird der Primärschlüssel der 1-Seite als <strong>Fremdschlüssel (FS)</strong> in die Relation der n-Seite aufgenommen.</p>
-        <p>Wichtig: Hat die 1-Seite einen <strong>Verbundschlüssel</strong>, wird <strong>immer der gesamte Primärschlüssel</strong> als Fremdschlüssel übernommen, also <strong>alle</strong> beteiligten Attribute.</p>
-        <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Klassenstufe, Parallelklasse) wird als FS in die Relation Schüler aufgenommen.</p>`,
-      objective: `<p>Löse die 1:n-Beziehung „geht in" (Schüler n : 1 Klasse) auf.</p>
-        <p>Füge bei der Relation <strong>„Schüler"</strong> die Fremdschlüssel <strong>„Klassenstufe"</strong> und <strong>„Parallelklasse"</strong> hinzu und markiere sie als <strong>Fremdschlüssel (FS)</strong>.</p>`,
+        <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Bezeichnung) wird als FS in die Relation Schüler aufgenommen.</p>`,
+      objective: `<p><strong>Beziehungen auflösen:</strong> Als nächstes müssen alle Beziehungen nacheinander aufgelöst werden, um die Zusammenhänge auch im Relationenmodell darzustellen.</p>
+        <p>Löse die 1:n-Beziehung <strong>„geht in"</strong> (Schüler n : 1 Klasse) auf.</p>
+        <p>Füge bei der Relation <strong>„Schüler"</strong> den Fremdschlüssel <strong>„Bezeichnung"</strong> hinzu und markiere ihn als <strong>Fremdschlüssel (FS)</strong>.</p>`,
       validator: function () {
-        if (!studentRelHasAttr('Schüler', 'Klassenstufe'))
-          return { passed: false, error: '„Klassenstufe" fehlt als Fremdschlüssel bei „Schüler".' };
-        if (!studentRelHasAttr('Schüler', 'Parallelklasse'))
-          return { passed: false, error: '„Parallelklasse" fehlt als Fremdschlüssel bei „Schüler".' };
-        if (!studentRelAttrIsFk('Schüler', 'Klassenstufe'))
-          return { passed: false, error: '„Klassenstufe" muss bei „Schüler" als Fremdschlüssel markiert sein.' };
-        if (!studentRelAttrIsFk('Schüler', 'Parallelklasse'))
-          return { passed: false, error: '„Parallelklasse" muss bei „Schüler" als Fremdschlüssel markiert sein.' };
+        if (!studentRelHasAttr('Schüler', 'Bezeichnung'))
+          return { passed: false, error: '„Bezeichnung" fehlt als Fremdschlüssel bei „Schüler".' };
+        if (!studentRelAttrIsFk('Schüler', 'Bezeichnung'))
+          return { passed: false, error: '„Bezeichnung" muss bei „Schüler" als Fremdschlüssel markiert sein.' };
         return { passed: true };
       },
     },
@@ -1241,9 +1235,9 @@
       title: '1:1-Beziehung „ist Klassensprecher"',
       theory: `<p><strong>1:1-Beziehung auflösen:</strong> Bei einer 1:1-Beziehung wird der Primärschlüssel <em>einer</em> Seite als Fremdschlüssel in die <em>andere</em> Seite aufgenommen.</p>
         <p>Die Richtung ist frei wählbar – entweder Seite A bekommt den Fremdschlüssel von B, oder umgekehrt. <br><strong>Wichtig:</strong> Es wird immer nur <strong>eine</strong> Richtung gewählt, nicht beide gleichzeitig.</p>`,
-      objective: `<p>Löse die 1:1-Beziehung „ist Klassensprecher" (Schüler 1 : 1 Klasse) auf.</p>
+      objective: `<p>Löse die 1:1-Beziehung <strong>„ist Klassensprecher"</strong> (Schüler 1 : 1 Klasse) auf.</p>
         <p>Füge bei der Relation <strong>„Klasse"</strong> den Fremdschlüssel <strong>„SchülerNr"</strong> hinzu und markiere ihn als <strong>FS</strong>.</p>
-        <p><em>Alternativ könntest du auch Klassenstufe + Parallelklasse als FS in Schüler einfügen – hier verwenden wir die Variante mit SchülerNr in Klasse.</em></p>`,
+        <p><em>Alternativ könntest du auch Bezeichnung als FS in Schüler einfügen – hier verwenden wir die Variante mit SchülerNr in Klasse.</em></p>`,
       validator: function () {
         // Akzeptiere beide Richtungen
         const klHatSchuelerNr = studentRelHasAttr('Klasse', 'SchülerNr') && studentRelAttrIsFk('Klasse', 'SchülerNr');
@@ -1258,17 +1252,17 @@
       number: 7,
       title: 'n:m-Beziehung „unterrichtet"',
       theory: `<p><strong>n:m-Beziehung auflösen:</strong> Eine n:m-Beziehung kann nicht direkt in eine bestehende Relation aufgenommen werden. Stattdessen wird eine <strong>neue Hilfsrelation</strong> (auch: Zwischentabelle) erstellt.</p>
-        <p>Die Hilfsrelation erhält die Primärschlüssel beider beteiligten Entitätsklassen als <strong>Fremdschlüssel</strong>. Zusammen bilden diese den <strong>Primärschlüssel (Verbundschlüssel)</strong> der Hilfsrelation.</p>`,
+        <p>Die Hilfsrelation erhält die Primärschlüssel <strong>beider beteiligten Entitätsklassen</strong> als <strong>Fremdschlüssel</strong>. Zusammen bilden diese den <strong>Primärschlüssel (Verbundschlüssel)</strong> der Hilfsrelation.</p>`,
       objective: `<p>Löse die n:m-Beziehung „unterrichtet" (Lehrer n : m Klasse) auf.</p>
         <ol>
           <li>Erstelle eine neue Relation <strong>„unterrichtet"</strong></li>
-          <li>Füge die Attribute <strong>„Lehrer-Kürzel"</strong>, <strong>„Klassenstufe"</strong> und <strong>„Parallelklasse"</strong> hinzu</li>
-          <li>Markiere alle drei als <strong>Primärschlüssel (PS)</strong> und <strong>Fremdschlüssel (FS)</strong></li>
+          <li>Füge die Attribute <strong>„Lehrer-Kürzel"</strong> und <strong>„Bezeichnung"</strong> hinzu</li>
+          <li>Markiere beide als <strong>Primärschlüssel (PS)</strong> und <strong>Fremdschlüssel (FS)</strong></li>
         </ol>`,
       validator: function () {
         const rel = getStudentRelByName('unterrichtet');
         if (!rel) return { passed: false, error: 'Relation „unterrichtet" fehlt.' };
-        for (const attr of ['Lehrer-Kürzel', 'Klassenstufe', 'Parallelklasse']) {
+        for (const attr of ['Lehrer-Kürzel', 'Bezeichnung']) {
           if (!studentRelHasAttr('unterrichtet', attr))
             return { passed: false, error: `Attribut „${attr}" fehlt bei „unterrichtet".` };
           if (!studentRelAttrIsPk('unterrichtet', attr))
@@ -1375,10 +1369,10 @@
     {
       id: 3,
       number: 3,
-      title: 'Universität',
-      szenario: `<p><strong>Überführe das ER-Modell «Universität» in das Relationenmodell.</strong></p>
+      title: 'Fußball-Turnier',
+      szenario: `<p><strong>Überführe das ER-Modell «Fußball-Turnier» in das Relationenmodell.</strong></p>
         <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
-      jsonFile: '03_universitaet.json',
+      jsonFile: '03_fussball.json',
       validator: function () {
         return window.RelModel?.checkAndGetResult?.() || { passed: false };
       },
@@ -1408,8 +1402,8 @@
     {
       id: 6,
       number: 6,
-      title: 'Lehre & Hilfskräfte',
-      szenario: `<p><strong>Überführe das ER-Modell «Lehre & Hilfskräfte» in das Relationenmodell.</strong></p>
+      title: 'Universität',
+      szenario: `<p><strong>Überführe das ER-Modell «Universität» in das Relationenmodell.</strong></p>
         <p>Erstelle die passenden Relationen in der Seitenleiste.</p>`,
       jsonFile: '06_universitaet2.json',
       validator: function () {
@@ -1579,8 +1573,6 @@
             });
             return { passed: true };
           }
-
-          // Manuelle Wiederholung: Erfolg anzeigen, dann zur nächsten Quest navigieren
           if (isAlreadyCompleted && forceRecheck) {
             window.App?.showQuestSuccessModal?.(quest.number, () => {
               const nextNumber = quest.number + 1;
