@@ -733,7 +733,16 @@
       number: 13,
       title: '🎉 Abschluss',
       theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
-        <p>Du hast gelernt: Entitätsklassen, Attribute, Primärschlüssel, Beziehungen, Kardinalitäten, Verbundschlüssel und Selbstbeziehungen zu modellieren.</p>`,
+        <p><strong>Du hast gelernt:</strong></p>
+        <ul>
+          <li>Entitätsklassen modellieren</li>
+          <li>Attribute hinzufügen</li>
+          <li>Primärschlüssel setzen</li>
+          <li>Beziehungen erstellen</li>
+          <li>Kardinalitäten festlegen</li>
+          <li>Verbundschlüssel verwenden</li>
+          <li>Selbstbeziehungen modellieren</li>
+        </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
           <li>Gib deinem ER-Modell in der Titelleiste einen <strong>Namen</strong> (z.B. "Schule")</li>
