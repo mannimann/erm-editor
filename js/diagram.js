@@ -2253,6 +2253,8 @@
       if (showTogglePk) {
         ctxTogglePk.textContent = node.isPrimaryKey ? 'Primärschlüssel entfernen' : 'Als Primärschlüssel markieren';
       }
+      ctxDelete.textContent =
+        node.type === 'entity' || node.type === 'relationship' ? 'Löschen (inkl. Attribute)' : 'Löschen';
     }
 
     ctxRename.style.display = showRename ? '' : 'none';
@@ -2509,8 +2511,22 @@
   });
 
   function deleteNode(nodeId) {
-    S().nodes = S().nodes.filter((n) => n.id !== nodeId);
-    S().edges = S().edges.filter((e) => e.fromId !== nodeId && e.toId !== nodeId);
+    const node = byId(nodeId);
+    // Beim Löschen einer Entität oder Beziehung: alle direkt verbundenen Attribut-Nodes mitlöschen
+    if (node && (node.type === 'entity' || node.type === 'relationship')) {
+      const attrIds = S()
+        .edges.filter((e) => e.edgeType === 'attribute' && (e.fromId === nodeId || e.toId === nodeId))
+        .map((e) => (e.fromId === nodeId ? e.toId : e.fromId))
+        .filter((id) => byId(id)?.type === 'attribute');
+      const attrIdSet = new Set(attrIds);
+      S().nodes = S().nodes.filter((n) => n.id !== nodeId && !attrIdSet.has(n.id));
+      S().edges = S().edges.filter(
+        (e) => e.fromId !== nodeId && e.toId !== nodeId && !attrIdSet.has(e.fromId) && !attrIdSet.has(e.toId),
+      );
+    } else {
+      S().nodes = S().nodes.filter((n) => n.id !== nodeId);
+      S().edges = S().edges.filter((e) => e.fromId !== nodeId && e.toId !== nodeId);
+    }
     deselectAll();
     renderAll();
     requestRelModelSync();

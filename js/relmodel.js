@@ -596,6 +596,7 @@
     } catch (_e) {
       /* ignore */
     }
+    window.App?.onRelmodelStudentChanged?.();
   }
 
   function loadStudentRelations(storageKey = _persistKey) {
@@ -1158,9 +1159,12 @@
         }
       }
     });
-    studentNames.forEach((sn) => {
-      if (!solutionNames.includes(sn))
-        extraRelations.push(`Relation <strong>${sn}</strong> ist nicht Teil der erwarteten Lösung.`);
+    _studentRelations.forEach((rel) => {
+      const normalizedName = normalizeRelationToken(rel.name);
+      if (!solutionNames.includes(normalizedName)) {
+        const displayName = String(rel.name || '').trim() || 'Unbenannte Relation';
+        extraRelations.push(`Relation <strong>${displayName}</strong> ist nicht Teil der erwarteten Lösung.`);
+      }
     });
 
     solution.forEach((solRel) => {
@@ -1266,7 +1270,7 @@
       });
     });
 
-    const hasErrors = missingRelations.length || missingAttrs.length || pkErrors.length;
+    const hasErrors = missingRelations.length || missingNmRelations.length || missingAttrs.length || pkErrors.length;
     const hasWarnings =
       extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length || fkOverWarnings.length;
     if (!hasErrors && !hasWarnings) {
@@ -1595,81 +1599,60 @@
   }
 
   function exportRelmodelPNG() {
-    const area = document.getElementById('student-relations-list');
-    if (!area || _studentRelations.length === 0) {
+    if (_studentRelations.length === 0) {
       window.App?.showAlertModal?.('Es sind keine Relationen zum Exportieren vorhanden.', 'Export nicht möglich');
       return;
     }
 
-    // Merke, welche Relationen Fehler haben (damit sie nachher wieder in Edit-Modus gehen)
-    const relationIdsWithErrors = _studentRelations.filter((rel) => rel.inlineError).map((rel) => rel.id);
+    if (typeof html2canvas !== 'function') {
+      window.App?.showAlertModal?.('html2canvas ist nicht verfügbar.', 'Export fehlgeschlagen');
+      return;
+    }
 
-    // Alle Relationen in den Preview-Modus setzen
+    // Temporären Export-Container aufbauen: nur die weißen Relation-Boxen, ohne graue Card-Header
+    const exportContainer = document.createElement('div');
+    exportContainer.style.cssText =
+      'position:fixed;left:-9999px;top:-9999px;background:#fff;padding:4px;width:fit-content;max-width:900px;';
+
     _studentRelations.forEach((rel) => {
-      removeEmptyAttrs(rel);
-      sortAttrsPrimaryFirst(rel.attrs);
-      rel.isEditing = false;
+      const relCopy = {
+        ...rel,
+        attrs: rel.attrs.map((a) => ({ ...a })),
+        isEditing: false,
+      };
+      removeEmptyAttrs(relCopy);
+      sortAttrsPrimaryFirst(relCopy.attrs);
+      const preview = buildRelationPreview(relCopy, false);
+      // Abstand zwischen den Boxen verringern: Padding des Wrappers und margin der Box reduzieren
+      preview.style.padding = '2px 0';
+      const box = preview.querySelector('.solution-relation');
+      if (box) box.style.marginBottom = '0';
+      exportContainer.appendChild(preview);
     });
-    renderStudentForm();
-    // Kurze Verzögerung damit das DOM-Update sichtbar wird
-    setTimeout(() => {
-      if (typeof html2canvas !== 'function') {
-        window.App?.showAlertModal?.('html2canvas ist nicht verfügbar.', 'Export fehlgeschlagen');
-        return;
-      }
 
-      // Temporärer CSS für Export: Buttons verstecken, Fehler verstecken und Breite optimieren
-      const styleId = 'relmodel-export-style-' + Date.now();
-      const styleEl = document.createElement('style');
-      styleEl.id = styleId;
-      styleEl.textContent = `
-        #student-relations-list {
-          width: fit-content;
-          max-width: 900px;
-        }
-        .relation-card-actions {
-          display: none !important;
-        }
-        .relation-inline-error {
-          display: none !important;
-        }
-      `;
-      document.head.appendChild(styleEl);
+    document.body.appendChild(exportContainer);
 
-      html2canvas(area, { backgroundColor: '#ffffff', scale: 2 })
-        .then((canvas) => {
-          canvas.toBlob((blob) => {
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const title = (window.AppState?.state?.diagramTitle || 'relationenmodell').replace(
-              /[^a-zA-Z0-9äöüÄÖÜß_\- ]/g,
-              '',
-            );
-            a.download = title + '.erm-editor-relmodel.png';
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(url), 3000);
-          }, 'image/png');
-        })
-        .catch(() => {
-          window.App?.showAlertModal?.('PNG-Export fehlgeschlagen. Bitte versuche es erneut.', 'Export fehlgeschlagen');
-        })
-        .finally(() => {
-          // Temporärer CSS entfernen
-          const style = document.getElementById(styleId);
-          if (style) style.remove();
-
-          // Relationen mit Fehlern zurück in den Edit-Modus setzen
-          _studentRelations.forEach((rel) => {
-            if (relationIdsWithErrors.includes(rel.id)) {
-              rel.isEditing = true;
-            }
-          });
-
-          // Seite neu rendern um original-Zustand wiederherzustellen
-          renderStudentForm();
-        });
-    }, 100);
+    html2canvas(exportContainer, { backgroundColor: '#ffffff', scale: 2 })
+      .then((canvas) => {
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const title = (window.AppState?.state?.diagramTitle || 'relationenmodell').replace(
+            /[^a-zA-Z0-9äöüÄÖÜß_\- ]/g,
+            '',
+          );
+          a.download = title + '.erm-editor-relmodel.png';
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 3000);
+        }, 'image/png');
+      })
+      .catch(() => {
+        window.App?.showAlertModal?.('PNG-Export fehlgeschlagen. Bitte versuche es erneut.', 'Export fehlgeschlagen');
+      })
+      .finally(() => {
+        document.body.removeChild(exportContainer);
+      });
   }
 
   // ======================================================================

@@ -1321,8 +1321,8 @@
         </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
-          <li>Klicke auf <strong>„JSON-Export"</strong> in der Seitenleiste und speichere die Datei</li>
-          <li>Klicke auf <strong>„PNG-Export"</strong> und speichere das Bild</li>
+          <li>Klicke in der Seitenleiste auf <strong>„JSON-Export"</strong> und speichere die Datei</li>
+          <li>Klicke in der Seitenleiste auf <strong>„PNG-Export"</strong> und speichere das Bild</li>
         </ol>
         <p>Danach kannst du die Relationenmodell-Expertenquests im Menü starten!</p>`,
       validator: function () {

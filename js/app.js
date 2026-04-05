@@ -263,20 +263,32 @@ function updateExpertChecklist() {
   const checklist = window.Quest.getChecklistStatus();
   if (!checklist) return;
 
-  const mapping = {
-    entities: checklist.entities,
-    relationships: checklist.relationships,
-    attributes: checklist.attributes,
-    primaryKeys: checklist.primaryKeys,
-  };
+  const mode = window.Quest?.state?.questMode || '';
+  const mapping =
+    mode === 'relmodel-experten'
+      ? {
+          relations: checklist.relations,
+          attributes: checklist.attributes,
+          primaryKeys: checklist.primaryKeys,
+          foreignKeys: checklist.foreignKeys,
+        }
+      : {
+          entities: checklist.entities,
+          relationships: checklist.relationships,
+          attributes: checklist.attributes,
+          primaryKeys: checklist.primaryKeys,
+        };
   const labels = {
     entities: 'Entitätsklassen',
     relationships: 'Beziehungen',
     attributes: 'Attribute',
     primaryKeys: 'Primärschlüssel',
+    relations: 'Relationen',
+    foreignKeys: 'Fremdschlüssel',
   };
 
   for (const [key, data] of Object.entries(mapping)) {
+    if (!data) continue;
     const row = checklistEl.querySelector(`[data-checklist-key="${key}"]`);
     if (!row) continue;
     const allDone = data.done === data.total;
@@ -293,7 +305,7 @@ function updateExpertChecklist() {
     const icon = row.querySelector('.quest-checklist-icon');
     if (icon) icon.textContent = allDone ? '✓' : '✗';
     const label = row.querySelector('.quest-checklist-label');
-    if (label) label.textContent = `${labels[key]} (${data.done}/${data.total})`;
+    if (label) label.textContent = `${labels[key] || key} (${data.done}/${data.total})`;
   }
 }
 
@@ -1350,6 +1362,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (qMode === 'grundlagen' || qMode === 'experten') {
           // Leere ERM-Diagramm für Grundlagen und Experten
           clearDiagramSilent();
+          if (qMode === 'experten') {
+            const firstQuest = window.Quest.getCurrentQuest?.();
+            if (firstQuest?.title) {
+              const maxQuests = window.Quest?.getMaxQuests?.('experten') || 9;
+              state.diagramTitle =
+                firstQuest.number < maxQuests
+                  ? `Expertenquest ${firstQuest.number} - ${firstQuest.title}`
+                  : firstQuest.title;
+              const titleInput = document.getElementById('erm-title-input');
+              if (titleInput) titleInput.value = state.diagramTitle;
+            }
+          }
         } else if (qMode === 'relmodel-grundlagen') {
           // Leere Relationenmodell für Relmodel-Grundlagen
           if (window.RelModel) window.RelModel.reset();
@@ -1681,6 +1705,12 @@ window.App = {
     this.showTopToast?.('Das ER-Modell ist während der Quest gesperrt.');
   },
 
+  onRelmodelStudentChanged() {
+    if (window.Quest?.state?.questMode === 'relmodel-experten' && window.Quest?.state?.questsPanelVisible) {
+      updateExpertChecklist();
+    }
+  },
+
   onBeforeQuestChange(questState) {
     const mode = questState?.questMode || '';
     const isVisible = !!questState?.questsPanelVisible;
@@ -1742,6 +1772,12 @@ window.App = {
     if (mode === 'experten') {
       if (!loadErmSnapshot(storageKey)) {
         clearDiagramSilent();
+        if (quest?.title) {
+          const maxQuests = window.Quest?.getMaxQuests?.('experten') || 9;
+          state.diagramTitle = questNumber < maxQuests ? `Expertenquest ${questNumber} - ${quest.title}` : quest.title;
+          const titleInput = document.getElementById('erm-title-input');
+          if (titleInput) titleInput.value = state.diagramTitle;
+        }
         saveErmSnapshot(storageKey);
       }
       state.diagramLocked = false;
@@ -1760,6 +1796,8 @@ window.App = {
       if (!loaded && window.RelModel) window.RelModel.reset();
       if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
       state.diagramLocked = true;
+      // Checkliste nach Laden des gespeicherten Arbeitsstands neu rendern
+      window.Quest?.renderPanel?.();
       return;
     }
 
