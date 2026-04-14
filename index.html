@@ -234,6 +234,9 @@
                 <button id="btn-add-relation" class="rel-btn primary">+ Relation hinzufügen</button>
                 <button id="btn-check" class="rel-btn success">✔ Überprüfen</button>
                 <button id="btn-reset-relmodel" class="rel-btn danger">↺ Zurücksetzen</button>
+                <button id="btn-preview-student" class="rel-btn" title="Tabellenansicht deiner Relationen öffnen">
+                  🧾 Tabellenvorschau
+                </button>
               </div>
             </div>
 
@@ -244,6 +247,14 @@
                 <button id="btn-hide-solution" class="rel-btn solution-hide-btn" style="display: none">
                   Lösung ausblenden
                 </button>
+                <button
+                  id="btn-preview-solution"
+                  class="rel-btn"
+                  style="display: none"
+                  title="Tabellenansicht der Musterlösung öffnen"
+                >
+                  🧾 Tabellenvorschau
+                </button>
               </div>
               <div id="solution-display" style="display: none"></div>
             </div>
@@ -251,6 +262,28 @@
         </main>
       </aside>
     </div>
+
+    <!-- ===== MODAL: Tabellenvorschau ===== -->
+    <div
+      id="modal-table-preview-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-table-preview-title"
+    >
+      <div class="info-modal-card table-preview-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-table-preview-title">🧾 Tabellenvorschau</h3>
+          <button class="info-modal-close" id="btn-table-preview-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <p id="table-preview-hint" class="table-preview-hint"></p>
+          <div id="table-preview-content" class="table-preview-content"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- /#main-layout -->
 
     <!-- ===== MODAL: Musterlösung wirklich anzeigen? ===== -->

@@ -652,6 +652,7 @@
     document.getElementById('feedback-area').innerHTML = '';
     document.getElementById('solution-display').style.display = 'none';
     document.getElementById('btn-hide-solution').style.display = 'none';
+    document.getElementById('btn-preview-solution').style.display = 'none';
     document.getElementById('btn-show-solution').style.display = '';
     renderStudentForm();
     renderSolution();
@@ -863,6 +864,116 @@
     wrapper.appendChild(formatted);
 
     return wrapper;
+  }
+
+  function buildTablePreviewRelations(source) {
+    const baseRelations = source === 'solution' ? generateSolution(window.AppState.state) : _studentRelations;
+
+    return (baseRelations || [])
+      .map((rel) => {
+        const relName = String(rel?.name || '').trim();
+        const attrs = Array.isArray(rel?.attrs) ? rel.attrs : [];
+        const cleanedAttrs = attrs
+          .map((attr) => ({
+            name: String(attr?.name || '').trim(),
+            isPk: !!attr?.isPk,
+            isFk: !!attr?.isFk || hasForeignKeyMarker(attr?.name || ''),
+          }))
+          .filter((attr) => !!attr.name);
+
+        return {
+          name: relName || 'Relation',
+          attrs: sortAttrsPrimaryFirst(cleanedAttrs),
+        };
+      })
+      .filter((rel) => rel.attrs.length > 0);
+  }
+
+  function buildTablePreviewAttrNode(attr) {
+    const span = document.createElement('span');
+    const cleanName = stripForeignKeyMarker(attr.name || '').trim() || 'Attribut';
+
+    if (attr.isPk && attr.isFk) span.className = 'solution-attr fkpk';
+    else if (attr.isPk) span.className = 'solution-attr pk';
+    else if (attr.isFk) span.className = 'solution-attr fk';
+    else span.className = 'solution-attr';
+
+    span.textContent = attr.isFk ? cleanName + FK_SUFFIX : cleanName;
+    return span;
+  }
+
+  function closeTablePreviewModal() {
+    const backdrop = document.getElementById('modal-table-preview-backdrop');
+    if (!backdrop) return;
+    backdrop.style.display = 'none';
+  }
+
+  function openTablePreviewModal(source) {
+    const backdrop = document.getElementById('modal-table-preview-backdrop');
+    const titleEl = document.getElementById('modal-table-preview-title');
+    const hintEl = document.getElementById('table-preview-hint');
+    const contentEl = document.getElementById('table-preview-content');
+    if (!backdrop || !titleEl || !hintEl || !contentEl) return;
+
+    const isSolution = source === 'solution';
+    const relations = buildTablePreviewRelations(source);
+
+    titleEl.textContent = isSolution ? '🧾 Tabellenvorschau: Musterlösung' : '🧾 Tabellenvorschau: Deine Relationen';
+    hintEl.textContent =
+      'Hinweis: Diese Tabellen dienen nur der Veranschaulichung. Das Relationenmodell besteht fachlich aus Relationszeilen; die Tabellen werden erst daraus abgeleitet.';
+
+    contentEl.innerHTML = '';
+    if (relations.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'table-preview-empty';
+      empty.textContent = isSolution
+        ? 'Für die Musterlösung konnten aktuell keine tabellarisch darstellbaren Relationen erzeugt werden.'
+        : 'Es sind noch keine Relationen mit Attributen für die Tabellenvorschau vorhanden.';
+      contentEl.appendChild(empty);
+    } else {
+      relations.forEach((rel) => {
+        const section = document.createElement('section');
+        section.className = 'table-preview-relation';
+
+        const relTitle = document.createElement('h4');
+        relTitle.className = 'table-preview-relation-title';
+        relTitle.textContent = rel.name;
+        section.appendChild(relTitle);
+
+        const tableWrap = document.createElement('div');
+        tableWrap.className = 'table-preview-table-wrap';
+
+        const table = document.createElement('table');
+        table.className = 'table-preview-table';
+
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+        rel.attrs.forEach((attr) => {
+          const th = document.createElement('th');
+          th.appendChild(buildTablePreviewAttrNode(attr));
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+
+        const tbody = document.createElement('tbody');
+        const valueRow = document.createElement('tr');
+        rel.attrs.forEach(() => {
+          const td = document.createElement('td');
+          td.textContent = '...';
+          valueRow.appendChild(td);
+        });
+        tbody.appendChild(valueRow);
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableWrap.appendChild(table);
+        section.appendChild(tableWrap);
+        contentEl.appendChild(section);
+      });
+    }
+
+    backdrop.style.display = 'flex';
+    backdrop.focus();
   }
 
   function buildAttrRow(rel, attr) {
@@ -1532,9 +1643,11 @@
         const solDisplay = document.getElementById('solution-display');
         const showBtn = document.getElementById('btn-show-solution');
         const hideBtn = document.getElementById('btn-hide-solution');
+        const previewBtn = document.getElementById('btn-preview-solution');
         solDisplay.style.display = '';
         if (showBtn) showBtn.style.display = 'none';
         if (hideBtn) hideBtn.style.display = '';
+        if (previewBtn) previewBtn.style.display = '';
         solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
       cancelBtn.addEventListener('click', onCancel);
@@ -1545,9 +1658,32 @@
       const solDisplay = document.getElementById('solution-display');
       const showBtn = document.getElementById('btn-show-solution');
       const hideBtn = document.getElementById('btn-hide-solution');
+      const previewBtn = document.getElementById('btn-preview-solution');
       solDisplay.style.display = 'none';
       if (showBtn) showBtn.style.display = '';
       if (hideBtn) hideBtn.style.display = 'none';
+      if (previewBtn) previewBtn.style.display = 'none';
+    });
+
+    document.getElementById('btn-preview-student').addEventListener('click', () => {
+      openTablePreviewModal('student');
+    });
+
+    document.getElementById('btn-preview-solution').addEventListener('click', () => {
+      openTablePreviewModal('solution');
+    });
+
+    const previewBackdrop = document.getElementById('modal-table-preview-backdrop');
+    const previewCloseBtn = document.getElementById('btn-table-preview-close');
+    if (previewCloseBtn) previewCloseBtn.addEventListener('click', closeTablePreviewModal);
+    if (previewBackdrop) {
+      previewBackdrop.addEventListener('click', (e) => {
+        if (e.target === previewBackdrop) closeTablePreviewModal();
+      });
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeTablePreviewModal();
     });
 
     document.getElementById('btn-reset-relmodel').addEventListener('click', async () => {
