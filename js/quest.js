@@ -1207,8 +1207,8 @@
       title: '1:n-Beziehung „geht in"',
       theory: `<p><strong>1:n-Beziehung abbilden:</strong> Bei einer 1:n-Beziehung wird der Primärschlüssel der 1-Seite als <strong>Fremdschlüssel (FS)</strong> in die Relation der n-Seite aufgenommen.</p>
         <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Bezeichnung) wird als FS in die Relation Schüler aufgenommen.</p>`,
-      objective: `<p><strong>Beziehungen abbilden:</strong> Als nächstes müssen alle Beziehungen nacheinander abgebildet werden, um die Zusammenhänge auch im Relationenmodell darzustellen.</p>
-        <p>Löse die 1:n-Beziehung <strong>„geht in"</strong> (Schüler n : 1 Klasse) auf.</p>
+      objective: `<p><strong>Beziehungen abbilden:</strong> Als nächstes müssen alle Beziehungen nacheinander abgebildet werden, um die Zusammenhänge zwischen den Entitätsklassen auch im Relationenmodell darzustellen. Dazu werden Primärschlüssel zwischen den beteiligten Relationen „verschoben“: Im einfachsten Fall wird der Primärschlüssel einer Seite als sog. Fremdschlüssel in der anderen Seite übernommen, damit eine eindeutige Zuordnung der Datensätze möglich ist.</p>
+        <p>Bilde die 1:n-Beziehung <strong>„geht in"</strong> (Schüler n : 1 Klasse) ab.</p>
         <p>Füge bei der Relation <strong>„Schüler"</strong> den Fremdschlüssel <strong>„Bezeichnung"</strong> hinzu und markiere ihn als <strong>Fremdschlüssel (FS)</strong>.</p>`,
       validator: function () {
         if (!studentRelHasAttr('Schüler', 'Bezeichnung'))
@@ -1224,7 +1224,7 @@
       title: '1:1-Beziehung „ist Klassensprecher"',
       theory: `<p><strong>1:1-Beziehung abbilden:</strong> Bei einer 1:1-Beziehung wird der Primärschlüssel <em>einer</em> Seite als Fremdschlüssel in die <em>andere</em> Seite aufgenommen.</p>
         <p>Die Richtung ist frei wählbar – entweder Seite A bekommt den Fremdschlüssel von B, oder umgekehrt. <br><strong>Wichtig:</strong> Es wird immer nur <strong>eine</strong> Richtung gewählt, nicht beide gleichzeitig.</p>`,
-      objective: `<p>Löse die 1:1-Beziehung <strong>„ist Klassensprecher"</strong> (Schüler 1 : 1 Klasse) auf.</p>
+      objective: `<p>Bilde die 1:1-Beziehung <strong>„ist Klassensprecher"</strong> (Schüler 1 : 1 Klasse) ab.</p>
         <p>Füge bei der Relation <strong>„Klasse"</strong> den Fremdschlüssel <strong>„SchülerNr"</strong> hinzu und markiere ihn als <strong>FS</strong>.</p>
         <p><em>Alternativ könntest du auch Bezeichnung als FS in Schüler einfügen – hier verwenden wir die Variante mit SchülerNr in Klasse.</em></p>`,
       validator: function () {
@@ -1242,7 +1242,7 @@
       title: 'n:m-Beziehung „unterrichtet"',
       theory: `<p><strong>n:m-Beziehung abbilden:</strong> Eine n:m-Beziehung kann nicht direkt in eine bestehende Relation aufgenommen werden. Stattdessen wird eine <strong>neue Hilfsrelation</strong> (auch: Zwischentabelle) erstellt.</p>
         <p>Die Hilfsrelation erhält die Primärschlüssel <strong>beider beteiligten Entitätsklassen</strong> als <strong>Fremdschlüssel</strong>. Zusammen bilden diese den <strong>Primärschlüssel (Verbundschlüssel)</strong> der Hilfsrelation.</p>`,
-      objective: `<p>Löse die n:m-Beziehung „unterrichtet" (Lehrer n : m Klasse) auf.</p>
+      objective: `<p>Bilde die n:m-Beziehung „unterrichtet" (Lehrer n : m Klasse) ab.</p>
         <ol>
           <li>Erstelle eine neue Relation <strong>„unterrichtet"</strong></li>
           <li>Füge die Attribute <strong>„Lehrer-Kürzel"</strong> und <strong>„Bezeichnung"</strong> hinzu</li>
@@ -1284,7 +1284,7 @@
       title: 'Selbstbeziehung „ist befreundet mit"',
       theory: `<p><strong>Selbstbeziehung abbilden:</strong> Selbstbeziehungen werden genau wie andere Beziehungen abgebildet. Bei einer n:m-Selbstbeziehung entsteht eine Hilfsrelation, in der derselbe Primärschlüssel zweimal vorkommt – einmal für jede Seite der Beziehung.</p>
         <p>Da beide Fremdschlüssel auf dieselbe Relation verweisen, müssen sie <strong>umbenannt</strong> werden, damit sie sich unterscheiden (z.B. „SchülerNr" und „SchülerNr-Freund").</p>`,
-      objective: `<p>Löse die n:m-Selbstbeziehung „ist befreundet mit" (Schüler n : m Schüler) auf.</p>
+      objective: `<p>Bilde die n:m-Selbstbeziehung „ist befreundet mit" (Schüler n : m Schüler) ab.</p>
         <ol>
           <li>Erstelle eine neue Relation <strong>„ist befreundet mit"</strong></li>
           <li>Füge zwei Fremdschlüssel-Attribute hinzu, die beide auf SchülerNr verweisen (z.B. <strong>„SchülerNr"</strong> und <strong>„SchülerNr-Freund"</strong>)</li>

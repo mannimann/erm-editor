@@ -86,6 +86,7 @@ a[data-tooltip],
 .tool-btn[data-tooltip]:not(:disabled),
 .header-btn[data-tooltip]:not(:disabled),
 .rel-btn[data-tooltip]:not(:disabled),
+.attr-key-toggle[data-tooltip],
 .prop-related-link[data-tooltip],
 .quest-circle[data-tooltip],
 [role='button'][data-tooltip]:not(:disabled) {
@@ -1480,6 +1481,14 @@ body.is-resizing-drawer {
 .attr-pk-checkbox {
   cursor: pointer !important;
   flex-shrink: 0;
+}
+.attr-key-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
 }
 .attr-pk-label {
   font-size: 1rem;

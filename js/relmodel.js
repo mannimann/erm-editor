@@ -926,7 +926,6 @@
     pkCb.className = 'attr-pk-checkbox';
     pkCb.checked = attr.isPk;
     pkCb.id = 'pk-cb-' + attr.id;
-    pkCb.title = 'Primärschlüssel';
     pkCb.addEventListener('change', (e) => {
       attr.isPk = e.target.checked;
       clearInlineError(rel);
@@ -934,16 +933,19 @@
     });
 
     const pkLbl = document.createElement('label');
-    pkLbl.className = 'attr-pk-label';
-    pkLbl.htmlFor = pkCb.id;
-    pkLbl.textContent = 'PS';
+    pkLbl.className = 'attr-key-toggle attr-pk-toggle';
+    pkLbl.title = 'Primärschlüssel';
+    const pkText = document.createElement('span');
+    pkText.className = 'attr-pk-label';
+    pkText.textContent = 'PS';
+    pkLbl.appendChild(pkCb);
+    pkLbl.appendChild(pkText);
 
     const fkCb = document.createElement('input');
     fkCb.type = 'checkbox';
     fkCb.className = 'attr-fk-checkbox';
     fkCb.checked = !!attr.isFk;
     fkCb.id = 'fk-cb-' + attr.id;
-    fkCb.title = 'Fremdschlüssel';
     fkCb.addEventListener('change', (e) => {
       attr.isFk = e.target.checked;
       clearInlineError(rel);
@@ -951,9 +953,13 @@
     });
 
     const fkLbl = document.createElement('label');
-    fkLbl.className = 'attr-fk-label';
-    fkLbl.htmlFor = fkCb.id;
-    fkLbl.textContent = 'FS';
+    fkLbl.className = 'attr-key-toggle attr-fk-toggle';
+    fkLbl.title = 'Fremdschlüssel';
+    const fkText = document.createElement('span');
+    fkText.className = 'attr-fk-label';
+    fkText.textContent = 'FS';
+    fkLbl.appendChild(fkCb);
+    fkLbl.appendChild(fkText);
 
     inp.id = 'attr-input-' + attr.id;
     pkCb.addEventListener('click', (e) => e.stopPropagation());
@@ -970,9 +976,7 @@
     });
 
     row.appendChild(inp);
-    row.appendChild(pkCb);
     row.appendChild(pkLbl);
-    row.appendChild(fkCb);
     row.appendChild(fkLbl);
     row.appendChild(delAttrBtn);
     return row;
