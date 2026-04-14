@@ -548,7 +548,7 @@
       }));
     });
 
-    // Aufgelöste FK-Namen in _oneToOneInfos nachtragen
+    // Abgebildete FK-Namen in _oneToOneInfos nachtragen
     _oneToOneInfos.forEach((info) => {
       const targetRel = relations.find(
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(info.targetEntityName),
@@ -1064,7 +1064,7 @@
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
       );
 
-      // Standard-Richtung: FK(sourcePk) in target – prüfe sowohl den Original-PK als auch den aufgelösten FK-Namen
+      // Standard-Richtung: FK(sourcePk) in target – prüfe sowohl den Original-PK als auch den abgebildeten FK-Namen
       const hasStandard = studTarget?.attrs.some(
         (a) =>
           a.isFk &&
@@ -1096,7 +1096,7 @@
           (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
         );
         if (adjTarget && adjSource && altAttr) {
-          // FK aus target entfernen (nutze aufgelösten Namen falls vorhanden)
+          // FK aus target entfernen (nutze abgebildeten Namen falls vorhanden)
           const fkNameToRemove = resolvedSourceFkName || sourcePk;
           adjTarget.attrs = adjTarget.attrs.filter(
             (a) =>
