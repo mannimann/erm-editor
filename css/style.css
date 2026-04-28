@@ -879,40 +879,31 @@ body.is-resizing-drawer {
   background: var(--color-attr-bg);
   flex-shrink: 0;
 }
-.legend-diamond {
-  /* Diamond using clip-path so it can have non-square dimensions (20x12) */
-  width: 20px;
-  height: 12px;
-  position: relative;
-  flex-shrink: 0;
-}
 
-.legend-diamond::before,
-.legend-diamond::after {
+/* Small centered underline inside the ellipse (like PK underline) */
+.legend-ellipse-pk {
+  position: relative;
+}
+.legend-ellipse-pk::after {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  -webkit-clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 2px;
+  width: 10px;
+  height: 2px;
+  background: var(--color-attr);
+  border-radius: 1px;
 }
-
-.legend-diamond::before {
-  /* outer layer acts as border */
-  background: var(--color-rel);
-  z-index: 0;
-}
-
-.legend-diamond::after {
-  /* inner layer is inset to simulate the fill and border thickness (2px) */
-  left: 2px;
-  top: 2px;
-  width: calc(100% - 4px);
-  height: calc(100% - 4px);
-  background: var(--color-rel-bg);
-  z-index: 1;
+.legend-diamond {
+  /* Use an inline SVG background for a reliable diamond (20x12) — no underline */
+  width: 20px;
+  height: 12px;
+  display: inline-block;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='12' viewBox='0 0 20 12'><polygon points='10,0 20,6 10,12 0,6' fill='%23dcfce7' stroke='%2316a34a' stroke-width='2'/></svg>");
+  background-size: 20px 12px;
+  background-repeat: no-repeat;
 }
 
 .entity-color {
@@ -920,10 +911,6 @@ body.is-resizing-drawer {
   border-color: var(--color-entity);
 }
 .attribute-color {
-  background: var(--color-attr-bg);
-  border-color: var(--color-attr);
-}
-.pk-color {
   background: var(--color-attr-bg);
   border-color: var(--color-attr);
 }
