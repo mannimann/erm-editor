@@ -1821,11 +1821,7 @@ window.App = {
 
     if (mode === 'grundlagen') {
       if (!loadErmSnapshot(storageKey)) {
-        try {
-          await loadErmFromFile('00_schule.json');
-        } catch (_) {
-          clearDiagramSilent();
-        }
+        clearDiagramSilent();
         saveErmSnapshot(storageKey);
       }
       state.diagramLocked = false;
