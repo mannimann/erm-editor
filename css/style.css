@@ -704,6 +704,23 @@ body.is-resizing-drawer {
   color: #94a3b8;
 }
 
+/* Modal-specific: restore dark input style for relationship name to match other inputs */
+#modal-name {
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  color: #f1f5f9;
+  padding: 5px 28px 5px 7px;
+  font-size: 0.85rem;
+}
+#modal-name:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+#modal-name::placeholder {
+  color: #94a3b8;
+}
+
 .prop-input-icon {
   position: absolute;
   top: 50%;
@@ -1802,6 +1819,31 @@ body.is-resizing-drawer {
 #modal-card h3 {
   font-size: 1.1rem;
   margin-bottom: 6px;
+}
+
+@keyframes modal-shake {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+#modal-card.shake {
+  animation: modal-shake 340ms ease-in-out;
 }
 
 .modal-row {

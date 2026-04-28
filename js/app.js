@@ -125,12 +125,12 @@ function getUniqueEntityAttributeName(entityId, baseName, excludeAttributeId = n
 
 function getExportBaseName() {
   const rawTitle = String(state.diagramTitle || '').trim();
-  const safe = (rawTitle || 'erm-editor')
+  const safe = (rawTitle || 'neues-erm')
     .replace(/[\\/:*?"<>|]/g, '-')
     .replace(/\s+/g, '_')
     .replace(/\.+$/g, '')
     .slice(0, 80);
-  return safe || 'erm-editor';
+  return safe || 'neues-erm';
 }
 
 function buildPersistPayload() {
@@ -957,28 +957,87 @@ function exportPNG() {
     return;
   }
 
+  // Compute bounds from rendered node groups to match exact visuals (use hit-rect when available)
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
   let maxY = -Infinity;
 
-  state.nodes.forEach((node) => {
-    let w = 0;
-    let h = 0;
-    if (node.type === 'entity') {
-      w = 140;
-      h = 50;
-    } else if (node.type === 'attribute') {
-      w = 120;
-      h = 52;
-    } else {
-      w = 130;
-      h = 60;
+  const nodeGroups = svgEl.querySelectorAll('.node');
+  nodeGroups.forEach((g) => {
+    if (!g) return;
+    const transform = g.getAttribute('transform') || '';
+    const m = /translate\(\s*([\-0-9\.]+)[,\s]+([\-0-9\.]+)\s*\)/.exec(transform);
+    const tx = m ? parseFloat(m[1]) : 0;
+    const ty = m ? parseFloat(m[2]) : 0;
+
+    // Prefer the invisible hit rect (contains padding) if present
+    const hitRect = Array.from(g.querySelectorAll('rect')).find((r) => r.getAttribute('fill') === 'transparent');
+    if (hitRect) {
+      const x = parseFloat(hitRect.getAttribute('x') || '0') + tx;
+      const y = parseFloat(hitRect.getAttribute('y') || '0') + ty;
+      const w = parseFloat(hitRect.getAttribute('width') || '0');
+      const h = parseFloat(hitRect.getAttribute('height') || '0');
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + w);
+      maxY = Math.max(maxY, y + h);
+      return;
     }
-    minX = Math.min(minX, node.x);
-    minY = Math.min(minY, node.y);
-    maxX = Math.max(maxX, node.x + w);
-    maxY = Math.max(maxY, node.y + h);
+
+    // Fallback: inspect shape types
+    const rect = g.querySelector('rect');
+    if (rect) {
+      const x = parseFloat(rect.getAttribute('x') || '0') + tx;
+      const y = parseFloat(rect.getAttribute('y') || '0') + ty;
+      const w = parseFloat(rect.getAttribute('width') || '0');
+      const h = parseFloat(rect.getAttribute('height') || '0');
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + w);
+      maxY = Math.max(maxY, y + h);
+      return;
+    }
+
+    const ellipse = g.querySelector('ellipse');
+    if (ellipse) {
+      const rx = parseFloat(ellipse.getAttribute('rx') || '0');
+      const ry = parseFloat(ellipse.getAttribute('ry') || '0');
+      const x = tx - rx;
+      const y = ty - ry;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, tx + rx);
+      maxY = Math.max(maxY, ty + ry);
+      return;
+    }
+
+    const poly = g.querySelector('polygon');
+    if (poly) {
+      const pts = (poly.getAttribute('points') || '')
+        .trim()
+        .split(/\s+/)
+        .map((p) => p.split(',').map((n) => parseFloat(n)));
+      if (pts.length) {
+        let lx = Infinity,
+          ly = Infinity,
+          hx = -Infinity,
+          hy = -Infinity;
+        pts.forEach((p) => {
+          const px = p[0];
+          const py = p[1];
+          lx = Math.min(lx, px);
+          ly = Math.min(ly, py);
+          hx = Math.max(hx, px);
+          hy = Math.max(hy, py);
+        });
+        minX = Math.min(minX, tx + lx);
+        minY = Math.min(minY, ty + ly);
+        maxX = Math.max(maxX, tx + hx);
+        maxY = Math.max(maxY, ty + hy);
+      }
+      return;
+    }
   });
 
   const cropX = minX - margin;
@@ -1077,6 +1136,10 @@ async function clearAll() {
   state.nodes = [];
   state.edges = [];
   state.nextId = 1;
+  // Reset diagram title when starting fresh
+  state.diagramTitle = '';
+  const titleInput = document.getElementById('erm-title-input');
+  if (titleInput) titleInput.value = '';
   clearSelection();
   if (window.Diagram) window.Diagram.renderAll();
   if (window.RelModel) window.RelModel.reset();

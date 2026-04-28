@@ -149,8 +149,10 @@
   const edgesLayer = document.getElementById('edges-layer');
   const nodesLayer = document.getElementById('nodes-layer');
   const modalBackdrop = document.getElementById('modal-backdrop');
+  const modalCard = document.getElementById('modal-card');
   const modalTitle = document.getElementById('modal-title');
   const modalSubtitle = document.getElementById('modal-subtitle');
+  const modalName = document.getElementById('modal-name');
   const modalEntity1 = document.getElementById('modal-entity-1');
   const modalEntity2 = document.getElementById('modal-entity-2');
   const modalCardinality = document.getElementById('modal-cardinality');
@@ -2180,7 +2182,11 @@
     const existingEdges = getRelationshipEntityEdges(relationshipId).slice(0, 2);
 
     modalTitle.textContent = 'Beziehung bearbeiten';
-    modalSubtitle.textContent = `Verbinde ${relationshipNode.name || 'Beziehung'} mit bis zu zwei Entitätsklassen.`;
+    // Kein einleitender Satz anzeigen (Subtitle entfernt auf Wunsch)
+    modalSubtitle.textContent = '';
+
+    // Set relationship name field (if present in the modal)
+    if (modalName) modalName.value = relationshipNode.name || '';
 
     fillEntitySelect(
       modalEntity1,
@@ -2196,6 +2202,19 @@
 
     modalBackdrop.style.display = '';
 
+    // Fokus auf das Namensfeld setzen (falls vorhanden)
+    if (modalName) {
+      setTimeout(() => {
+        try {
+          modalName.focus();
+          // Select all text for quicker Umbenennen
+          modalName.select && modalName.select();
+        } catch (err) {
+          /* ignore */
+        }
+      }, 10);
+    }
+
     const cleanup = () => {
       modalOk.removeEventListener('click', onOk);
       modalCancel.removeEventListener('click', onCancel);
@@ -2204,6 +2223,11 @@
     };
 
     const onOk = () => {
+      // Apply name change from modal (if present)
+      if (modalName) {
+        relationshipNode.name = String(modalName.value || '').trim();
+      }
+
       const entityId1 = modalEntity1.value;
       const entityId2 = modalEntity2.value;
       const [leftCardinality, rightCardinality] = getCardinalityParts(modalCardinality.value);
@@ -2324,6 +2348,11 @@
           nodeClickTimer = null;
         }
         e.preventDefault();
+        // For relationships: open the edit modal on double-click instead of inline rename
+        if (node.type === 'relationship') {
+          openRelationshipModal(node.id);
+          return;
+        }
         startInlineEdit(node);
         return;
       }
@@ -2551,11 +2580,33 @@
     renderAll();
   }
 
-  modalBackdrop.addEventListener('click', (e) => {
-    if (e.target === modalBackdrop) {
-      if (activeModalCleanup) activeModalCleanup();
-    }
-  });
+  // Klick außerhalb schließt das Beziehungs-Dialog NICHT mehr.
+  // Stattdessen eine kurze Shake-Animation am Dialog zeigen, um Feedback zu geben.
+  if (modalBackdrop) {
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target !== modalBackdrop) return;
+      if (!activeModalCleanup) return;
+      if (!modalCard) return;
+      // Restart animation
+      modalCard.classList.remove('shake');
+      // Force reflow to allow re-triggering the animation
+      // eslint-disable-next-line no-unused-expressions
+      modalCard.offsetWidth;
+      modalCard.classList.add('shake');
+      // Keep focus on name field for convenience
+      if (modalName) {
+        try {
+          modalName.focus();
+          modalName.select && modalName.select();
+        } catch (err) {
+          /* ignore */
+        }
+      }
+    });
+
+    // Remove shake class after animation ends
+    modalCard && modalCard.addEventListener('animationend', () => modalCard.classList.remove('shake'));
+  }
 
   document.addEventListener('click', (e) => {
     if (!contextMenu.contains(e.target)) {
