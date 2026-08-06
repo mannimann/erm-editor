@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(backdropId);
     if (el) el.style.display = 'none';
   }
-  ['info', 'rules'].forEach((name) => {
+  ['info', 'rules', 'impressum', 'datenschutz'].forEach((name) => {
     const btn = document.getElementById(`btn-${name}-modal`);
     const closeBtn = document.getElementById(`btn-${name}-modal-close`);
     const backdrop = document.getElementById(`modal-${name}-backdrop`);
@@ -1200,8 +1200,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape') {
       closeModal('modal-info-backdrop');
       closeModal('modal-rules-backdrop');
+      closeModal('modal-impressum-backdrop');
+      closeModal('modal-datenschutz-backdrop');
     }
   });
+
+  // Kontakt-E-Mail wird erst zur Laufzeit zusammengesetzt, um sie vor
+  // einfachen Adress-Scrapern zu verstecken (steht nicht im HTML-Quelltext).
+  (function renderObfuscatedEmail() {
+    const user = ['j', '-', 'mann'].join('');
+    const domain = ['mail', '.', 'de'].join('');
+    const address = `${user}@${domain}`;
+    document.querySelectorAll('#impressum-email-link, #datenschutz-email-link').forEach((el) => {
+      el.textContent = address;
+      el.href = `mailto:${address}`;
+    });
+  })();
 
   document.getElementById('btn-export-json').addEventListener('click', exportJSON);
   document.getElementById('btn-export-png').addEventListener('click', exportPNG);

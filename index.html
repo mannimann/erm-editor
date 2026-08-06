@@ -172,6 +172,12 @@
             <span class="legend-ellipse legend-ellipse-pk attribute-color"></span> Primärschlüssel (PS)
           </div>
         </div>
+
+        <!-- ===== RECHTLICHE HINWEISE (Impressum/Datenschutz) ===== -->
+        <div id="legal-links">
+          <button id="btn-impressum-modal" type="button">Impressum</button>
+          <button id="btn-datenschutz-modal" type="button">Datenschutz</button>
+        </div>
       </aside>
 
       <!-- === CANVAS-BEREICH: ER-Diagramm === -->
@@ -453,6 +459,91 @@
       </div>
     </div>
 
+    <!-- ===== MODAL: Impressum ===== -->
+    <div
+      id="modal-impressum-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-impressum-title"
+    >
+      <div class="info-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-impressum-title">Impressum</h3>
+          <button class="info-modal-close" id="btn-impressum-modal-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <h4>Angaben gemäß § 5 DDG</h4>
+          <p>
+            Jakob Mann<br />
+            Lehrer für Informatik und Sport<br />
+            Nordplatz 13<br />
+            04105 Leipzig (Dienstanschrift)
+          </p>
+          <p>Kontakt: <a id="impressum-email-link" href="#" rel="nofollow"></a></p>
+          <h4>Art des Angebots</h4>
+          <p>
+            Diese Website ist ein privates, nicht-kommerzielles Angebot von Jakob Mann und dient ausschließlich
+            Bildungszwecken.
+          </p>
+          <p>
+            Sie ist kein offizielles Angebot der Leibnizschule – Gymnasium der Stadt Leipzig. Die Schule stellt
+            lediglich die oben genannte Dienstanschrift zur Verfügung und ist weder Betreiberin der Website noch für
+            deren Inhalte verantwortlich.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL: Datenschutz ===== -->
+    <div
+      id="modal-datenschutz-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-datenschutz-title"
+    >
+      <div class="info-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-datenschutz-title">Datenschutzerklärung</h3>
+          <button class="info-modal-close" id="btn-datenschutz-modal-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <h4>Verantwortlicher</h4>
+          <p>
+            Jakob Mann, Nordplatz 13, 04105 Leipzig<br />
+            Kontakt: <a id="datenschutz-email-link" href="#" rel="nofollow"></a>
+          </p>
+          <h4>Hosting / Server-Logfiles</h4>
+          <p>
+            Beim Aufruf dieser Website verarbeitet der Hosting-Anbieter automatisch technische Daten (u.&nbsp;a.
+            IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Datei, verwendeter Browser) in Server-Logfiles.
+            Dies ist technisch erforderlich, um die Website bereitzustellen. Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1
+            lit.&nbsp;f DSGVO (berechtigtes Interesse an einem sicheren und funktionsfähigen Betrieb).
+          </p>
+          <h4>Keine Cookies, kein Tracking</h4>
+          <p>
+            Diese Website setzt keine Cookies und keine Analyse- oder Tracking-Dienste ein. Es werden keine Daten an
+            Dritte übertragen.
+          </p>
+          <h4>Lokale Speicherung im Browser</h4>
+          <p>
+            Diagramme und Lernfortschritt werden ausschließlich lokal in deinem Browser (localStorage) gespeichert,
+            um deine Arbeit zwischen Besuchen zu erhalten. Diese Daten verlassen deinen Rechner nicht und werden
+            nicht an den Server übertragen.
+          </p>
+          <h4>Deine Rechte</h4>
+          <p>
+            Du hast das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung deiner
+            personenbezogenen Daten sowie das Recht auf Beschwerde bei einer Datenschutz-Aufsichtsbehörde. Wende dich
+            dazu an die oben genannte Kontakt-E-Mail-Adresse.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== QUEST-PANEL (bottom, initially hidden) ===== -->
     <div id="quest-panel-resizer" class="quest-panel-resizer"></div>
     <div id="quest-panel" class="quest-panel">
@@ -516,12 +607,7 @@
     </div>
 
     <!-- Scripts -->
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-      integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-    ></script>
+    <script src="js/vendor/html2canvas.min.js"></script>
     <script src="js/app.js"></script>
     <script src="js/diagram.js"></script>
     <script src="js/relmodel.js"></script>

@@ -1757,6 +1757,33 @@ body.is-resizing-drawer {
   max-width: min(980px, 96vw);
 }
 
+/* ===== RECHTLICHE HINWEISE (Impressum/Datenschutz) ===== */
+#legal-links {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  font-size: 0.72rem;
+}
+
+#legal-links button {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font-size: inherit;
+  color: #94a3b8;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+}
+
+#legal-links button:hover {
+  color: #e2e8f0;
+  text-decoration-color: currentColor;
+}
+
 .table-preview-hint {
   font-size: 0.84rem;
   color: #475569;
