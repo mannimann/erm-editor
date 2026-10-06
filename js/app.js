@@ -588,7 +588,6 @@ function escapeHtml(text) {
 // Klicks behandelt ein Listener am Menü (DOMContentLoaded), deshalb lässt es sich neu aufbauen.
 // Seitenleiste einklappen (nur unter 1100px wirksam, siehe style.css)
 const tabletMedia = window.matchMedia('(max-width: 1100px)');
-let toolbarAutoEingeklappt = false; // vom Relationenmodell eingeklappt, beim Schließen wieder auf
 function setToolbarCollapsed(zu) {
   document.body.classList.toggle('toolbar-collapsed', zu);
   const btn = document.getElementById('btn-toolbar-toggle');
@@ -697,7 +696,8 @@ function initTabs() {
   const syncQuestPanelRight = () => {
     const questPanel = document.getElementById('quest-panel');
     if (!questPanel) return;
-    if (mobileMedia.matches) {
+    // Tablet: Quest-Panel volle Breite, das Relationenmodell endet darüber (syncQuestPanelResizer)
+    if (tabletMedia.matches) {
       questPanel.style.right = '';
       syncQuestPanelResizer();
       return;
@@ -719,13 +719,7 @@ function initTabs() {
     relmodelBtn.classList.toggle('active', open);
 
     // Tablet: Platz fürs Diagramm neben dem Relationenmodell
-    if (open && tabletMedia.matches && !document.body.classList.contains('toolbar-collapsed')) {
-      toolbarAutoEingeklappt = true;
-      setToolbarCollapsed(true);
-    } else if (!open && toolbarAutoEingeklappt) {
-      toolbarAutoEingeklappt = false;
-      setToolbarCollapsed(false);
-    }
+    if (open && tabletMedia.matches) setToolbarCollapsed(true);
 
     if (open) {
       relmodelDrawer.style.width = `${clampDrawerWidth(lastOpenWidth)}px`;
@@ -807,9 +801,9 @@ function initTabs() {
       questPanelResizer.style.bottom = `${h}px`;
       questPanelResizer.style.right = questPanel.style.right || '0';
     }
-    // Schmal liegt das Relationenmodell über dem Canvas: unten Platz fürs Quest-Panel lassen
+    // Tablet: Relationenmodell endet über dem Quest-Panel
     relmodelDrawer.style.height =
-      isVisible && mobileMedia.matches ? `calc(100% - ${questPanel.getBoundingClientRect().height}px)` : '';
+      isVisible && tabletMedia.matches ? `calc(100% - ${questPanel.getBoundingClientRect().height}px)` : '';
   };
 
   if (questPanelResizer && questPanel) {
@@ -849,7 +843,7 @@ function initTabs() {
   questFoldBtn?.addEventListener('click', () => {
     const zu = questPanel.classList.toggle('eingeklappt');
     const text = zu ? 'Quest-Panel ausklappen' : 'Quest-Panel einklappen';
-    questFoldBtn.textContent = zu ? '▴' : '▾';
+    questFoldBtn.firstElementChild.textContent = zu ? '«' : '»'; // um 90° gedreht: hoch / runter
     questFoldBtn.dataset.tooltip = text;
     questFoldBtn.setAttribute('aria-label', text);
     questFoldBtn.setAttribute('aria-expanded', String(!zu));
@@ -1409,7 +1403,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('btn-toolbar-toggle').addEventListener('click', () => {
-    toolbarAutoEingeklappt = false;
     setToolbarCollapsed(!document.body.classList.contains('toolbar-collapsed'));
   });
 

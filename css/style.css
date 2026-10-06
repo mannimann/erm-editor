@@ -3696,20 +3696,25 @@ fieldset.szenario-feld label {
 }
 
 /* ===== Seitenleiste einklappen (schmale Bildschirme, nur per Button) ===== */
-#btn-toolbar-toggle {
+#btn-toolbar-toggle,
+#btn-quest-fold {
   display: none;
 }
 
 @media (max-width: 1100px) {
-  #btn-toolbar-toggle {
+  #btn-toolbar-toggle,
+  #btn-quest-fold {
     display: block;
-    align-self: flex-start;
     flex-shrink: 0;
     width: 36px;
     height: 32px;
-    margin-bottom: 4px;
     font-size: 1.1rem;
     line-height: 1;
+  }
+
+  #btn-toolbar-toggle {
+    align-self: flex-start;
+    margin-bottom: 4px;
   }
 
   body.toolbar-collapsed #toolbar {
@@ -3735,14 +3740,14 @@ fieldset.szenario-feld label {
 }
 
 /* ===== Quest-Panel einklappen (Tablet) ===== */
-#btn-quest-fold {
-  display: none;
-}
-
 @media (max-width: 1100px) {
   #btn-quest-fold {
-    display: block;
-    margin-right: 4px;
+    margin-right: 10px;
+  }
+
+  #btn-quest-fold span {
+    display: inline-block;
+    transform: rotate(90deg);
   }
 
   #quest-panel.eingeklappt {
