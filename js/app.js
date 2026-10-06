@@ -1370,6 +1370,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('handy-hinweis').hidden = true;
   });
 
+  // ☰-Menü (schmale Bildschirme): Knöpfe schließen es, Schalter nicht
+  const headerMenu = document.getElementById('header-menu');
+  const headerMenuBtn = document.getElementById('btn-header-menu');
+  const setHeaderMenu = (open) => {
+    headerMenu.classList.toggle('open', open);
+    headerMenuBtn.setAttribute('aria-expanded', String(open));
+  };
+  headerMenuBtn.addEventListener('click', () => setHeaderMenu(!headerMenu.classList.contains('open')));
+  document.addEventListener('click', (e) => {
+    if (headerMenuBtn.contains(e.target)) return;
+    if (headerMenu.contains(e.target) && !e.target.closest('button')) return;
+    setHeaderMenu(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setHeaderMenu(false);
+  });
+
   // Info-Modals
   function openModal(backdropId) {
     const el = document.getElementById(backdropId);

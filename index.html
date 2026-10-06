@@ -46,6 +46,18 @@
             ↷
           </button>
         </div>
+      </div>
+      <button
+        id="btn-header-menu"
+        class="header-btn"
+        type="button"
+        aria-expanded="false"
+        aria-controls="header-menu"
+        title="Optionen"
+      >
+        ☰
+      </button>
+      <div id="header-menu">
         <div id="header-layout-controls">
           <label
             class="header-switch"
@@ -71,13 +83,13 @@
             🧭 Auto-Layout
           </button>
         </div>
-      </div>
-      <div id="header-right">
-        <button id="btn-import" class="header-btn" title="Diagramm aus JSON-Datei laden">⬆ Importieren</button>
-        <button id="btn-export-json" class="header-btn" title="Diagramm als JSON speichern">⬇ JSON-Export</button>
-        <button id="btn-export-png" class="header-btn" title="Diagramm als PNG-Bild exportieren">📷 PNG-Export</button>
-        <button id="btn-clear" class="header-btn danger" title="Alles löschen">🗑 Neu</button>
-        <input type="file" id="file-input" accept=".json" style="display: none" />
+        <div id="header-right">
+          <button id="btn-import" class="header-btn" title="Diagramm aus JSON-Datei laden">⬆ Importieren</button>
+          <button id="btn-export-json" class="header-btn" title="Diagramm als JSON speichern">⬇ JSON-Export</button>
+          <button id="btn-export-png" class="header-btn" title="Diagramm als PNG-Bild exportieren">📷 PNG-Export</button>
+          <button id="btn-clear" class="header-btn danger" title="Alles löschen">🗑 Neu</button>
+          <input type="file" id="file-input" accept=".json" style="display: none" />
+        </div>
       </div>
     </header>
 
