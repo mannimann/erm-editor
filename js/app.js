@@ -722,8 +722,8 @@ function initTabs() {
   const stopResize = () => {
     relmodelResizer.classList.remove('is-dragging');
     document.body.classList.remove('is-resizing-drawer');
-    window.removeEventListener('mousemove', onPointerMove);
-    window.removeEventListener('mouseup', stopResize);
+    window.removeEventListener('pointermove', onPointerMove);
+    window.removeEventListener('pointerup', stopResize);
   };
 
   const onPointerMove = (event) => {
@@ -751,14 +751,14 @@ function initTabs() {
     setDrawerState(relmodelDrawer.classList.contains('collapsed'));
   });
 
-  relmodelResizer.addEventListener('mousedown', (event) => {
+  relmodelResizer.addEventListener('pointerdown', (event) => {
     if (mobileMedia.matches) return;
     if (relmodelDrawer.classList.contains('collapsed')) return;
     event.preventDefault();
     relmodelResizer.classList.add('is-dragging');
     document.body.classList.add('is-resizing-drawer');
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('mouseup', stopResize);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', stopResize);
   });
 
   window.addEventListener('resize', () => {
@@ -793,8 +793,8 @@ function initTabs() {
     const stopQuestResize = () => {
       questPanelResizer.classList.remove('is-dragging');
       document.body.classList.remove('is-resizing-drawer');
-      window.removeEventListener('mousemove', onQuestPointerMove);
-      window.removeEventListener('mouseup', stopQuestResize);
+      window.removeEventListener('pointermove', onQuestPointerMove);
+      window.removeEventListener('pointerup', stopQuestResize);
     };
 
     const onQuestPointerMove = (event) => {
@@ -806,15 +806,15 @@ function initTabs() {
       syncQuestPanelResizer();
     };
 
-    questPanelResizer.addEventListener('mousedown', (event) => {
+    questPanelResizer.addEventListener('pointerdown', (event) => {
       if (!questPanel.classList.contains('visible')) return;
       event.preventDefault();
       questPanelStartY = event.clientY;
       questPanelStartH = questPanel.getBoundingClientRect().height;
       questPanelResizer.classList.add('is-dragging');
       document.body.classList.add('is-resizing-drawer');
-      window.addEventListener('mousemove', onQuestPointerMove);
-      window.addEventListener('mouseup', stopQuestResize);
+      window.addEventListener('pointermove', onQuestPointerMove);
+      window.addEventListener('pointerup', stopQuestResize);
     });
   }
 
@@ -1366,6 +1366,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const hadPersistedData = loadPersistedState();
   initTabs();
   initPropertiesPanel();
+  document.getElementById('btn-handy-hinweis')?.addEventListener('click', () => {
+    document.getElementById('handy-hinweis').hidden = true;
+  });
 
   // Info-Modals
   function openModal(backdropId) {
@@ -1886,12 +1889,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Event delegation: pointer + keyboard
-    document.addEventListener('mouseover', (e) => {
+    // Nur Maus: beim Tippen würde der Tooltip sonst bis zum nächsten Tippen stehen bleiben
+    document.addEventListener('pointerover', (e) => {
+      if (e.pointerType !== 'mouse') return;
       const t = findTarget(e.target);
       if (t) showTooltipFor(t);
     });
 
-    document.addEventListener('mouseout', (e) => {
+    document.addEventListener('pointerout', (e) => {
       const from = findTarget(e.target);
       const to = findTarget(e.relatedTarget);
       if (from && from !== to) hideTooltip(!e.relatedTarget);

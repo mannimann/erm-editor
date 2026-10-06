@@ -478,7 +478,7 @@
     // Spaltenbreite: Trenner ziehen (links 240 px bis Gesamtbreite − 240 px)
     const trenner = backdrop.querySelector('.sql-trenner');
     const body = backdrop.querySelector('.sql-modal-body');
-    trenner.addEventListener('mousedown', (e) => {
+    trenner.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       const links = body.getBoundingClientRect().left;
       const breite = body.getBoundingClientRect().width;
@@ -489,13 +489,13 @@
       const loslassen = () => {
         trenner.classList.remove('zieht');
         document.body.classList.remove('sql-zieht');
-        window.removeEventListener('mousemove', ziehen);
-        window.removeEventListener('mouseup', loslassen);
+        window.removeEventListener('pointermove', ziehen);
+        window.removeEventListener('pointerup', loslassen);
       };
       trenner.classList.add('zieht');
       document.body.classList.add('sql-zieht');
-      window.addEventListener('mousemove', ziehen);
-      window.addEventListener('mouseup', loslassen);
+      window.addEventListener('pointermove', ziehen);
+      window.addEventListener('pointerup', loslassen);
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && backdrop.style.display !== 'none') schliessen();

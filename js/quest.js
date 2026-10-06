@@ -832,7 +832,7 @@
         <p>Im Dialog „Beziehung bearbeiten“ gehört die erste Zahl zur linken Auswahl, die zweite zur rechten: Schüler (links), Klasse (rechts) → n:1.</p>`,
       objective: `<p>Das Schul-ERM aus den Grundlagen ist geladen – dein eigenes, wenn du die Grundlagen abgeschlossen hast. An den Linien steht noch <strong>„?“</strong>: Die Kardinalitäten fehlen.</p>
         <ol>
-          <li>Rechtsklick auf die Raute <strong>„geht in“</strong> → Beziehung bearbeiten</li>
+          <li>Rechtsklick (Tablet: lange tippen) auf die Raute <strong>„geht in“</strong> → Beziehung bearbeiten</li>
           <li>Im Dialog „Schüler“ links, „Klasse“ rechts, Kardinalität <strong>n:1</strong> (viele Schüler gehen in eine Klasse)</li>
         </ol>`,
       validator: function () {
@@ -983,7 +983,7 @@
     {
       title: 'Beziehungsattribut',
       theory: `<p><strong>Beziehungsattribut</strong> (Ellipse an der Raute): eine Eigenschaft, die erst durch die Beziehung entsteht. Das Fach gehört weder allein zum Lehrer noch allein zur Klasse, sondern zum Paar aus beiden.</p>`,
-      objective: `<p>Füge der Beziehung <strong>„unterrichtet“</strong> das Attribut <strong>„Fach“</strong> hinzu (Rechtsklick auf die Raute → Attribut hinzufügen).</p>`,
+      objective: `<p>Füge der Beziehung <strong>„unterrichtet“</strong> das Attribut <strong>„Fach“</strong> hinzu (Rechtsklick oder lange tippen auf die Raute → Attribut hinzufügen).</p>`,
       validator: function () {
         return validateRelationshipRequirements({
           relationships: [

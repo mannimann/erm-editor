@@ -3699,3 +3699,73 @@ fieldset.szenario-feld label {
 .sql-zeichen {
   color: #94a3b8;
 }
+
+/* ===== Touch (Tablet) ===== */
+/* Ziehen, Verschieben und Zoomen übernimmt js/diagram.js – nicht der Browser */
+#er-canvas,
+#relmodel-resizer,
+.quest-panel-resizer,
+.sql-trenner,
+#modal-title {
+  touch-action: none;
+}
+
+#er-canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (pointer: coarse) {
+  .viewport-btn {
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .tool-btn {
+    padding: 12px 11px;
+  }
+
+  .ctx-item {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  #relmodel-resizer {
+    width: 16px;
+  }
+
+  .quest-panel-resizer {
+    height: 14px;
+  }
+}
+
+/* Header passt auf Tablets nicht ganz: wischen statt abschneiden */
+#app-header {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+/* ===== Handy: Hinweis auf Tablet/PC ===== */
+#handy-hinweis {
+  display: none;
+}
+
+@media (max-width: 600px), (max-height: 500px) {
+  #handy-hinweis:not([hidden]) {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px 16px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #f8fafc;
+    text-align: center;
+    font-size: 1.05rem;
+    line-height: 1.5;
+  }
+}

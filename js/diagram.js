@@ -192,6 +192,11 @@
   let panning = null;
   let spacePressed = false;
   let hasPanned = false;
+  // Touch: langes Drücken öffnet das Kontextmenü, zwei Finger zoomen
+  const LONG_PRESS_MS = 500;
+  let longPress = null;
+  const touchPoints = new Map();
+  let pinch = null;
   let selectedNodeId = null;
   let ctxTarget = null;
   let activeModalCleanup = null;
@@ -2394,7 +2399,7 @@
     let lastMousedownTime = 0;
     const DBLCLICK_MS = 350;
 
-    nodesLayer.addEventListener('mousedown', (e) => {
+    nodesLayer.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       const node = getNodeFromTarget(e.target);
       if (!node) return;
@@ -2431,6 +2436,22 @@
 
       selectNodeFn(node.id);
 
+      if (e.pointerType !== 'mouse') {
+        // renderAll() ersetzt den Knoten beim Ziehen; implizites Capture würde dabei verloren gehen
+        if (e.target.hasPointerCapture?.(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+        const { clientX, clientY } = e;
+        clearTimeout(longPress?.timer);
+        longPress = {
+          clientX,
+          clientY,
+          timer: setTimeout(() => {
+            longPress = null;
+            dragging = null;
+            showContextMenu({ clientX, clientY }, 'node', node.id);
+          }, LONG_PRESS_MS),
+        };
+      }
+
       const svgPt = getSVGPoint(e);
       dragging = {
         nodeId: node.id,
@@ -2448,7 +2469,7 @@
       e.preventDefault();
     });
 
-    // Ein Klick wählt nur aus; bearbeitet wird eine Beziehung per Doppelklick oder Rechtsklick
+    // Ein Klick wählt nur aus; bearbeitet wird eine Beziehung per Doppelklick oder Rechtsklick (Touch: lange tippen)
     nodesLayer.addEventListener('click', (e) => {
       if (getNodeFromTarget(e.target)) e.stopPropagation();
     });
@@ -2467,7 +2488,56 @@
     });
   }
 
-  svg.addEventListener('mousemove', (e) => {
+  function cancelLongPress() {
+    if (!longPress) return;
+    clearTimeout(longPress.timer);
+    longPress = null;
+  }
+
+  function pinchState() {
+    const [a, b] = [...touchPoints.values()];
+    return { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  // Capture-Phase: läuft vor dem Knoten-Handler, damit ein zweiter Finger keinen Knoten greift
+  svg.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (e.pointerType !== 'touch') return;
+      touchPoints.set(e.pointerId, getLocalSVGPoint(e));
+      if (touchPoints.size !== 2) return;
+      e.stopPropagation();
+      cancelLongPress();
+      dragging = null;
+      panning = null;
+      svg.classList.remove('is-panning');
+      pinch = { ...pinchState(), scale: viewState.scale };
+    },
+    true,
+  );
+
+  function endTouch(e) {
+    touchPoints.delete(e.pointerId);
+    if (pinch && touchPoints.size < 2) {
+      pinch = null;
+      hasPanned = true; // folgenden Klick nicht als Abwählen werten
+    }
+  }
+
+  svg.addEventListener('pointermove', (e) => {
+    if (touchPoints.has(e.pointerId)) touchPoints.set(e.pointerId, getLocalSVGPoint(e));
+    if (pinch) {
+      const now = pinchState();
+      viewState.x += now.x - pinch.x;
+      viewState.y += now.y - pinch.y;
+      pinch.x = now.x;
+      pinch.y = now.y;
+      setZoom(pinch.scale * (now.dist / pinch.dist), now.x, now.y);
+      return;
+    }
+    if (longPress && Math.hypot(e.clientX - longPress.clientX, e.clientY - longPress.clientY) > 8) {
+      cancelLongPress();
+    }
     if (panning) {
       const local = getLocalSVGPoint(e);
       viewState.x = panning.startViewX + (local.x - panning.startX);
@@ -2501,18 +2571,17 @@
     renderAll();
   });
 
-  svg.addEventListener('mouseup', () => {
-    dragging = null;
-    panning = null;
-    svg.classList.remove('is-panning');
-  });
-  svg.addEventListener('mouseleave', () => {
-    dragging = null;
-    panning = null;
-    svg.classList.remove('is-panning');
-  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) =>
+    svg.addEventListener(type, (e) => {
+      endTouch(e);
+      cancelLongPress();
+      dragging = null;
+      panning = null;
+      svg.classList.remove('is-panning');
+    }),
+  );
 
-  svg.addEventListener('mousedown', (e) => {
+  svg.addEventListener('pointerdown', (e) => {
     const backgroundClick = e.target === svg || (e.target.tagName === 'rect' && !e.target.closest('.node'));
     const shouldPan = backgroundClick && (e.button === 0 || e.button === 1 || (e.button === 0 && spacePressed));
     if (!shouldPan) return;
@@ -2648,16 +2717,18 @@
     modalCard.style.top = `${dialogLage.y}px`;
   }
   document.getElementById('modal-close')?.addEventListener('click', () => activeModalCleanup?.());
-  modalTitle.addEventListener('mousedown', (e) => {
+  modalTitle.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     const start = { x: e.clientX - dialogLage.x, y: e.clientY - dialogLage.y };
     const ziehen = (ev) => dialogVerschieben(ev.clientX - start.x, ev.clientY - start.y);
     const loslassen = () => {
-      window.removeEventListener('mousemove', ziehen);
-      window.removeEventListener('mouseup', loslassen);
+      window.removeEventListener('pointermove', ziehen);
+      window.removeEventListener('pointerup', loslassen);
+      window.removeEventListener('pointercancel', loslassen);
     };
-    window.addEventListener('mousemove', ziehen);
-    window.addEventListener('mouseup', loslassen);
+    window.addEventListener('pointermove', ziehen);
+    window.addEventListener('pointerup', loslassen);
+    window.addEventListener('pointercancel', loslassen);
   });
 
   // Klick außerhalb schließt das Beziehungs-Dialog NICHT mehr.
