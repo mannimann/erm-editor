@@ -3056,3 +3056,127 @@ body.is-resizing-drawer {
     max-width: calc(100vw - 40px);
   }
 }
+
+/* ===== Quest-Menü: Reihen nach Stufe gruppiert, Stufen nebeneinander ===== */
+#quests-menu:not([hidden]) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(250px, 1fr));
+  gap: 0 8px;
+}
+
+.quest-menu-group-title {
+  padding: 8px 11px 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+@media (max-width: 860px) {
+  #quests-menu:not([hidden]) {
+    grid-template-columns: 1fr;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+}
+
+/* Erste Zeile des Erklärkastens: „Neuer Begriff: … · Symbol: …“ */
+.quest-concept .quest-begriff {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #93c5fd;
+  margin-bottom: 2px;
+}
+
+.quest-concept .quest-begriff ~ .quest-begriff {
+  margin-top: 8px;
+}
+
+/* ===== SQL erzeugen ===== */
+.sql-modal-card {
+  max-width: min(980px, 96vw);
+}
+
+.sql-erweitert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.sql-erweitert[hidden] {
+  display: none;
+}
+
+.sql-relation {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  margin-bottom: 10px;
+}
+
+.sql-relation h5 {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+  color: #1e293b;
+}
+
+.sql-table {
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.sql-table th,
+.sql-table td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 4px 10px 4px 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sql-table th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sql-spalte {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+.sql-key {
+  margin-left: 6px;
+  font-family: inherit;
+  font-size: 0.7rem;
+  color: #2563eb;
+}
+
+.sql-select {
+  padding: 2px 4px;
+  font-size: 0.82rem;
+}
+
+.sql-ausgabe {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.sql-fehler-liste {
+  color: #b91c1c;
+}
+
+.sql-aktionen {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

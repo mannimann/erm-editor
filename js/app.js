@@ -155,16 +155,24 @@ function buildPersistPayload() {
   };
 }
 
-const QUEST_WORK_PREFIX = 'erm-editor-quest-work-v1';
 const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
 
 function getQuestWorkStorageKey(mode, questNumber) {
-  const q = Number(questNumber) || 1;
-  if (mode === 'grundlagen') return `${QUEST_WORK_PREFIX}:erm:grundlagen`;
-  if (mode === 'experten') return `${QUEST_WORK_PREFIX}:erm:experten:q${q}`;
-  if (mode === 'relmodel-grundlagen') return `${QUEST_WORK_PREFIX}:relmodel:grundlagen`;
-  if (mode === 'relmodel-experten') return `${QUEST_WORK_PREFIX}:relmodel:experten:q${q}`;
-  return null;
+  return window.Quest?.getWorkKey?.(mode, questNumber) || null;
+}
+
+// Quest-Reihe ({ id, stufe, art: 'erm' | 'rm', schritt, … }) oder null
+function getQuestSeries(mode = window.Quest?.state?.questMode) {
+  return window.Quest?.getSeries?.(mode) || null;
+}
+
+// Titel eines neuen ERM in einer Szenario-Reihe, z. B. „ERM-Übung 2 – Krankenhaus-System“
+function applySzenarioTitle(reihe, quest) {
+  if (!quest?.title) return;
+  const total = window.Quest?.getMaxQuests?.(reihe.id) || 0;
+  state.diagramTitle = quest.number < total ? `${reihe.titel} ${quest.number} – ${quest.title}` : quest.title;
+  const titleInput = document.getElementById('erm-title-input');
+  if (titleInput) titleInput.value = state.diagramTitle;
 }
 
 function hasStorageEntry(storageKey) {
@@ -241,16 +249,11 @@ function persistStateDebounced(delay = 260) {
     _persistTimer = null;
     persistStateNow();
 
-    const qMode = window.Quest?.state?.questMode || '';
-    const isQuestVisible = !!window.Quest?.state?.questsPanelVisible;
-    if ((qMode === 'grundlagen' || qMode === 'experten') && isQuestVisible) {
-      const qNumber = window.Quest?.state?.currentQuestNumber || 1;
-      saveErmSnapshot(getQuestWorkStorageKey(qMode, qNumber));
-    }
-
-    // Live-Checkliste aktualisieren, wenn Experten-Quest aktiv ist
-    if (window.Quest?.state?.questMode === 'experten' && window.Quest?.state?.questsPanelVisible) {
-      updateExpertChecklist();
+    const reihe = getQuestSeries();
+    if (reihe?.art === 'erm' && window.Quest.state.questsPanelVisible) {
+      saveErmSnapshot(getQuestWorkStorageKey(reihe.id, window.Quest.state.currentQuestNumber || 1));
+      // Live-Checkliste aktualisieren, wenn eine Szenario-Quest aktiv ist
+      if (!reihe.schritt) updateExpertChecklist();
     }
   }, delay);
 }
@@ -263,9 +266,8 @@ function updateExpertChecklist() {
   const checklist = window.Quest.getChecklistStatus();
   if (!checklist) return;
 
-  const mode = window.Quest?.state?.questMode || '';
   const mapping =
-    mode === 'relmodel-experten'
+    getQuestSeries()?.art === 'rm'
       ? {
           relations: checklist.relations,
           attributes: checklist.attributes,
@@ -481,6 +483,28 @@ function initTabs() {
   )
     return;
 
+  // Quest-Menü aus den Reihen aufbauen, gruppiert nach Stufe (Einstieg, Fortgeschritten)
+  const reihen = window.Quest?.getSeriesList?.() || [];
+  [...new Set(reihen.map((r) => r.stufe))].forEach((stufe) => {
+    const group = document.createElement('div');
+    group.className = 'quest-menu-group';
+    group.innerHTML = `<div class="quest-menu-group-title">${stufe}</div>`;
+    reihen
+      .filter((r) => r.stufe === stufe)
+      .forEach((r) => {
+        group.insertAdjacentHTML(
+          'beforeend',
+          `<button class="tab-dropdown-item" type="button" data-quest-series="${r.id}">
+            <div class="tab-dropdown-item-text">
+              <span class="tab-dropdown-item-title">${r.icon} ${r.titel} <span class="quest-progress-badge" data-mode="${r.id}"></span></span>
+              <span class="tab-dropdown-item-subtitle">${r.untertitel}</span>
+            </div>
+          </button>`,
+        );
+      });
+    questsMenu.appendChild(group);
+  });
+
   let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
   let isDrawerOpen = false;
   const mobileMedia = window.matchMedia('(max-width: 860px)');
@@ -531,8 +555,9 @@ function initTabs() {
     if (open) {
       relmodelDrawer.style.width = `${clampDrawerWidth(lastOpenWidth)}px`;
       if (window.RelModel) window.RelModel.syncFromDiagram();
-      // Trigger Quest-Validierung wenn Drawer während relmodel-grundlagen geöffnet wird
-      if (window.Quest?.state?.questMode === 'relmodel-grundlagen' && window.Quest?.state?.questsPanelVisible) {
+      // Trigger Quest-Validierung wenn Drawer während einer Relationenmodell-Schritt-Reihe geöffnet wird
+      const reihe = getQuestSeries();
+      if (reihe?.art === 'rm' && reihe.schritt && window.Quest.state.questsPanelVisible) {
         setTimeout(() => window.Quest.validateCurrentQuest(), 100);
       }
     }
@@ -669,9 +694,7 @@ function initTabs() {
     function isNotStarted(btn) {
       const mode = btn.dataset.questSeries;
       if (!mode) return false;
-      const version = mode === 'experten' ? 'v4' : 'v1';
-      const key = 'erm-editor-quests-' + mode + '-' + version;
-      return !localStorage.getItem(key);
+      return !localStorage.getItem(window.Quest.getStorageKey(mode));
     }
 
     function updateQuestDots() {
@@ -699,7 +722,7 @@ function initTabs() {
           const mode = badge.getAttribute('data-mode');
           if (mode) {
             const maxQuests = window.Quest.getMaxQuests?.(mode) || 0;
-            const storageKey = `erm-editor-quests-${mode === 'relmodel-grundlagen' ? 'relmodel-grundlagen' : mode === 'relmodel-experten' ? 'relmodel-experten' : mode}-v${mode === 'experten' ? '4' : mode === 'relmodel-grundlagen' ? '1' : mode === 'relmodel-experten' ? '1' : '1'}`;
+            const storageKey = window.Quest.getStorageKey(mode);
             let completedCount = 0;
             try {
               const saved = localStorage.getItem(storageKey);
@@ -1304,111 +1327,64 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.setAttribute('aria-expanded', 'false');
   };
 
-  const grundlagenBtn = document.querySelector('[data-quest-series="grundlagen"]');
-  const expertenBtn = document.querySelector('[data-quest-series="experten"]');
-
-  async function startQuestWithConfirm(mode) {
-    if (!window.Quest) return;
-    const title = mode === 'experten' ? 'Expertenquests starten' : 'Grundlagenquests starten';
-    const decision = await window.App?.showAppModal?.({
-      title,
-      message:
-        'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
-      mode: 'confirm',
-      confirmLabel: 'Starten',
-      cancelLabel: 'Abbrechen',
-    });
-    if (!decision) return;
-
-    window.App?.onBeforeQuestChange?.(window.Quest.state);
-
-    // Beim Start von ERM-Questreihen soll das Relationenmodell immer geleert sein.
-    // Wichtig: Erst den ggf. aktiven Quest-Stand sichern (onBeforeQuestChange),
-    // dann auf den normalen Persist-Key wechseln und nur den normalen RelModel-Stand leeren.
-    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(RELMODEL_PERSIST_KEY);
-    if (window.RelModel?.reset) window.RelModel.reset();
-    if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(false);
-
-    window.Quest.startQuestSeries(mode);
-    const quest = window.Quest.getCurrentQuest?.();
-    await window.App?.onQuestChanged?.(quest, window.Quest.state);
-    closeQuestDropdownMenu();
-  }
-
-  if (grundlagenBtn) {
-    grundlagenBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      startQuestWithConfirm('grundlagen');
-    });
-  }
-
-  if (expertenBtn) {
-    expertenBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      startQuestWithConfirm('experten');
-    });
-  }
-
-  // Relmodel-Grundlagen: ERM laden und Quest starten
-  const relmodelQuestBtn = document.getElementById('btn-start-relmodel');
-  if (relmodelQuestBtn) {
-    relmodelQuestBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      if (!window.Quest) return;
+  // Startet eine Quest-Reihe; fragt vorher nach, weil das aktuelle Modell ersetzt wird.
+  // nurBeiInhalt: nur fragen, wenn ER- oder Relationenmodell etwas enthalten (Start über Link).
+  async function startQuestSeriesFlow(mode, { nurBeiInhalt = false } = {}) {
+    const reihe = getQuestSeries(mode);
+    if (!window.Quest || !reihe) return false;
+    const hatInhalt = state.nodes.length > 0 || (window.RelModel?.getStudentRelations?.() || []).length > 0;
+    if (!nurBeiInhalt || hatInhalt) {
       const decision = await window.App?.showAppModal?.({
-        title: 'Relationenmodell – Grundlagen',
+        title: `${reihe.titel} starten`,
         message:
           'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
         mode: 'confirm',
         confirmLabel: 'Starten',
         cancelLabel: 'Abbrechen',
       });
-      if (!decision) return;
-      closeQuestDropdownMenu();
+      if (!decision) return false;
+    }
+    closeQuestDropdownMenu();
 
-      window.App?.onBeforeQuestChange?.(window.Quest.state);
-      window.Quest.startQuestSeries('relmodel-grundlagen');
+    // Erst den ggf. aktiven Quest-Stand sichern (onBeforeQuestChange), dann wechseln.
+    window.App?.onBeforeQuestChange?.(window.Quest.state);
 
-      const relmodelKey = getQuestWorkStorageKey('relmodel-grundlagen', 1);
-      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(relmodelKey);
+    if (reihe.art === 'erm') {
+      // Beim Start von ERM-Questreihen soll das Relationenmodell immer geleert sein:
+      // auf den normalen Persist-Key wechseln und nur den normalen RelModel-Stand leeren.
+      window.RelModel?.setPersistKey?.(RELMODEL_PERSIST_KEY);
+      window.RelModel?.reset?.();
+      window.AppTabs?.setDrawerState?.(false);
+    }
+
+    window.Quest.startQuestSeries(mode);
+
+    if (reihe.art === 'rm' && reihe.schritt) {
+      // Schritt-Reihe: ein ER-Modell und ein Arbeitsstand für die ganze Reihe
+      const workKey = getQuestWorkStorageKey(mode, 1);
+      window.RelModel?.setPersistKey?.(workKey);
       try {
-        await loadErmFromFile('00_schule.json');
+        await loadErmFromFile(reihe.ermDatei);
       } catch (err) {
         window.App?.showAlertModal?.('Das ER-Modell konnte nicht geladen werden.', 'Fehler');
-        return;
+        return false;
       }
-      if (!window.RelModel?.loadFromStorage?.(relmodelKey) && window.RelModel) {
-        window.RelModel.reset();
-      }
-      if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(false);
+      if (!window.RelModel?.loadFromStorage?.(workKey)) window.RelModel?.reset?.();
+      window.AppTabs?.setDrawerState?.(!window.Quest.getCurrentQuest()?.seitenleisteSelbstOeffnen);
       state.diagramLocked = true;
       window.Quest.renderPanel();
-    });
+    } else {
+      await window.App?.onQuestChanged?.(window.Quest.getCurrentQuest?.(), window.Quest.state);
+    }
+    return true;
   }
 
-  // Relmodel-Experten: Quest starten (Modal nur bei nicht-leerem Diagramm)
-  const relmodelExpertenBtn = document.getElementById('btn-start-relmodel-experten');
-  if (relmodelExpertenBtn) {
-    relmodelExpertenBtn.addEventListener('click', async (e) => {
+  document.querySelectorAll('#quests-menu [data-quest-series]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (!window.Quest) return;
-      const decision = await window.App?.showAppModal?.({
-        title: 'Relationenmodell – Experten',
-        message:
-          'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird der letzte Arbeitsstand der aktuellen Aufgabe automatisch geladen.',
-        mode: 'confirm',
-        confirmLabel: 'Starten',
-        cancelLabel: 'Abbrechen',
-      });
-      if (!decision) return;
-      closeQuestDropdownMenu();
-
-      window.App?.onBeforeQuestChange?.(window.Quest.state);
-      window.Quest.startQuestSeries('relmodel-experten');
-      const firstQuest = window.Quest.getCurrentQuest?.();
-      await window.App?.onQuestChanged?.(firstQuest, window.Quest.state);
+      startQuestSeriesFlow(btn.dataset.questSeries);
     });
-  }
+  });
 
   // Quest-Close Button
   const questCloseBtn = document.querySelector('.quest-close-btn');
@@ -1431,31 +1407,19 @@ document.addEventListener('DOMContentLoaded', () => {
         'Quest-Reihe zurücksetzen',
       );
       if (confirmed) {
-        const qMode = window.Quest.state?.questMode || '';
+        const reihe = getQuestSeries();
 
         window.Quest.resetCurrentSeriesProgress();
 
-        // Leere/reload Modelle je nach Quest-Modus
-        if (qMode === 'grundlagen' || qMode === 'experten') {
-          // Leere ERM-Diagramm für Grundlagen und Experten
+        // Leere/reload Modelle je nach Quest-Reihe
+        if (reihe?.art === 'erm') {
           clearDiagramSilent();
-          if (qMode === 'experten') {
-            const firstQuest = window.Quest.getCurrentQuest?.();
-            if (firstQuest?.title) {
-              const maxQuests = window.Quest?.getMaxQuests?.('experten') || 9;
-              state.diagramTitle =
-                firstQuest.number < maxQuests
-                  ? `Expertenquest ${firstQuest.number} - ${firstQuest.title}`
-                  : firstQuest.title;
-              const titleInput = document.getElementById('erm-title-input');
-              if (titleInput) titleInput.value = state.diagramTitle;
-            }
-          }
-        } else if (qMode === 'relmodel-grundlagen') {
-          // Leere Relationenmodell für Relmodel-Grundlagen
+          if (!reihe.schritt) applySzenarioTitle(reihe, window.Quest.getCurrentQuest?.());
+        } else if (reihe?.schritt) {
+          // Relationenmodell-Schritt-Reihe: ERM bleibt, Relationen leeren
           if (window.RelModel) window.RelModel.reset();
-        } else if (qMode === 'relmodel-experten') {
-          // Reload ERM und leere Relationenmodell für Relmodel-Experten
+        } else if (reihe) {
+          // Relationenmodell-Szenario: ERM neu laden und Relationen leeren
           const quest = window.Quest.getCurrentQuest?.();
           if (quest?.jsonFile) {
             try {
@@ -1499,31 +1463,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      if (!isCompleted && qMode !== 'relmodel-experten' && qMode !== 'experten') {
-        const isGrundlagen = qMode === 'grundlagen' || qMode === 'relmodel-grundlagen';
-        if (isGrundlagen && !window.Quest.state.unlockedQuests.includes(questNum)) {
-          await window.App?.showAppModal?.({
-            title: 'Aufgabe gesperrt',
-            message: 'Schließe zuerst die vorherigen Aufgaben ab, bevor du zu dieser Aufgabe springst.',
-            mode: 'alert',
-            confirmLabel: 'OK',
-          });
-          return false;
-        }
-        if (!isGrundlagen) {
-          const solvedNumbers = window.Quest.state.completedQuests
-            .map((n) => Number(n))
-            .filter((n) => Number.isFinite(n));
-          const lastSolvedQuest = solvedNumbers.length > 0 ? Math.max(...solvedNumbers) : 0;
-          const skippedCount = Math.max(0, questNum - lastSolvedQuest - 1);
-          if (skippedCount > 0) {
-            const confirmed = await window.App?.showConfirmModal?.(
-              `Zu Aufgabe ${questNum} springen? Dabei werden ${skippedCount} Aufgabe(n) übersprungen.`,
-              'Aufgabe wechseln',
-            );
-            if (!confirmed) return false;
-          }
-        }
+      // Schritt-Reihen bauen aufeinander auf: nur freigeschaltete Aufgaben; Szenarien sind frei wählbar.
+      if (!isCompleted && getQuestSeries(qMode)?.schritt && !window.Quest.state.unlockedQuests.includes(questNum)) {
+        await window.App?.showAppModal?.({
+          title: 'Aufgabe gesperrt',
+          message: 'Schließe zuerst die vorherigen Aufgaben ab, bevor du zu dieser Aufgabe springst.',
+          mode: 'alert',
+          confirmLabel: 'OK',
+        });
+        return false;
       }
 
       window.Quest.jumpToQuest(questNum);
@@ -1542,13 +1490,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (manualCheckBtn && window.Quest?.validateCurrentQuest) {
         e.preventDefault();
         if (window.App?.isQuestCheckSuppressed?.()) return;
-        const qMode = window.Quest.state?.questMode || '';
-        const currentQuestNumber = Number(window.Quest.state?.currentQuestNumber || 1);
-        if (qMode.startsWith('relmodel-')) {
-          const shouldAutoOpenDrawer = !(qMode === 'relmodel-grundlagen' && currentQuestNumber === 1);
-          const shouldTriggerRelmodelCheck = !(qMode === 'relmodel-grundlagen' && currentQuestNumber === 1);
-          if (shouldAutoOpenDrawer && window.RelModel?.openDrawer) window.RelModel.openDrawer();
-          if (shouldTriggerRelmodelCheck && window.RelModel?.triggerCheck) window.RelModel.triggerCheck();
+        if (getQuestSeries()?.art === 'rm' && !window.Quest.getCurrentQuest?.()?.seitenleisteSelbstOeffnen) {
+          window.RelModel?.openDrawer?.();
+          window.RelModel?.triggerCheck?.();
         }
         window.Quest.validateCurrentQuest(true);
         return;
@@ -1571,6 +1515,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const questNum = parseInt(circle.getAttribute('data-quest-number'), 10);
       await switchQuestWithGuards(questNum);
     });
+
+    // Direktstart über einen Link: ?reihe=erm-grundlagen&quest=3 (Quest nur, wenn freigeschaltet).
+    // setTimeout: erst nach den übrigen DOMContentLoaded-Handlern (z. B. relmodel.js) starten.
+    setTimeout(async function startFromLink() {
+      const params = new URLSearchParams(window.location.search);
+      const reihe = params.get('reihe');
+      if (!reihe) return;
+      // Parameter entfernen, damit ein Neuladen nicht erneut startet
+      window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+      if (!getQuestSeries(reihe)) {
+        window.App?.showAlertModal?.(
+          `Die Quest-Reihe „${reihe}“ gibt es nicht. Wähle eine Reihe unter ⚔️ Quests.`,
+          'Unbekannte Quest-Reihe',
+        );
+        return;
+      }
+      if (!(await startQuestSeriesFlow(reihe, { nurBeiInhalt: true }))) return;
+      const questNum = parseInt(params.get('quest'), 10);
+      if (questNum >= 1 && questNum <= window.Quest.getMaxQuests()) await switchQuestWithGuards(questNum);
+    }, 0);
   }
   // Tooltip migration + global floating tooltip manager
   (function initTooltips() {
@@ -1783,101 +1747,78 @@ window.App = {
   },
 
   onRelmodelStudentChanged() {
-    if (window.Quest?.state?.questMode === 'relmodel-experten' && window.Quest?.state?.questsPanelVisible) {
+    const reihe = getQuestSeries();
+    if (reihe?.art === 'rm' && !reihe.schritt && window.Quest.state.questsPanelVisible) {
       updateExpertChecklist();
     }
   },
 
   onBeforeQuestChange(questState) {
-    const mode = questState?.questMode || '';
-    const isVisible = !!questState?.questsPanelVisible;
-    if (!mode || !isVisible) return;
-    const currentNumber = Number(questState?.currentQuestNumber || 1);
-    const storageKey = getQuestWorkStorageKey(mode, currentNumber);
-    if (!storageKey) return;
+    const reihe = getQuestSeries(questState?.questMode);
+    if (!reihe || !questState?.questsPanelVisible) return;
+    const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);
 
-    if (mode === 'grundlagen' || mode === 'experten') {
+    if (reihe.art === 'erm') {
       saveErmSnapshot(storageKey);
       return;
     }
 
-    if (mode === 'relmodel-grundlagen' || mode === 'relmodel-experten') {
-      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
-      if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
-    }
+    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+    if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
   },
 
   onQuestPanelClosing(questState) {
-    const mode = questState?.questMode || '';
-    const currentNumber = Number(questState?.currentQuestNumber || 1);
-    const storageKey = getQuestWorkStorageKey(mode, currentNumber);
-    if (!storageKey) return;
+    const reihe = getQuestSeries(questState?.questMode);
+    if (!reihe) return;
+    const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);
 
-    if (mode === 'grundlagen' || mode === 'experten') {
+    if (reihe.art === 'erm') {
       saveErmSnapshot(storageKey);
       persistStateNow();
       return;
     }
 
-    if (mode === 'relmodel-grundlagen' || mode === 'relmodel-experten') {
-      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
-      if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
-      persistStateNow();
-      if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(RELMODEL_PERSIST_KEY);
-      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(RELMODEL_PERSIST_KEY);
-    }
+    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+    if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
+    persistStateNow();
+    if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(RELMODEL_PERSIST_KEY);
+    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(RELMODEL_PERSIST_KEY);
   },
 
   async onQuestChanged(quest, questState) {
-    const mode = questState?.questMode || '';
+    const reihe = getQuestSeries(questState?.questMode);
+    if (!reihe) return;
     const questNumber = Number(quest?.number || questState?.currentQuestNumber || 1);
-    const storageKey = getQuestWorkStorageKey(mode, questNumber);
+    const storageKey = getQuestWorkStorageKey(reihe.id, questNumber);
 
-    if (mode === 'grundlagen') {
+    if (reihe.art === 'erm') {
       if (!loadErmSnapshot(storageKey)) {
         clearDiagramSilent();
+        if (!reihe.schritt) applySzenarioTitle(reihe, quest);
         saveErmSnapshot(storageKey);
       }
       state.diagramLocked = false;
       return;
     }
 
-    if (mode === 'experten') {
-      if (!loadErmSnapshot(storageKey)) {
-        clearDiagramSilent();
-        if (quest?.title) {
-          const maxQuests = window.Quest?.getMaxQuests?.('experten') || 9;
-          state.diagramTitle = questNumber < maxQuests ? `Expertenquest ${questNumber} - ${quest.title}` : quest.title;
-          const titleInput = document.getElementById('erm-title-input');
-          if (titleInput) titleInput.value = state.diagramTitle;
-        }
-        saveErmSnapshot(storageKey);
-      }
-      state.diagramLocked = false;
+    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
+    if (reihe.schritt) {
+      state.diagramLocked = true;
       return;
     }
 
-    if (mode === 'relmodel-experten') {
-      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
-      if (quest?.jsonFile) {
-        try {
-          await loadErmFromFile(quest.jsonFile);
-        } catch (_) {}
-      }
-
-      const loaded = window.RelModel?.loadFromStorage?.(storageKey);
-      if (!loaded && window.RelModel) window.RelModel.reset();
-      if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
-      state.diagramLocked = true;
-      // Checkliste nach Laden des gespeicherten Arbeitsstands neu rendern
-      window.Quest?.renderPanel?.();
-      return;
+    if (quest?.jsonFile) {
+      try {
+        await loadErmFromFile(quest.jsonFile);
+      } catch (_) {}
     }
 
-    if (mode === 'relmodel-grundlagen' && storageKey) {
-      if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
-      state.diagramLocked = true;
-    }
+    const loaded = window.RelModel?.loadFromStorage?.(storageKey);
+    if (!loaded && window.RelModel) window.RelModel.reset();
+    if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
+    state.diagramLocked = true;
+    // Checkliste nach Laden des gespeicherten Arbeitsstands neu rendern
+    window.Quest?.renderPanel?.();
   },
 
   updateQuestPanel(quest, questState) {
@@ -1887,11 +1828,10 @@ window.App = {
     if (!panel) return;
 
     const mode = questState.questMode;
-    const isGrundlagen = mode === 'grundlagen' || mode === 'relmodel-grundlagen';
-    const isRelmodel = mode === 'relmodel-grundlagen' || mode === 'relmodel-experten';
-    const isErmExperten = mode === 'experten';
-    const isRelmodelExperten = mode === 'relmodel-experten';
-    const hasChecklist = isErmExperten;
+    const reihe = getQuestSeries(mode);
+    const isSchritt = !!reihe?.schritt;
+    const isRelmodelSzenario = reihe?.art === 'rm' && !isSchritt;
+    const hasChecklist = !isSchritt;
 
     // Update Title & Progress (count completed quests, exclude final completion task)
     const titleEl = panel.querySelector('#quest-title');
@@ -1935,11 +1875,11 @@ window.App = {
       const taskSection = document.createElement('div');
       taskSection.className = 'quest-section quest-task';
       const taskHeader = document.createElement('h4');
-      taskHeader.textContent = isGrundlagen || isRelmodelExperten ? '🎯 Aufgabe' : '🎯 Szenario';
+      taskHeader.textContent = isSchritt || isRelmodelSzenario ? '🎯 Aufgabe' : '🎯 Szenario';
       taskSection.appendChild(taskHeader);
       const taskContent = document.createElement('div');
-      const rawTaskHtml = isGrundlagen ? quest.objective : quest.szenario;
-      const taskHtml = isGrundlagen
+      const rawTaskHtml = isSchritt ? quest.objective : quest.szenario;
+      const taskHtml = isSchritt
         ? String(rawTaskHtml || '').replace(/^\s*<p>\s*Aufgabe\s*:\s*<\/p>\s*/i, '')
         : rawTaskHtml;
       taskContent.innerHTML = taskHtml;
@@ -1969,7 +1909,7 @@ window.App = {
           checklistSection.appendChild(checklistTitle);
 
           let categories;
-          if (isRelmodelExperten) {
+          if (isRelmodelSzenario) {
             categories = [
               { key: 'relations', label: 'Relationen', data: checklist.relations },
               { key: 'attributes', label: 'Attribute', data: checklist.attributes },
@@ -2019,7 +1959,7 @@ window.App = {
       actions.appendChild(checkBtn);
 
       const isCurrentCompleted = (questState.completedQuests || []).includes(quest.number);
-      if (isRelmodelExperten && isCurrentCompleted && quest.number < total) {
+      if (isRelmodelSzenario && isCurrentCompleted && quest.number < total) {
         const nextBtn = document.createElement('button');
         nextBtn.id = 'btn-quest-next-manual';
         nextBtn.type = 'button';
@@ -2129,9 +2069,7 @@ window.App = {
       if (existing) existing.remove();
 
       const currentQuest = window.Quest?.getCurrentQuest?.();
-      const questMode = window.Quest?.state?.questMode || '';
-      const isAnyGrundlagen = questMode === 'grundlagen' || questMode === 'relmodel-grundlagen';
-      const theoryHtml = isAnyGrundlagen ? currentQuest?.theory || '' : '';
+      const theoryHtml = getQuestSeries()?.schritt ? currentQuest?.theory || '' : '';
       if (theoryHtml) {
         const conceptDiv = document.createElement('div');
         conceptDiv.className = 'quest-concept quest-success-concept';
@@ -2343,9 +2281,8 @@ window.App = {
     const hints = window.Quest?.getHints?.() || [];
     const singleHint = hints.length > 0 ? hints[0] : String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
 
-    // Bei Experten-Quests (ERM + Relmodel) soll keine Hinweisbox angezeigt werden.
-    const questMode = window.Quest?.state?.questMode || '';
-    const showHintButton = questMode === 'grundlagen' || questMode === 'relmodel-grundlagen';
+    // Bei Szenario-Quests (ERM + Relationenmodell) soll keine Hinweisbox angezeigt werden.
+    const showHintButton = !!getQuestSeries()?.schritt;
 
     return this.showAppModal({
       title: 'Überprüfung',

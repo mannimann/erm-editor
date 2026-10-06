@@ -1,6 +1,6 @@
 {
   "snapToGrid": true,
-  "diagramTitle": "Expertenquest 1 - Hotel-Verwaltung",
+  "diagramTitle": "Hotel-Verwaltung",
   "nodes": [
     {
       "id": "s1",
@@ -119,7 +119,7 @@
       "type": "attribute",
       "x": -40,
       "y": 20,
-      "name": "AnzahlNaechte",
+      "name": "AnzahlNächte",
       "isPrimaryKey": false
     },
     {

@@ -1,6 +1,6 @@
 {
   "snapToGrid": true,
-  "diagramTitle": "ERM-Grundlagenquest - Schule",
+  "diagramTitle": "Schule",
   "nodes": [
     {
       "id": "s1",
@@ -47,7 +47,7 @@
       "type": "attribute",
       "x": 120,
       "y": 0,
-      "name": "Bezeichnung",
+      "name": "Klassenstufe",
       "isPrimaryKey": true
     },
     {
@@ -129,6 +129,14 @@
       "y": 220,
       "name": "ist befreundet mit",
       "isPrimaryKey": false
+    },
+    {
+      "id": "s51",
+      "type": "attribute",
+      "x": 260,
+      "y": -20,
+      "name": "Parallelklasse",
+      "isPrimaryKey": true
     }
   ],
   "edges": [
@@ -249,7 +257,13 @@
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "m"
+    },
+    {
+      "id": "s52",
+      "fromId": "s8",
+      "toId": "s51",
+      "edgeType": "attribute"
     }
   ],
-  "nextId": 51
+  "nextId": 53
 }

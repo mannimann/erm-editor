@@ -1579,7 +1579,7 @@
     if (questValidateTimeout) clearTimeout(questValidateTimeout);
     questValidateTimeout = setTimeout(() => {
       const mode = window.Quest?.state?.questMode;
-      const shouldAutoValidate = mode === 'grundlagen' || mode === 'experten';
+      const shouldAutoValidate = window.Quest?.getSeries?.(mode)?.art === 'erm';
       if (window.Quest?.state?.questsPanelVisible && shouldAutoValidate) {
         window.Quest.validateCurrentQuest();
       }

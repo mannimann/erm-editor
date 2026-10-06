@@ -49,52 +49,8 @@
         >
           ⚔️ Quests <span class="tab-dropdown-chevron">&#x276F;</span>
         </button>
-        <div id="quests-menu" class="tab-dropdown-menu" aria-label="Quests" hidden>
-          <button class="tab-dropdown-item" type="button" id="btn-start-grundlagen" data-quest-series="grundlagen">
-            <div class="tab-dropdown-item-text">
-              <span class="tab-dropdown-item-title"
-                >📚 ERM-Grundlagen-Quest <span class="quest-progress-badge" data-mode="grundlagen"></span
-              ></span>
-              <span class="tab-dropdown-item-subtitle">Lerne die Basics kennen</span>
-            </div>
-          </button>
-          <button class="tab-dropdown-item" type="button" id="btn-start-experten" data-quest-series="experten">
-            <div class="tab-dropdown-item-text">
-              <span class="tab-dropdown-item-title"
-                >⚡ ERM-Experten-Quests <span class="quest-progress-badge" data-mode="experten"></span
-              ></span>
-              <span class="tab-dropdown-item-subtitle">Setze komplexe Szenarien um</span>
-            </div>
-          </button>
-          <button
-            class="tab-dropdown-item"
-            type="button"
-            id="btn-start-relmodel"
-            data-quest-series="relmodel-grundlagen"
-          >
-            <div class="tab-dropdown-item-text">
-              <span class="tab-dropdown-item-title"
-                >🗄 Relationenmodell-Grundlagen-Quest
-                <span class="quest-progress-badge" data-mode="relmodel-grundlagen"></span
-              ></span>
-              <span class="tab-dropdown-item-subtitle">ER-Modelle Schritt für Schritt überführen lernen</span>
-            </div>
-          </button>
-          <button
-            class="tab-dropdown-item"
-            type="button"
-            id="btn-start-relmodel-experten"
-            data-quest-series="relmodel-experten"
-          >
-            <div class="tab-dropdown-item-text">
-              <span class="tab-dropdown-item-title"
-                >⚡ Relationenmodell-Experten-Quests
-                <span class="quest-progress-badge" data-mode="relmodel-experten"></span
-              ></span>
-              <span class="tab-dropdown-item-subtitle">ER-Modelle selbstständig überführen</span>
-            </div>
-          </button>
-        </div>
+        <!-- Einträge baut app.js aus den Quest-Reihen (quest.js) -->
+        <div id="quests-menu" class="tab-dropdown-menu" aria-label="Quests" hidden></div>
       </div>
       <div class="erm-title-wrap" title="Bezeichnung des Diagramma">
         <label class="erm-title-label" for="erm-title-input">Titel:</label>
@@ -243,6 +199,9 @@
                 <button id="btn-preview-student" class="rel-btn" title="Tabellenansicht deiner Relationen öffnen">
                   🧾 Tabellenvorschau
                 </button>
+                <button id="btn-sql" class="rel-btn" title="SQL-Code (CREATE TABLE) aus deinen Relationen erzeugen">
+                  🛢 SQL erzeugen
+                </button>
               </div>
             </div>
 
@@ -267,6 +226,42 @@
           </div>
         </main>
       </aside>
+    </div>
+
+    <!-- ===== MODAL: SQL erzeugen (js/sql.js) ===== -->
+    <div
+      id="modal-sql-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-sql-title"
+    >
+      <div class="info-modal-card sql-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-sql-title">🛢 SQL erzeugen</h3>
+          <button class="info-modal-close" id="btn-sql-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <p class="table-preview-hint">
+            Wähle für jede Spalte einen Datentyp: <strong>INTEGER</strong> (ganze Zahl), <strong>REAL</strong>
+            (Kommazahl) oder <strong>TEXT</strong>. Ein Datum speicherst du als TEXT (z.&nbsp;B. 2026-10-06), einen
+            Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den Typ seines Primärschlüssels.
+          </p>
+          <label id="sql-erweitert-wrap" class="sql-erweitert">
+            <input type="checkbox" id="sql-erweitert" />
+            NOT NULL (Muss-Beziehung) und UNIQUE (1:1-Beziehung) einstellen
+          </label>
+          <div id="sql-spalten"></div>
+          <h4>SQL-Code</h4>
+          <div id="sql-fehler"></div>
+          <pre id="sql-ausgabe" class="sql-ausgabe"></pre>
+          <div class="sql-aktionen">
+            <button id="btn-sql-kopieren" class="rel-btn primary" type="button">📋 Kopieren</button>
+            <button id="btn-sql-speichern" class="rel-btn" type="button">⬇ Als .sql speichern</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===== MODAL: Tabellenvorschau ===== -->
@@ -395,7 +390,7 @@
             Übertrage das ER-Diagramm manuell ins Relationenmodell. Trage für jede Relation den Namen und alle Attribute
             ein.
           </p>
-          <p>Wenn du fertig bist, klicke auf <strong>„Überprüfen"</strong>.</p>
+          <p>Wenn du fertig bist, klicke auf <strong>„Überprüfen“</strong>.</p>
           <h4>Zeichenlegende</h4>
           <ul>
             <li>
@@ -415,6 +410,11 @@
             Falls ein Fremdschlüsselname mit einem bestehenden Attributnamen kollidiert, darf er umbenannt werden. Dabei
             muss der Prä- oder Postfix mit <code>-</code> oder <code>_</code> vom Originalname getrennt sein (z.&nbsp;B.
             <code>Klasse-SchülerNr</code> oder <code>SchülerNr_2</code>).
+          </p>
+          <h4>SQL erzeugen</h4>
+          <p>
+            „SQL erzeugen“ macht aus deinen Relationen SQL-Code (<code>CREATE TABLE</code>) für SQLite. Dort wählst du
+            die Datentypen; den Code kannst du kopieren oder als <code>.sql</code>-Datei speichern.
           </p>
         </div>
       </div>
@@ -451,10 +451,17 @@
           </p>
           <h4>4. n:m-Beziehung</h4>
           <p>
-            Es entsteht eine <em>neue Relation</em> mit dem Namen der Beziehung. Die PS beider beteiligten
-            Entitätsklassen werden als FS übernommen und bilden gemeinsam den zusammengesetzten PS. Eigene Attribute der
-            Beziehung werden ebenfalls aufgenommen.
+            Die Beziehung wird eine eigene Tabelle (Relation), die <em>Beziehungstabelle</em>. Sie heißt wie die
+            Beziehung. Die PS beider beteiligten Entitätsklassen werden als FS übernommen und bilden gemeinsam den
+            zusammengesetzten PS. Eigene Attribute der Beziehung werden ebenfalls aufgenommen.
           </p>
+          <h4>5. Selbstbeziehung</h4>
+          <p>
+            Sie wird wie jede andere Beziehung abgebildet. Weil der FS auf die eigene Relation zeigt, wird er
+            umbenannt, z. B. <code>SchülerNr-Freund</code>.
+          </p>
+          <h4>6. Verbundschlüssel</h4>
+          <p>Besteht ein PS aus mehreren Attributen, wandern als FS immer alle seine Attribute mit.</p>
         </div>
       </div>
     </div>
@@ -611,6 +618,7 @@
     <script src="js/app.js"></script>
     <script src="js/diagram.js"></script>
     <script src="js/relmodel.js"></script>
+    <script src="js/sql.js"></script>
     <script src="js/quest.js"></script>
   </body>
 </html>

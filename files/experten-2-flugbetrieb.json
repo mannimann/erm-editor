@@ -1,0 +1,269 @@
+{
+  "snapToGrid": true,
+  "diagramTitle": "Flugbetrieb",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 120,
+      "y": 100,
+      "name": "Flughafen",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 560,
+      "y": 100,
+      "name": "Flug",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s3",
+      "type": "entity",
+      "x": 560,
+      "y": 340,
+      "name": "Pilot",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s4",
+      "type": "attribute",
+      "x": 120,
+      "y": -20,
+      "name": "Flughafencode",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s5",
+      "type": "attribute",
+      "x": -80,
+      "y": 60,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": -80,
+      "y": 160,
+      "name": "Stadt",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s7",
+      "type": "attribute",
+      "x": 560,
+      "y": -20,
+      "name": "FlugID",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s8",
+      "type": "attribute",
+      "x": 740,
+      "y": 20,
+      "name": "Datum",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": 780,
+      "y": 100,
+      "name": "Abflugzeit",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 740,
+      "y": 180,
+      "name": "Ankunftszeit",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s11",
+      "type": "attribute",
+      "x": 760,
+      "y": 300,
+      "name": "Lizenznummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s12",
+      "type": "attribute",
+      "x": 760,
+      "y": 380,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 360,
+      "y": 340,
+      "name": "Flugstunden",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s14",
+      "type": "relationship",
+      "x": 340,
+      "y": 60,
+      "name": "startet von",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s15",
+      "type": "relationship",
+      "x": 340,
+      "y": 140,
+      "name": "landet in",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s16",
+      "type": "relationship",
+      "x": 560,
+      "y": 220,
+      "name": "führt",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s17",
+      "type": "relationship",
+      "x": 560,
+      "y": 460,
+      "name": "bildet aus",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s18",
+      "fromId": "s1",
+      "toId": "s4",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s19",
+      "fromId": "s1",
+      "toId": "s5",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s20",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s21",
+      "fromId": "s2",
+      "toId": "s7",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s22",
+      "fromId": "s2",
+      "toId": "s8",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s23",
+      "fromId": "s2",
+      "toId": "s9",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s24",
+      "fromId": "s2",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s25",
+      "fromId": "s3",
+      "toId": "s11",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s3",
+      "toId": "s12",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s3",
+      "toId": "s13",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s28",
+      "fromId": "s14",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s29",
+      "fromId": "s14",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s30",
+      "fromId": "s15",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s31",
+      "fromId": "s15",
+      "toId": "s1",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s32",
+      "fromId": "s16",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s33",
+      "fromId": "s16",
+      "toId": "s2",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s34",
+      "fromId": "s17",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s35",
+      "fromId": "s17",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    }
+  ],
+  "nextId": 36
+}

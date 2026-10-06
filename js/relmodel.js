@@ -6,8 +6,29 @@
 (function () {
   const FK_SUFFIX = '↑';
 
+  // Gemeinsame Namens-Normalisierung für ERM- und Relationenmodell-Quests:
+  // Groß-/Kleinschreibung egal, ä = ae, ö = oe, ü = ue, ß = ss ...
+  function foldName(s) {
+    return String(s || '')
+      .trim()
+      .toLocaleLowerCase('de')
+      .replace(/ä/g, 'ae')
+      .replace(/ö/g, 'oe')
+      .replace(/ü/g, 'ue')
+      .replace(/ß/g, 'ss');
+  }
+
+  // ... und Leerzeichen, _ und - werden ignoriert („Lehrer Kürzel“ = „lehrer_kuerzel“ = „Lehrer-Kürzel“).
+  function normalizeName(s) {
+    return foldName(s).replace(/[\s_‐-―-]+/g, '');
+  }
+
+  function isNameSeparator(c) {
+    return /[\s_‐-―-]/.test(c || '');
+  }
+
   function normalize(s) {
-    return (s || '').trim().toLowerCase().replace(/\s+/g, '');
+    return normalizeName(s);
   }
 
   function hasForeignKeyMarker(name) {
@@ -22,17 +43,11 @@
   }
 
   function normalizeAttrToken(name) {
-    return stripForeignKeyMarker(name)
-      .toLowerCase()
-      .replace(/[\s_-]+/g, '')
-      .trim();
+    return normalizeName(stripForeignKeyMarker(name));
   }
 
   function normalizeRelationToken(name) {
-    return String(name || '')
-      .toLowerCase()
-      .replace(/[\s_-]+/g, '')
-      .trim();
+    return normalizeName(name);
   }
 
   function normAttr(name) {
@@ -40,58 +55,40 @@
   }
 
   /**
-   * Prüft ob ein Schüler-FK-Name einem Lösungs-FK-Name entspricht
-   * (exakt oder mit Prä-/Postfix, getrennt durch - oder _).
-   * Arbeitet auf Rohnamen (vor Normalisierung).
+   * Prüft ob ein Schüler-FK-Name einem Lösungs-FK-Name entspricht: exakt oder mit Zusatz davor
+   * und/oder danach, getrennt durch -, _ oder Leerzeichen („SchülerNr-Freund“, „fk_SchülerNr“,
+   * „Flughafen-Flughafencode-2“).
    */
   function fkRawNameMatches(studentRaw, solutionRaw) {
-    const sNorm = normAttr(studentRaw);
-    const solNorm = normAttr(solutionRaw);
-    if (sNorm === solNorm) return true;
-    if (solNorm.length < 2) return false;
-    // Rohnamen (lowercase, FK-Marker entfernt, aber - und _ bleiben)
-    const sRaw = stripForeignKeyMarker(studentRaw).toLowerCase().trim();
-    const solRawClean = stripForeignKeyMarker(solutionRaw).toLowerCase().trim();
-    if (sRaw.length <= solRawClean.length) return false;
-    // Postfix: "schülernr_fk" enthält "schülernr" + Trennzeichen danach
-    if (sRaw.startsWith(solRawClean)) {
-      const sep = sRaw[solRawClean.length];
-      if (sep === '-' || sep === '_') return true;
-    }
-    // Präfix: "fk_schülernr" enthält "schülernr" + Trennzeichen davor
-    if (sRaw.endsWith(solRawClean)) {
-      const sep = sRaw[sRaw.length - solRawClean.length - 1];
-      if (sep === '-' || sep === '_') return true;
+    if (normAttr(studentRaw) === normAttr(solutionRaw)) return true;
+    const s = foldName(stripForeignKeyMarker(studentRaw));
+    const base = foldName(stripForeignKeyMarker(solutionRaw));
+    if (base.length < 2 || s.length <= base.length + 1) return false;
+    for (let i = s.indexOf(base); i !== -1; i = s.indexOf(base, i + 1)) {
+      const davor = i === 0 || isNameSeparator(s[i - 1]);
+      const danach = i + base.length === s.length || isNameSeparator(s[i + base.length]);
+      if (davor && danach) return true;
     }
     return false;
   }
 
   /**
-   * Prüft ob ein Schüler-Attributname dem Basis-PK einer Selbstbeziehung entspricht.
-   * Erlaubt exakten Treffer oder Prä-/Postfix mit - oder _ als Trennzeichen (Affix min. 2 Zeichen).
+   * Wie fkRawNameMatches, erlaubt bei Selbstbeziehungen zusätzlich angehängte Ziffern (schülernr1, schülernr2).
    */
   function selfRefFkRawNameMatchesBase(studentRaw, basePkRaw) {
-    const sNorm = normAttr(studentRaw);
-    const baseNorm = normAttr(basePkRaw);
-    if (sNorm === baseNorm) return true;
-    const sRaw = stripForeignKeyMarker(studentRaw).toLowerCase().trim();
-    const baseRawClean = stripForeignKeyMarker(basePkRaw).toLowerCase().trim();
-    // Postfix: base + sep + affix
-    if (sRaw.startsWith(baseRawClean) && sRaw.length > baseRawClean.length + 1) {
-      const sep = sRaw[baseRawClean.length];
-      if (sep === '-' || sep === '_') return true;
-    }
-    // Direkter numerischer Postfix ohne Trennzeichen: base + Ziffernfolge (z. B. schülernr1, schülernr2)
-    if (sRaw.startsWith(baseRawClean) && sRaw.length > baseRawClean.length) {
-      const suffix = sRaw.slice(baseRawClean.length);
-      if (/^\d+$/.test(suffix)) return true;
-    }
-    // Präfix: affix + sep + base
-    if (sRaw.endsWith(baseRawClean) && sRaw.length > baseRawClean.length + 1) {
-      const sep = sRaw[sRaw.length - baseRawClean.length - 1];
-      if (sep === '-' || sep === '_') return true;
-    }
-    return false;
+    if (fkRawNameMatches(studentRaw, basePkRaw)) return true;
+    const s = foldName(stripForeignKeyMarker(studentRaw));
+    const base = foldName(stripForeignKeyMarker(basePkRaw));
+    return s.startsWith(base) && /^\d+$/.test(s.slice(base.length));
+  }
+
+  /**
+   * Passt ein Schüler-Fremdschlüssel zu einem Fremdschlüssel der Musterlösung? Bei Namenskonflikten
+   * benennt die Musterlösung um (z. B. „Flughafen-Flughafencode-2“); dann zählt der Basisname.
+   */
+  function fkMatches(studentName, solAttr) {
+    if (fkRawNameMatches(studentName, solAttr.name)) return true;
+    return !!solAttr._fkBaseName && fkRawNameMatches(studentName, solAttr._fkBaseName);
   }
 
   function sortAttrsPrimaryFirst(attrs) {
@@ -159,7 +156,7 @@
       const name = normAttr(attr.name);
       if (!name) continue;
       if (seen.has(name)) {
-        return `Das Attribut „${(attr.name || '').trim()}" ist doppelt vorhanden.`;
+        return `Das Attribut „${(attr.name || '').trim()}“ ist doppelt vorhanden.`;
       }
       seen.set(name, true);
     }
@@ -380,12 +377,15 @@
       });
     }
 
-    function addAttr(rel, attrName, isPk = false, isFk = false, sourceEntityName = '') {
+    // via: Beziehung, aus der ein Fremdschlüssel stammt. Zwei Beziehungen zwischen denselben
+    // Entitätsklassen (z. B. „startet von“ und „landet in“) ergeben zwei Fremdschlüssel.
+    function addAttr(rel, attrName, isPk = false, isFk = false, sourceEntityName = '', via = '') {
       const cleanName = stripForeignKeyMarker(attrName);
       const normalized = normAttr(cleanName);
       const existing = rel.attrs.find((a) => {
         if (normAttr(a.name) !== normalized) return false;
         if (isFk && a.isFk) {
+          if ((a._fkVia || '') !== via) return false;
           const existingSource = normalize(a._fkSourceEntity || '');
           const currentSource = normalize(sourceEntityName || '');
           if (existingSource && currentSource && existingSource !== currentSource) return false;
@@ -413,6 +413,7 @@
         isFk,
         _fkSourceEntity: isFk ? String(sourceEntityName || '').trim() : '',
         _fkBaseName: isFk ? cleanName : '',
+        _fkVia: isFk ? via : '',
       });
     }
 
@@ -465,8 +466,8 @@
           const entity = getNode(entityIds[0]);
           const pk = getPkAttr(entityIds[0]);
           if (entity && pk) {
-            addAttr(mnRel, pk + '1', true, true, entity.name + '1');
-            addAttr(mnRel, pk + '2', true, true, entity.name + '2');
+            addAttr(mnRel, pk + '1', true, true, entity.name + '1', rel.id);
+            addAttr(mnRel, pk + '2', true, true, entity.name + '2', rel.id);
             mnRel._hasSelfRefFks = true;
             mnRel._selfRefBasePk = pk;
           }
@@ -477,13 +478,13 @@
             const entity = getNode(entityId);
             if (!entity) return;
             const pks = getPkAttrs(entityId);
-            pks.forEach((pk) => addAttr(mnRel, pk, true, true, entity.name));
+            pks.forEach((pk) => addAttr(mnRel, pk, true, true, entity.name, rel.id));
           });
         }
         relAttrs.forEach((a) => addRelationshipAttr(mnRel, rel.name, a.name));
       } else if (type === '1:N') {
         // FS der 1-Seite in die N-Seite
-        // Herausfinden welche Seite die „1"-Seite ist
+        // Herausfinden welche Seite die „1“-Seite ist
         let oneSide = null;
         let nSide = null;
 
@@ -505,7 +506,7 @@
         // Alle PK-Attribute der 1-Seite (Verbundschlüssel) als FK in N-Seite eintragen
         const onePks = getPkAttrs(oneSide.id);
         onePks.forEach((pk) => {
-          addAttr(ensureEntityRelation(nSide.name), pk, false, true, oneSide.name);
+          addAttr(ensureEntityRelation(nSide.name), pk, false, true, oneSide.name, rel.id);
         });
         // Eigene Beziehungsattribute in N-Seite
         relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(nSide.name), rel.name, a.name));
@@ -519,7 +520,7 @@
           const srcPk = getPkAttr(sourceEntity.id);
           const tgtPk = getPkAttr(targetEntity.id);
           if (srcPk) {
-            addAttr(ensureEntityRelation(targetEntity.name), srcPk, false, true, sourceEntity.name);
+            addAttr(ensureEntityRelation(targetEntity.name), srcPk, false, true, sourceEntity.name, rel.id);
           }
           relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(targetEntity.name), rel.name, a.name));
 
@@ -545,6 +546,7 @@
         name: attr.name,
         isPk: !!attr.isPk,
         isFk: !!attr.isFk,
+        _fkBaseName: attr.isFk ? attr._fkBaseName || '' : '',
       }));
     });
 
@@ -681,7 +683,8 @@
     if (_questChangeTimer) clearTimeout(_questChangeTimer);
     _questChangeTimer = setTimeout(() => {
       _questChangeTimer = null;
-      if (window.Quest?.state?.questMode === 'relmodel-grundlagen' && window.Quest?.state?.questsPanelVisible) {
+      const reihe = window.Quest?.getSeries?.(window.Quest?.state?.questMode);
+      if (reihe?.art === 'rm' && reihe.schritt && window.Quest.state.questsPanelVisible) {
         window.Quest.validateCurrentQuest();
       }
     }, 600);
@@ -734,9 +737,9 @@
       const hasData = (rel.name || '').trim() || rel.attrs.some((a) => (a.name || '').trim());
       if (hasData) {
         const confirmed = await (window.App?.showConfirmModal?.(
-          `Relation „${rel.name || 'unbenannt'}" wirklich löschen?`,
+          `Relation „${rel.name || 'unbenannt'}“ wirklich löschen?`,
           'Relation löschen',
-        ) ?? Promise.resolve(confirm(`Relation „${rel.name || 'unbenannt'}" wirklich löschen?`)));
+        ) ?? Promise.resolve(confirm(`Relation „${rel.name || 'unbenannt'}“ wirklich löschen?`)));
         if (!confirmed) return;
       }
       _studentRelations = _studentRelations.filter((r) => r.id !== rel.id);
@@ -1186,17 +1189,28 @@
           (fkRawNameMatches(a.name, sourcePk) ||
             (resolvedSourceFkName && fkRawNameMatches(a.name, resolvedSourceFkName))),
       );
-      // Alternative Richtung: FK(targetPk) in source
-      // Konstruiere den erwarteten FK-Namen für alternative Richtung: z.B. "e-id"
-      const altFkName = `${targetEntityName}-${targetPk}`;
-      // Alternative Richtung auch dann erkennen, wenn der FK bereits markiert wurde (z. B. e-id↑)
-      const altAttr = studSource?.attrs.find((a) => fkRawNameMatches(a.name, altFkName));
-      const hasAlt = !!altAttr;
+      // Alternative Richtung: FK(targetPk) in source. Erkannt, wenn source mehr Attribute auf Basis von
+      // targetPk hat, als die Musterlösung dort aus anderen Beziehungen erwartet (z. B. „Teamname-Kapitän“
+      // neben „Teamname“ aus „spielt in“). Auch noch nicht als FS markierte Attribute zählen.
+      // ponytail: nur der erste Schlüsselteil; Gegenrichtung auf einen Verbundschlüssel erkennt das nicht.
+      const solSource = solution.find(
+        (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
+      );
+      const expectedInSource = (solSource?.attrs || []).filter(
+        (a) => a.isFk && normAttr(a._fkBaseName || a.name) === normAttr(targetPk),
+      ).length;
+      const altCandidates = (studSource?.attrs || []).filter((a) => !a.isPk && fkRawNameMatches(a.name, targetPk));
+      const hasAlt = altCandidates.length > expectedInSource;
+      const altAttr = hasAlt
+        ? altCandidates.find(
+            (a) => !(solSource?.attrs || []).some((s) => s.isFk && normAttr(s.name) === normAttr(a.name)),
+          ) || altCandidates[altCandidates.length - 1]
+        : null;
 
       if (hasStandard && hasAlt) {
         bothDirectionErrors.push(
-          `@@REL:${relationshipName}@@Bei der 1:1-Beziehung „${relationshipName}" wurde der Fremdschlüssel in <strong>beide</strong> Richtungen eingetragen. ` +
-            `Wähle eine Richtung: entweder in „${sourceEntityName}" oder in „${targetEntityName}".`,
+          `@@REL:${relationshipName}@@Bei der 1:1-Beziehung „${relationshipName}“ wurde der Fremdschlüssel in <strong>beide</strong> Richtungen eingetragen. ` +
+            `Wähle eine Richtung: entweder in „${sourceEntityName}“ oder in „${targetEntityName}“.`,
         );
       } else if (hasAlt && !hasStandard) {
         // Speichere den erkannten Student-Attribut-Namen
@@ -1268,7 +1282,7 @@
       const sn = normalizeRelationToken(rel.name);
       if (!studentNames.includes(sn)) {
         if (isNm) {
-          missingNmRelations.push(`Relation <strong>${rel.name}</strong> (aus n:m-Beziehung) fehlt.`);
+          missingNmRelations.push(`Beziehungstabelle <strong>${rel.name}</strong> (aus der n:m-Beziehung) fehlt.`);
         } else {
           missingRelations.push(`Relation <strong>${rel.name}</strong> fehlt.`);
         }
@@ -1293,7 +1307,6 @@
       const solNonFkAttrs = solRel.attrs.filter((a) => !a.isFk);
       const solAttrs = solNonFkAttrs.map((a) => normAttr(a.name));
       const solFkAttrs = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
-      const solFkRawNames = solRel.attrs.filter((a) => a.isFk).map((a) => a.name);
       // Pflicht-Attribute müssen vorhanden sein (egal ob als Fremdschlüssel markiert oder nicht)
       solNonFkAttrs.forEach((solAttr) => {
         const sa = normAttr(solAttr.name);
@@ -1308,7 +1321,7 @@
           const sa = normAttr(studAttr.name);
           if (!sa || solAttrs.includes(sa) || solFkAttrs.includes(sa)) return;
           const rawName = studAttr.name || '';
-          const matchesFk = solFkRawNames.some((sf) => fkRawNameMatches(rawName, sf));
+          const matchesFk = solRel.attrs.some((sf) => sf.isFk && fkMatches(rawName, sf));
           if (!matchesFk)
             extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${(rawName || '').trim()}</em> ist nicht erwartet.`);
         });
@@ -1320,7 +1333,7 @@
         );
         if (validSelfFkAttrs.length < 2) {
           pkErrors.push(
-            `@@REL:${solRel.name}@@Markiere mindestens 2 Attribute als PS und FS, die auf „${basePk}" basieren (z. B. ${basePk}-2 oder ${basePk}2).`,
+            `@@REL:${solRel.name}@@Markiere mindestens 2 Attribute als PS und FS, die auf „${basePk}“ basieren (z. B. ${basePk}-2 oder ${basePk}2).`,
           );
         }
         // Überflüssige PS+FS-Attribute (nicht zum Basis-PK passend)
@@ -1328,42 +1341,42 @@
           .filter((a) => (a.isPk || a.isFk) && !selfRefFkRawNameMatchesBase(a.name, basePk))
           .forEach((a) => {
             pkWarnings.push(
-              `@@REL:${solRel.name}@@<em>${(a.name || '').trim()}</em> passt nicht zum erwarteten Basis-Primärschlüssel „${basePk}".`,
+              `@@REL:${solRel.name}@@<em>${(a.name || '').trim()}</em> passt nicht zum erwarteten Basis-Primärschlüssel „${basePk}“.`,
             );
           });
         return;
       }
 
-      // Primärschlüssel-Prüfung
+      // Primärschlüssel-Prüfung (ein PS, der zugleich FS ist, darf wie ein FS umbenannt sein)
       const solPkAttrs = solRel.attrs.filter((a) => a.isPk);
       const studPkAttrs = studRel.attrs.filter((a) => a.isPk);
-      const solPks = solPkAttrs.map((a) => normAttr(a.name));
-      const studPks = studPkAttrs.map((a) => normAttr(a.name));
+      const pkMatches = (studName, solAttr) =>
+        normAttr(studName) === normAttr(solAttr.name) || (solAttr.isFk && fkMatches(studName, solAttr));
       solPkAttrs.forEach((pkAttr) => {
-        const pk = normAttr(pkAttr.name);
-        if (!studPks.includes(pk)) {
+        if (!studPkAttrs.some((a) => pkMatches(a.name, pkAttr))) {
           pkErrors.push(
             `@@REL:${solRel.name}@@<em>${(pkAttr.name || '').trim()}</em> sollte als Primärschlüssel (PS) markiert sein.`,
           );
         }
       });
       studPkAttrs.forEach((pkAttr) => {
-        const pk = normAttr(pkAttr.name);
-        if (!solPks.includes(pk)) {
+        if (!solPkAttrs.some((s) => pkMatches(pkAttr.name, s))) {
           pkWarnings.push(
             `@@REL:${solRel.name}@@<em>${(pkAttr.name || '').trim()}</em> ist kein erwarteter Primärschlüssel (PS).`,
           );
         }
       });
-      // Fremdschlüssel-Prüfung mit Prä-/Postfix-Unterstützung (Trennzeichen - oder _ erforderlich)
-      // Fehlende Fremdschlüssel-Markierungen (Rohnamen-Vergleich mit Prä-/Postfix)
+      // Fremdschlüssel-Prüfung: jedem FS der Lösung genau ein FS des Schülers zuordnen
+      // (Prä-/Postfix mit Trennzeichen erlaubt, z. B. „Flughafencode-Start“ und „Flughafencode-Ziel“)
       const solFkRawAttrs = solRel.attrs.filter((a) => a.isFk);
       const studFkRawAttrs = studRel.attrs.filter((a) => !!a.isFk);
+      const assignedStudFks = new Set();
       solFkRawAttrs.forEach((solFkAttr) => {
-        const matched = studFkRawAttrs.some((sf) => fkRawNameMatches(sf.name, solFkAttr.name));
-        if (!matched) {
+        const match = studFkRawAttrs.find((sf) => !assignedStudFks.has(sf) && fkMatches(sf.name, solFkAttr));
+        if (match) assignedStudFks.add(match);
+        else {
           // Prüfe ob ein nicht-markiertes Attribut per Prä-/Postfix dem FK entspricht
-          let unmatchedAttr = studRel.attrs.find((a) => !a.isFk && fkRawNameMatches(a.name, solFkAttr.name));
+          let unmatchedAttr = studRel.attrs.find((a) => !a.isFk && fkMatches(a.name, solFkAttr));
           // Falls alternative Richtung erkannt wurde, nutze den gespeicherten Student-Attribut-Namen
           if (!unmatchedAttr && altDirectionAttrs[solRel.name]) {
             unmatchedAttr = { name: altDirectionAttrs[solRel.name] };
@@ -1376,8 +1389,7 @@
       });
       // Überflüssige Fremdschlüssel-Markierungen
       studFkRawAttrs.forEach((studFkAttr) => {
-        const matched = solFkRawAttrs.some((sf) => fkRawNameMatches(studFkAttr.name, sf.name));
-        if (!matched) {
+        if (!assignedStudFks.has(studFkAttr)) {
           fkOverWarnings.push(
             `@@REL:${solRel.name}@@<em>${(studFkAttr.name || '').trim()}</em> ist kein erwarteter Fremdschlüssel (FS).`,
           );
@@ -1558,7 +1570,7 @@
         );
       if (missingNmRelations.length)
         detailsBody.appendChild(
-          buildAccordionItem('Fehlende Relationen (aus n:m-Beziehungen)', missingNmRelations, false),
+          buildAccordionItem('Fehlende Beziehungstabellen (aus n:m-Beziehungen)', missingNmRelations, false),
         );
     }
 
@@ -1824,6 +1836,14 @@
 
   // Globale Exports
   window.RelModel = {
+    foldName,
+    normalizeName,
+    fkRawNameMatches,
+    selfRefFkRawNameMatchesBase,
+    fkMatches,
+    stripForeignKeyMarker,
+    // Musterlösung, angepasst an die vom Schüler gewählte 1:1-Richtung (für die Checkliste)
+    getCheckSolution: () => getAdjustedSolution().solution,
     syncFromDiagram,
     requestSyncFromDiagramDebounced,
     reset,

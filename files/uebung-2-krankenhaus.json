@@ -1,301 +1,291 @@
 {
   "snapToGrid": true,
-  "diagramTitle": "Expertenquest 3 - Fußball-Turnier",
+  "diagramTitle": "Krankenhaus-System",
   "nodes": [
     {
       "id": "s1",
       "type": "entity",
-      "x": 120,
-      "y": 320,
-      "name": "Spieler",
-      "isPrimaryKey": false
+      "x": 520,
+      "y": 340,
+      "name": "Patient"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 520,
-      "y": 320,
-      "name": "Team",
-      "isPrimaryKey": false
+      "x": 120,
+      "y": 100,
+      "name": "Arzt"
     },
     {
       "id": "s3",
       "type": "entity",
       "x": 520,
-      "y": 80,
-      "name": "Spiel",
-      "isPrimaryKey": false
+      "y": 100,
+      "name": "Behandlung"
     },
     {
       "id": "s4",
       "type": "entity",
       "x": 120,
-      "y": 80,
-      "name": "Trainer",
-      "isPrimaryKey": false
+      "y": 340,
+      "name": "Station"
     },
     {
       "id": "s5",
       "type": "attribute",
-      "x": -60,
-      "y": 320,
-      "name": "SpielerNr",
+      "x": 480,
+      "y": 460,
+      "name": "Versicherungsnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s6",
       "type": "attribute",
-      "x": -20,
-      "y": 400,
+      "x": 640,
+      "y": 440,
       "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s7",
       "type": "attribute",
-      "x": 100,
-      "y": 440,
-      "name": "Position",
+      "x": 720,
+      "y": 380,
+      "name": "Geburtsdatum",
       "isPrimaryKey": false
     },
     {
       "id": "s8",
       "type": "attribute",
       "x": 700,
-      "y": 380,
-      "name": "Teamname",
-      "isPrimaryKey": true
+      "y": 300,
+      "name": "Adresse",
+      "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 580,
-      "y": 420,
-      "name": "Altersklasse",
-      "isPrimaryKey": false
+      "x": 60,
+      "y": 0,
+      "name": "Personalnummer",
+      "isPrimaryKey": true
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 720,
-      "y": 300,
-      "name": "Ort",
+      "x": -60,
+      "y": 60,
+      "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s11",
       "type": "attribute",
-      "x": 380,
-      "y": 0,
-      "name": "SpielID",
-      "isPrimaryKey": true
+      "x": -60,
+      "y": 140,
+      "name": "Fachbereich",
+      "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 520,
+      "x": 380,
+      "y": 0,
+      "name": "Behandlungsnummer",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s13",
+      "type": "attribute",
+      "x": 540,
       "y": -20,
       "name": "Datum",
       "isPrimaryKey": false
     },
     {
-      "id": "s13",
-      "type": "attribute",
-      "x": 660,
-      "y": 0,
-      "name": "Heimtore",
-      "isPrimaryKey": false
-    },
-    {
       "id": "s14",
       "type": "attribute",
-      "x": 720,
-      "y": 80,
-      "name": "Gasttore",
+      "x": 660,
+      "y": 20,
+      "name": "Diagnose",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": -60,
+      "x": 720,
       "y": 80,
-      "name": "TrainerNr",
-      "isPrimaryKey": true
+      "name": "Medikation",
+      "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
-      "x": 0,
-      "y": 0,
-      "name": "Name",
-      "isPrimaryKey": false
+      "x": -60,
+      "y": 380,
+      "name": "Stationscode",
+      "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": 160,
-      "y": -20,
-      "name": "Lizenz",
+      "x": 40,
+      "y": 440,
+      "name": "Name",
       "isPrimaryKey": false
     },
     {
       "id": "s18",
-      "type": "relationship",
-      "x": 320,
-      "y": 200,
-      "name": "trainiert",
+      "type": "attribute",
+      "x": 200,
+      "y": 440,
+      "name": "Bettenzahl",
       "isPrimaryKey": false
     },
     {
       "id": "s19",
       "type": "relationship",
       "x": 320,
-      "y": 320,
-      "name": "spielt in",
-      "isPrimaryKey": false
+      "y": 100,
+      "name": "führt durch"
     },
     {
       "id": "s20",
       "type": "relationship",
-      "x": 320,
-      "y": 420,
-      "name": "ist Kapitän",
-      "isPrimaryKey": false
+      "x": 520,
+      "y": 220,
+      "name": "erhält"
     },
     {
       "id": "s21",
       "type": "relationship",
-      "x": 520,
-      "y": 200,
-      "name": "bestreitet",
-      "isPrimaryKey": false
+      "x": 120,
+      "y": 220,
+      "name": "arbeitet auf"
+    },
+    {
+      "id": "s22",
+      "type": "relationship",
+      "x": 320,
+      "y": 340,
+      "name": "liegt auf"
     }
   ],
   "edges": [
     {
-      "id": "s22",
+      "id": "s23",
       "fromId": "s1",
       "toId": "s5",
       "edgeType": "attribute"
     },
     {
-      "id": "s23",
+      "id": "s24",
       "fromId": "s1",
       "toId": "s6",
       "edgeType": "attribute"
     },
     {
-      "id": "s24",
+      "id": "s25",
       "fromId": "s1",
       "toId": "s7",
       "edgeType": "attribute"
     },
     {
-      "id": "s25",
-      "fromId": "s2",
-      "toId": "s8",
-      "edgeType": "attribute"
-    },
-    {
       "id": "s26",
-      "fromId": "s2",
-      "toId": "s9",
+      "fromId": "s1",
+      "toId": "s8",
       "edgeType": "attribute"
     },
     {
       "id": "s27",
       "fromId": "s2",
-      "toId": "s10",
+      "toId": "s9",
       "edgeType": "attribute"
     },
     {
       "id": "s28",
-      "fromId": "s3",
-      "toId": "s11",
+      "fromId": "s2",
+      "toId": "s10",
       "edgeType": "attribute"
     },
     {
       "id": "s29",
-      "fromId": "s3",
-      "toId": "s12",
+      "fromId": "s2",
+      "toId": "s11",
       "edgeType": "attribute"
     },
     {
       "id": "s30",
       "fromId": "s3",
-      "toId": "s13",
+      "toId": "s12",
       "edgeType": "attribute"
     },
     {
       "id": "s31",
       "fromId": "s3",
-      "toId": "s14",
+      "toId": "s13",
       "edgeType": "attribute"
     },
     {
       "id": "s32",
-      "fromId": "s4",
-      "toId": "s15",
+      "fromId": "s3",
+      "toId": "s14",
       "edgeType": "attribute"
     },
     {
       "id": "s33",
-      "fromId": "s4",
-      "toId": "s16",
+      "fromId": "s3",
+      "toId": "s15",
       "edgeType": "attribute"
     },
     {
       "id": "s34",
       "fromId": "s4",
-      "toId": "s17",
+      "toId": "s16",
       "edgeType": "attribute"
     },
     {
       "id": "s35",
       "fromId": "s4",
-      "toId": "s18",
-      "edgeType": "relationship",
-      "chenFrom": "1",
-      "chenTo": "1"
+      "toId": "s17",
+      "edgeType": "attribute"
     },
     {
       "id": "s36",
-      "fromId": "s2",
+      "fromId": "s4",
       "toId": "s18",
-      "edgeType": "relationship",
-      "chenFrom": "n",
-      "chenTo": "1"
+      "edgeType": "attribute"
     },
     {
       "id": "s37",
       "fromId": "s1",
-      "toId": "s19",
-      "edgeType": "relationship",
-      "chenFrom": "n",
-      "chenTo": "1"
-    },
-    {
-      "id": "s38",
-      "fromId": "s2",
-      "toId": "s19",
+      "toId": "s20",
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "1"
     },
     {
-      "id": "s39",
-      "fromId": "s1",
+      "id": "s38",
+      "fromId": "s3",
       "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s39",
+      "fromId": "s2",
+      "toId": "s19",
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "1"
     },
     {
       "id": "s40",
-      "fromId": "s2",
-      "toId": "s20",
+      "fromId": "s3",
+      "toId": "s19",
       "edgeType": "relationship",
-      "chenFrom": "1",
+      "chenFrom": "n",
       "chenTo": "1"
     },
     {
@@ -308,12 +298,28 @@
     },
     {
       "id": "s42",
-      "fromId": "s3",
+      "fromId": "s4",
       "toId": "s21",
       "edgeType": "relationship",
-      "chenFrom": "m",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s43",
+      "fromId": "s1",
+      "toId": "s22",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s44",
+      "fromId": "s4",
+      "toId": "s22",
+      "edgeType": "relationship",
+      "chenFrom": "1",
       "chenTo": "1"
     }
   ],
-  "nextId": 43
+  "nextId": 48
 }

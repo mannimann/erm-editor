@@ -1,141 +1,145 @@
 {
   "snapToGrid": true,
-  "diagramTitle": "Expertenquest 7 - Musikfestival",
+  "diagramTitle": "Bibliothek",
   "nodes": [
     {
       "id": "s1",
       "type": "entity",
-      "x": 560,
-      "y": 100,
-      "name": "Künstler"
+      "x": 120,
+      "y": 340,
+      "name": "Mitglied"
     },
     {
       "id": "s2",
       "type": "entity",
-      "x": 120,
+      "x": 560,
       "y": 340,
-      "name": "Bühne"
+      "name": "Buch"
     },
     {
       "id": "s3",
       "type": "entity",
-      "x": 120,
+      "x": 560,
       "y": 100,
-      "name": "Auftritt"
+      "name": "Exemplar"
     },
     {
       "id": "s4",
       "type": "entity",
-      "x": 560,
-      "y": 340,
-      "name": "Crewmitglied"
+      "x": 120,
+      "y": 100,
+      "name": "Ausleihe"
     },
     {
       "id": "s5",
-      "type": "relationship",
-      "x": 340,
-      "y": 100,
-      "name": "spielt"
+      "type": "attribute",
+      "x": 240,
+      "y": 440,
+      "name": "Mitgliedsnummer",
+      "isPrimaryKey": true
     },
     {
       "id": "s6",
-      "type": "relationship",
-      "x": 120,
-      "y": 220,
-      "name": "findet statt auf"
+      "type": "attribute",
+      "x": 100,
+      "y": 460,
+      "name": "Name",
+      "isPrimaryKey": false
     },
     {
       "id": "s7",
-      "type": "relationship",
-      "x": 340,
+      "type": "attribute",
+      "x": -80,
       "y": 340,
-      "name": "betreut"
+      "name": "Adresse",
+      "isPrimaryKey": false
     },
     {
       "id": "s8",
-      "type": "relationship",
-      "x": 560,
-      "y": 460,
-      "name": "arbeitet ein"
+      "type": "attribute",
+      "x": -40,
+      "y": 420,
+      "name": "Telefonnummer",
+      "isPrimaryKey": false
     },
     {
       "id": "s9",
       "type": "attribute",
-      "x": 600,
-      "y": -20,
-      "name": "Künstlercode",
+      "x": 720,
+      "y": 420,
+      "name": "ISBN",
       "isPrimaryKey": true
     },
     {
       "id": "s10",
       "type": "attribute",
-      "x": 740,
-      "y": 40,
-      "name": "Name",
+      "x": 580,
+      "y": 460,
+      "name": "Titel",
       "isPrimaryKey": false
     },
     {
       "id": "s11",
       "type": "attribute",
       "x": 440,
-      "y": 0,
-      "name": "Genre",
+      "y": 440,
+      "name": "Autor",
       "isPrimaryKey": false
     },
     {
       "id": "s12",
       "type": "attribute",
-      "x": 100,
-      "y": 440,
-      "name": "Bühnenname",
-      "isPrimaryKey": true
+      "x": 780,
+      "y": 340,
+      "name": "Erscheinungsjahr",
+      "isPrimaryKey": false
     },
     {
       "id": "s13",
       "type": "attribute",
-      "x": -40,
-      "y": 400,
-      "name": "Kapazität",
-      "isPrimaryKey": false
+      "x": 660,
+      "y": 0,
+      "name": "Inventarnummer",
+      "isPrimaryKey": true
     },
     {
       "id": "s14",
       "type": "attribute",
-      "x": 240,
-      "y": 420,
-      "name": "Bereich",
+      "x": 480,
+      "y": 0,
+      "name": "Anschaffungsdatum",
       "isPrimaryKey": false
     },
     {
       "id": "s15",
       "type": "attribute",
-      "x": -20,
-      "y": 180,
-      "name": "Bühnenname",
-      "isPrimaryKey": true
+      "x": 760,
+      "y": 60,
+      "name": "Zustand",
+      "isPrimaryKey": false
     },
     {
       "id": "s16",
       "type": "attribute",
       "x": -80,
       "y": 100,
-      "name": "Datum",
+      "name": "Ausleihnummer",
       "isPrimaryKey": true
     },
     {
       "id": "s17",
       "type": "attribute",
-      "x": -40,
-      "y": 20,
-      "name": "Startzeit",
-      "isPrimaryKey": true
+      "x": 100,
+      "y": -20,
+      "name": "Ausleihdatum",
+      "isPrimaryKey": false
     },
     {
       "id": "s18",
       "type": "attribute",
-      "x": 100,
-      "y": -20,
-      "name": "Endzeit",
+      "x": -40,
+      "y": 20,
+      "name": "Fälligkeitsdatum",
       "isPrimaryKey": false
     },
     {
@@ -143,183 +147,170 @@
       "type": "attribute",
       "x": 240,
       "y": 0,
-      "name": "Status",
+      "name": "Rückgabedatum",
       "isPrimaryKey": false
     },
     {
       "id": "s20",
-      "type": "attribute",
-      "x": 660,
-      "y": 240,
-      "name": "Crewnummer",
-      "isPrimaryKey": true
+      "type": "relationship",
+      "x": 560,
+      "y": 220,
+      "name": "ist Exemplar von"
     },
     {
       "id": "s21",
-      "type": "attribute",
-      "x": 740,
-      "y": 300,
-      "name": "Name",
-      "isPrimaryKey": false
+      "type": "relationship",
+      "x": 120,
+      "y": 220,
+      "name": "leiht aus"
     },
     {
       "id": "s22",
-      "type": "attribute",
-      "x": 740,
-      "y": 380,
-      "name": "Rolle",
-      "isPrimaryKey": false
+      "type": "relationship",
+      "x": 340,
+      "y": 100,
+      "name": "wird ausgeliehen in"
     }
   ],
   "edges": [
     {
       "id": "s23",
       "fromId": "s1",
-      "toId": "s9",
+      "toId": "s5",
       "edgeType": "attribute"
     },
     {
       "id": "s24",
       "fromId": "s1",
-      "toId": "s10",
+      "toId": "s6",
       "edgeType": "attribute"
     },
     {
       "id": "s25",
       "fromId": "s1",
-      "toId": "s11",
+      "toId": "s7",
       "edgeType": "attribute"
     },
     {
       "id": "s26",
-      "fromId": "s2",
-      "toId": "s12",
+      "fromId": "s1",
+      "toId": "s8",
       "edgeType": "attribute"
     },
     {
       "id": "s27",
       "fromId": "s2",
-      "toId": "s13",
+      "toId": "s9",
       "edgeType": "attribute"
     },
     {
       "id": "s28",
       "fromId": "s2",
-      "toId": "s14",
+      "toId": "s10",
       "edgeType": "attribute"
     },
     {
       "id": "s29",
-      "fromId": "s3",
-      "toId": "s15",
+      "fromId": "s2",
+      "toId": "s11",
       "edgeType": "attribute"
     },
     {
       "id": "s30",
-      "fromId": "s3",
-      "toId": "s16",
+      "fromId": "s2",
+      "toId": "s12",
       "edgeType": "attribute"
     },
     {
       "id": "s31",
       "fromId": "s3",
-      "toId": "s17",
+      "toId": "s13",
       "edgeType": "attribute"
     },
     {
       "id": "s32",
       "fromId": "s3",
-      "toId": "s18",
+      "toId": "s14",
       "edgeType": "attribute"
     },
     {
       "id": "s33",
       "fromId": "s3",
-      "toId": "s19",
+      "toId": "s15",
       "edgeType": "attribute"
     },
     {
       "id": "s34",
       "fromId": "s4",
-      "toId": "s20",
+      "toId": "s16",
       "edgeType": "attribute"
     },
     {
       "id": "s35",
       "fromId": "s4",
-      "toId": "s21",
+      "toId": "s17",
       "edgeType": "attribute"
     },
     {
       "id": "s36",
       "fromId": "s4",
-      "toId": "s22",
+      "toId": "s18",
       "edgeType": "attribute"
     },
     {
       "id": "s37",
-      "fromId": "s1",
-      "toId": "s5",
-      "edgeType": "relationship",
-      "chenFrom": "1",
-      "chenTo": "1"
+      "fromId": "s4",
+      "toId": "s19",
+      "edgeType": "attribute"
     },
     {
       "id": "s38",
       "fromId": "s3",
-      "toId": "s5",
+      "toId": "s20",
       "edgeType": "relationship",
       "chenFrom": "n",
       "chenTo": "1"
     },
     {
       "id": "s39",
-      "fromId": "s3",
-      "toId": "s6",
+      "fromId": "s2",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s40",
+      "fromId": "s1",
+      "toId": "s21",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s41",
+      "fromId": "s4",
+      "toId": "s21",
       "edgeType": "relationship",
       "chenFrom": "n",
       "chenTo": "1"
     },
     {
-      "id": "s40",
-      "fromId": "s2",
-      "toId": "s6",
+      "id": "s42",
+      "fromId": "s3",
+      "toId": "s22",
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "1"
     },
     {
-      "id": "s44",
-      "fromId": "s8",
-      "toId": "s4",
+      "id": "s43",
+      "fromId": "s4",
+      "toId": "s22",
       "edgeType": "relationship",
-      "chenFrom": "1",
-      "chenTo": "n"
-    },
-    {
-      "id": "s45",
-      "fromId": "s8",
-      "toId": "s4",
-      "edgeType": "relationship",
-      "chenFrom": "1",
-      "chenTo": "m"
-    },
-    {
-      "id": "s46",
-      "fromId": "s7",
-      "toId": "s4",
-      "edgeType": "relationship",
-      "chenFrom": "1",
-      "chenTo": "n"
-    },
-    {
-      "id": "s47",
-      "fromId": "s7",
-      "toId": "s2",
-      "edgeType": "relationship",
-      "chenFrom": "1",
-      "chenTo": "m"
+      "chenFrom": "n",
+      "chenTo": "1"
     }
   ],
-  "nextId": 48
+  "nextId": 23
 }
