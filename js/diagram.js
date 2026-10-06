@@ -2266,6 +2266,7 @@
     modalCardinality.closest('.modal-row').style.display = withCardinalities() ? '' : 'none';
 
     modalBackdrop.style.display = '';
+    dialogVerschieben(dialogLage.x, dialogLage.y); // nach Größenänderung des Fensters wieder ins Bild
 
     // Fokus auf das Namensfeld (vorgegebene Beziehung: auf die Kardinalität)
     setTimeout(() => {
@@ -2632,6 +2633,31 @@
     window.AppSelect.clearSelection();
     renderAll();
   }
+
+  // Dialog „Beziehung bearbeiten“: Kreuz schließt (wie Abbrechen), an der Überschrift verschieben.
+  // Die Lage bleibt für das nächste Öffnen, aber immer im Fenster.
+  const dialogLage = { x: 0, y: 0 };
+  function dialogVerschieben(x, y) {
+    const r = modalCard.getBoundingClientRect();
+    const basisX = r.left - dialogLage.x;
+    const basisY = r.top - dialogLage.y;
+    dialogLage.x = Math.max(-basisX, Math.min(window.innerWidth - r.width - basisX, x));
+    dialogLage.y = Math.max(-basisY, Math.min(window.innerHeight - r.height - basisY, y));
+    modalCard.style.left = `${dialogLage.x}px`;
+    modalCard.style.top = `${dialogLage.y}px`;
+  }
+  document.getElementById('modal-close')?.addEventListener('click', () => activeModalCleanup?.());
+  modalTitle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const start = { x: e.clientX - dialogLage.x, y: e.clientY - dialogLage.y };
+    const ziehen = (ev) => dialogVerschieben(ev.clientX - start.x, ev.clientY - start.y);
+    const loslassen = () => {
+      window.removeEventListener('mousemove', ziehen);
+      window.removeEventListener('mouseup', loslassen);
+    };
+    window.addEventListener('mousemove', ziehen);
+    window.addEventListener('mouseup', loslassen);
+  });
 
   // Klick außerhalb schließt das Beziehungs-Dialog NICHT mehr.
   // Stattdessen eine kurze Shake-Animation am Dialog zeigen, um Feedback zu geben.

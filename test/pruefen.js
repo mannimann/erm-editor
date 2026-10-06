@@ -3,7 +3,8 @@
    2. Keine zwei Namen derselben Entitätsklasse fallen nach der Normalisierung zusammen
       (Musterlösungen und ER-Modelle in files/); jedes ER-Modell erfüllt seine ERM-Quest
    3. Relationenmodell-Prüfung: Musterlösung, umbenannte Fremdschlüssel, zweite 1:1-Richtung, SQL-Regeln
-   4. SQL aus allen Musterlösungen der Relationenmodell-Quests läuft in SQLite, die Verweise stimmen */
+   4. SQL aus allen Musterlösungen der Relationenmodell-Quests läuft in SQLite, die Verweise stimmen
+   5. Eigene Szenarien: Musterlösung aus dem ER-Modell, Prüfen von außen, Link hin und zurück */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -36,6 +37,13 @@ const context = {
   console,
   setTimeout,
   clearTimeout,
+  // für die Szenario-Links (js/szenario.js)
+  Blob,
+  Response,
+  CompressionStream,
+  DecompressionStream,
+  btoa,
+  atob,
   document: {
     getElementById: () => fakeElement(),
     querySelector: () => fakeElement(),
@@ -52,10 +60,10 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
-for (const file of ['js/relmodel.js', 'js/sql.js', 'js/quest.js']) {
+for (const file of ['js/relmodel.js', 'js/sql.js', 'js/quest.js', 'js/szenario.js']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
 }
-const { RelModel, SQLExport, Quest } = context;
+const { RelModel, SQLExport, Quest, Szenario } = context;
 const N = RelModel.normalizeName;
 const kopie = (x) => JSON.parse(JSON.stringify(x));
 const ermLaden = (datei) => JSON.parse(fs.readFileSync(path.join(FILES, datei), 'utf8'));
@@ -207,7 +215,7 @@ pruefe('Relationenmodell: umbenannte Fremdschlüssel nach Konvention werden erka
   assert(check(rels), 'ist befreundet mit (SchülerNr, Schuelernr-Freund)');
 });
 
-pruefe('Relationenmodell: Fremdschlüssel nach der Zieltabelle benannt (wie mannschaft↑ im Lehrbuch)', () => {
+pruefe('Relationenmodell: Fremdschlüssel nach der Zieltabelle benannt (z. B. „Gast“ statt „Gastnummer“)', () => {
   let rels = loesung('uebung-1-hotel.json');
   attr(rels, 'Buchung', 'Gastnummer').name = 'Gast';
   attr(rels, 'Buchung', 'Zimmernummer').name = 'Zimmer';
@@ -578,5 +586,116 @@ pruefe('SQL: alle Musterlösungen laufen in SQLite, Verweise stimmen', () => {
   }
 });
 
-console.log(fehler ? `\n${fehler} Prüfung(en) fehlgeschlagen` : '\nAlle Prüfungen bestanden');
-process.exit(fehler ? 1 : 0);
+// ---- 5. Eigene Szenarien ----
+const alsSzenario = (datei, aufgabe = 'erm') => ({
+  format: 'erm-editor-szenario',
+  version: 1,
+  titel: datei,
+  text: 'Text',
+  aufgabe,
+  kardinalitaeten: true,
+  erm: ermLaden(datei),
+});
+
+pruefe('Eigene Szenarien: Musterlösung aus dem ER-Modell = handgeschriebene Musterlösung', () => {
+  const menge = (namen) => [...new Set(namen.map(N))].sort().join('|');
+  for (const q of rmSzenarien) {
+    const hand = ermSzenarien.get(q.title).masterlösung;
+    const auto = Quest.masterAusErm(ermLaden(q.jsonFile));
+    const wo = q.jsonFile;
+    assert.strictEqual(menge(auto.entities), menge(hand.entities), `${wo}: Entitätsklassen`);
+    for (const e of hand.entities) {
+      const autoE = auto.entities.find((x) => N(x) === N(e));
+      assert.strictEqual(menge(auto.attributes[autoE]), menge(hand.attributes[e]), `${wo}: Attribute von ${e}`);
+      const pks = Array.isArray(hand.primaryKeys[e]) ? hand.primaryKeys[e] : [hand.primaryKeys[e]];
+      assert.strictEqual(menge(auto.primaryKeys[autoE]), menge(pks), `${wo}: Primärschlüssel von ${e}`);
+    }
+    assert.strictEqual(auto.relationships.length, hand.relationships.length, `${wo}: Anzahl Beziehungen`);
+    for (const h of hand.relationships) {
+      const a = auto.relationships.find((x) => N(x.name) === N(h.name));
+      assert(a, `${wo}: Beziehung ${h.name}`);
+      const gleich = N(a.from) === N(h.from) && N(a.to) === N(h.to);
+      assert(gleich || (N(a.from) === N(h.to) && N(a.to) === N(h.from)), `${wo}: Seiten von ${h.name}`);
+      if (h.cardinality) {
+        const [x, y] = a.cardinality.replace(/m/g, 'n').split(':');
+        const erwartet = h.cardinality.replace(/m/g, 'n');
+        assert.strictEqual(gleich ? `${x}:${y}` : `${y}:${x}`, erwartet, `${wo}: Kardinalität von ${h.name}`);
+      }
+      assert.strictEqual(menge(a.attributes), menge(h.attributes || []), `${wo}: Attribute von ${h.name}`);
+    }
+  }
+});
+
+pruefe('Eigene Szenarien: als Reihe lösbar – ER-Modell zeichnen und ins Relationenmodell überführen', () => {
+  for (const q of rmSzenarien) {
+    const zeichnen = Szenario.pruefeSzenario(alsSzenario(q.jsonFile)).sz;
+    const ueberfuehren = Szenario.pruefeSzenario(alsSzenario(q.jsonFile, 'rm')).sz;
+    Quest.setEigeneSzenarien([zeichnen, ueberfuehren]);
+    const erm = Quest.getSeries(`eigen-${zeichnen.id}`);
+    const rm = Quest.getSeries(`eigen-${ueberfuehren.id}`);
+    assert(erm.art === 'erm' && rm.art === 'rm' && erm.quests.length === 1, q.jsonFile);
+    context.AppState = { state: ermLaden(q.jsonFile) };
+    const r1 = erm.quests[0].validator();
+    assert(r1.passed, `${q.jsonFile} zeichnen: ${r1.error}`);
+    RelModel.setStudentRelations(loesung(q.jsonFile));
+    const r2 = rm.quests[0].validator();
+    assert(r2.passed, `${q.jsonFile} überführen: ${r2.error || r2.message}`);
+  }
+  // Ohne Kardinalitäten zählt nur die Verbindung
+  const ohne = Szenario.pruefeSzenario({ ...alsSzenario('uebung-2-krankenhaus.json'), kardinalitaeten: false }).sz;
+  Quest.setEigeneSzenarien([ohne]);
+  const state = ermLaden('uebung-2-krankenhaus.json');
+  state.edges.forEach((e) => e.edgeType === 'relationship' && (e.chenFrom = e.chenTo = ''));
+  context.AppState = { state };
+  assert(Quest.getSeries(`eigen-${ohne.id}`).quests[0].validator().passed, 'Krankenhaus ohne Kardinalitäten');
+  Quest.setEigeneSzenarien([]);
+  assert(!Quest.getSeriesList().some((r) => r.eigen), 'eigene Reihen wieder entfernt');
+});
+
+pruefe('Eigene Szenarien: Daten von außen werden geprüft', () => {
+  const html = Quest.textAlsHtml('Ein **Kino** <script>alert(1)</script>\n\n- Film\n- Saal');
+  assert(!html.includes('<script>') && html.includes('&lt;script&gt;'), html);
+  assert(html.includes('<strong>Kino</strong>') && html.includes('<ul><li>Film</li><li>Saal</li></ul>'), html);
+  const boese = alsSzenario('uebung-1-hotel.json');
+  boese.titel = 'Hotel <img src=x onerror=alert(1)>';
+  boese.erm.nodes[0].name = '<b>Gast</b>';
+  boese.erm.nodes[0].onclick = 'alert(1)';
+  const { sz } = Szenario.pruefeSzenario(boese);
+  assert(!/[<>]/.test(sz.titel + sz.erm.nodes.map((n) => n.name).join()), 'keine spitzen Klammern');
+  assert(!('onclick' in sz.erm.nodes[0]), 'nur bekannte Felder');
+  assert(Szenario.pruefeSzenario({ format: 'x' }).fehler);
+  assert(Szenario.pruefeSzenario({ ...alsSzenario('uebung-1-hotel.json'), erm: { nodes: 'x', edges: [] } }).fehler);
+  const ohneZahlen = alsSzenario('uebung-1-hotel.json', 'rm');
+  ohneZahlen.erm.edges.forEach((e) => (e.chenFrom = e.chenTo = ''));
+  assert(/Kardinalitäten/.test(Szenario.pruefeSzenario(ohneZahlen).fehler), 'Überführen braucht Kardinalitäten');
+});
+
+async function pruefeAsync(name, fn) {
+  try {
+    await fn();
+    console.log('ok   ' + name);
+  } catch (e) {
+    fehler++;
+    console.log('FEHL ' + name + '\n     ' + e.message.split('\n').join('\n     '));
+  }
+}
+
+(async () => {
+  await pruefeAsync('Eigene Szenarien: Link hin und zurück', async () => {
+    const original = alsSzenario('experten-5-katastrophenschutz.json');
+    const link = await Szenario.packen(original);
+    assert(/^[A-Za-z0-9_-]+$/.test(link), 'base64url');
+    const zurueck = await Szenario.auspacken(link);
+    // als JSON vergleichen: Arrays aus dem vm-Kontext haben einen anderen Prototyp
+    const json = (d) => JSON.stringify(Szenario.pruefeSzenario(d).sz);
+    assert.strictEqual(json(zurueck), json(original));
+    console.log(`     (Katastrophenschutz: ${link.length} Zeichen im Link)`);
+  });
+  await pruefeAsync('Eigene Szenarien: präparierter Link (Zip-Bombe, fremde Zeichen) wird abgelehnt', async () => {
+    const bombe = await Szenario.packen({ format: 'erm-editor-szenario', text: 'a'.repeat(5000000) });
+    await assert.rejects(Szenario.auspacken(bombe), /zu groß/);
+    await assert.rejects(Szenario.auspacken('abc"><img'), /ungültig/);
+  });
+  console.log(fehler ? `\n${fehler} Prüfung(en) fehlgeschlagen` : '\nAlle Prüfungen bestanden');
+  process.exit(fehler ? 1 : 0);
+})();

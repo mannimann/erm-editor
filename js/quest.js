@@ -1948,6 +1948,132 @@
     },
   ];
 
+  // ---- Eigene Szenarien (Lehrkräfte, js/szenario.js) ----
+  const esc = (t) =>
+    String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+  // Aufgabentext der Lehrkraft: Leerzeile = Absatz, **Wort** = hervorgehoben, „- “ = Aufzählung. Kein HTML.
+  function textAlsHtml(text) {
+    const inline = (z) => esc(z).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return String(text || '')
+      .trim()
+      .split(/\n\s*\n/)
+      .map((absatz) =>
+        absatz
+          .split('\n')
+          .map((z) => z.trim())
+          .filter(Boolean),
+      )
+      .filter((zeilen) => zeilen.length)
+      .map((zeilen) =>
+        zeilen.every((z) => z.startsWith('- '))
+          ? `<ul>${zeilen.map((z) => `<li>${inline(z.slice(2))}</li>`).join('')}</ul>`
+          : `<p>${zeilen.map(inline).join(' ')}</p>`,
+      )
+      .join('');
+  }
+
+  // Musterlösung im Format von SZENARIEN aus einem ER-Modell; Kardinalitäten nur, wenn gewünscht und gesetzt
+  function masterAusErm(erm, mitKardinalitaeten = true) {
+    const nodes = erm?.nodes || [];
+    const edges = erm?.edges || [];
+    const knoten = (id) => nodes.find((n) => n.id === id);
+    const istBeziehungskante = (e) =>
+      e.edgeType
+        ? e.edgeType === 'relationship'
+        : [knoten(e.fromId)?.type, knoten(e.toId)?.type].sort().join() === 'entity,relationship';
+    const anderer = (e, id) => knoten(e.fromId === id ? e.toId : e.fromId);
+    const attributeVon = (id) =>
+      edges
+        .filter((e) => !istBeziehungskante(e) && (e.fromId === id || e.toId === id))
+        .map((e) => anderer(e, id))
+        .filter((n) => n?.type === 'attribute');
+    const entities = nodes.filter((n) => n.type === 'entity');
+    const relationships = nodes
+      .filter((n) => n.type === 'relationship')
+      .map((r) => {
+        const seiten = edges
+          .filter((e) => istBeziehungskante(e) && (e.fromId === r.id || e.toId === r.id))
+          .map((e) => ({
+            name: anderer(e, r.id)?.name,
+            karte: String((e.fromId === r.id ? e.chenTo : e.chenFrom) || '').toLowerCase(),
+          }));
+        if (seiten.length < 2 || !seiten[0].name || !seiten[1].name) return null;
+        const spec = { name: r.name, from: seiten[0].name, to: seiten[1].name };
+        if (mitKardinalitaeten && seiten[0].karte && seiten[1].karte)
+          spec.cardinality = `${seiten[0].karte}:${seiten[1].karte}`;
+        spec.attributes = attributeVon(r.id).map((a) => a.name);
+        return spec;
+      })
+      .filter(Boolean);
+    return {
+      entities: entities.map((e) => e.name),
+      attributes: Object.fromEntries(entities.map((e) => [e.name, attributeVon(e.id).map((a) => a.name)])),
+      primaryKeys: Object.fromEntries(
+        entities.map((e) => [
+          e.name,
+          attributeVon(e.id)
+            .filter((a) => a.isPrimaryKey)
+            .map((a) => a.name),
+        ]),
+      ),
+      relationships,
+    };
+  }
+
+  // Namen der Musterlösung, die im Text nicht vorkommen (Prüfbericht beim Erstellen)
+  function nichtImText(spec, text) {
+    const woerter = (String(text || '').match(/[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*/gu) || []).map(normalizeName);
+    const kommtVor = (name) => {
+      const teile = name.split(/\s+/).map(normalizeName);
+      if (teile.length === 1) {
+        const formen = wortformen(name);
+        return woerter.some((w) => formen.has(w));
+      }
+      return woerter.some((_, i) => teile.every((t, k) => woerter[i + k] === t));
+    };
+    const namen = [
+      ...spec.entities,
+      ...Object.values(spec.attributes).flat(),
+      ...spec.relationships.flatMap((r) => [r.name, ...(r.attributes || [])]),
+    ];
+    return [...new Set(namen)].filter((n) => n && !kommtVor(n));
+  }
+
+  // Ein geprüftes Szenario (js/szenario.js) wird eine Übungsreihe mit einer Aufgabe
+  function eigeneReihe(sz) {
+    const text = textAlsHtml(sz.text);
+    const quest =
+      sz.aufgabe === 'rm'
+        ? {
+            title: sz.titel,
+            szenario: `<p><strong>Überführe das ER-Modell „${esc(sz.titel)}“ in das Relationenmodell.</strong> Lege die Relationen in der rechten Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${text}`,
+            erm: sz.erm,
+            validator: () => window.RelModel?.checkAndGetResult?.() || { passed: false },
+          }
+        : {
+            title: sz.titel,
+            szenario: text,
+            masterlösung: masterAusErm(sz.erm, sz.kardinalitaeten),
+            kardinalitaeten: sz.kardinalitaeten ? undefined : false,
+            validator: function () {
+              return validateExpertQuest(this.masterlösung);
+            },
+          };
+    return {
+      id: `eigen-${sz.id}`,
+      stufe: 'Eigene Szenarien',
+      art: sz.aufgabe,
+      schritt: false,
+      eigen: true,
+      icon: '✏️',
+      titel: sz.titel,
+      untertitel: sz.aufgabe === 'rm' ? 'Ins Relationenmodell überführen' : 'ER-Modell zeichnen',
+      abschlussText: 'Du hast das Szenario deiner Lehrkraft gelöst.',
+      quests: nummeriert([quest]),
+    };
+  }
+
   const QUEST_WORK_PREFIX = 'erm-editor-quest-work-v1';
 
   // ---- Quest Manager ----
@@ -1966,6 +2092,12 @@
 
     getSeriesList: function () {
       return REIHEN;
+    },
+
+    // Eigene Szenarien ersetzen die bisherigen am Ende der Reihenliste
+    setEigeneSzenarien: function (liste) {
+      for (let i = REIHEN.length - 1; i >= 0; i--) if (REIHEN[i].eigen) REIHEN.splice(i, 1);
+      REIHEN.push(...liste.map(eigeneReihe));
     },
 
     getStorageKey: function (mode = this.state.questMode) {
@@ -2377,7 +2509,14 @@
       const frag = document.createDocumentFragment();
       teile.forEach((teil, i) => {
         if (i % 2 === 0) {
-          if (teil) frag.appendChild(document.createTextNode(teil));
+          // Leerzeichen zwischen zwei Wörtern: eigenes <span>, damit Wortgruppen durchgehend markiert sind
+          if (/^\s+$/.test(teil) && i > 0 && i < teile.length - 1) {
+            const luecke = document.createElement('span');
+            luecke.className = 'tm-luecke';
+            luecke.textContent = teil;
+            woerter[woerter.length - 1].luecke = luecke;
+            frag.appendChild(luecke);
+          } else if (teil) frag.appendChild(document.createTextNode(teil));
           return;
         }
         const span = document.createElement('span');
@@ -2428,13 +2567,19 @@
     zaehlen();
 
     function zeichnen() {
-      woerter.forEach((w) => (w.span.className = 'tm-wort'));
+      woerter.forEach((w) => {
+        w.span.className = 'tm-wort';
+        if (w.luecke) w.luecke.className = 'tm-luecke';
+      });
       elemente
         .filter((e) => markiert.has(e.key))
         .forEach((e) => {
           for (let i = 0; i < woerter.length; i++) {
             if (passt(e, i) && elementBei(i) === e)
-              for (let k = 0; k < e.norm.length; k++) woerter[i + k].span.classList.add('tm-' + e.art);
+              for (let k = 0; k < e.norm.length; k++) {
+                woerter[i + k].span.classList.add('tm-' + e.art);
+                if (k < e.norm.length - 1) woerter[i + k].luecke?.classList.add('tm-' + e.art);
+              }
           }
         });
     }
@@ -2451,12 +2596,8 @@
       const span = event.target.closest('.tm-wort');
       if (!span) return;
       const e = elementBei(Number(span.dataset.i));
-      // Markierung entfernen kostet keinen Klick
-      if (e && markiert.has(e.key)) {
-        markiert.delete(e.key);
-        zeichnen();
-        return;
-      }
+      // Markiert bleibt markiert; ein zweiter Klick kostet nichts
+      if (e && markiert.has(e.key)) return;
       if (stand.klicks >= erlaubt) {
         aufleuchten(zaehler, 'tm-zaehler-aus');
         return;
@@ -2475,6 +2616,7 @@
   // ---- Export ----
   window.Quest = QuestManager;
   QuestManager.textmarker = textmarker;
+  Object.assign(QuestManager, { masterAusErm, nichtImText, textAlsHtml });
   // Liefert eine Quest-Definition nach Reihenname und Nummer (für Tooltips/Labels)
   QuestManager.getQuestByNumber = function (mode, number) {
     const quests = QuestManager.getQuestsForMode(mode);

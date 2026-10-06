@@ -216,6 +216,7 @@
     return q?.state?.questsPanelVisible ? q.getSeries?.()?.stufe || null : null;
   }
 
+  // Einstieg: ohne NOT NULL/UNIQUE, Fortgeschritten: mit; sonst (frei, eigene Szenarien) per Häkchen
   function istErweitert() {
     const s = stufe();
     if (s === 'Fortgeschritten') return true;
@@ -400,7 +401,7 @@
     letzteZeilen = null;
     document.getElementById('modal-sql-title').textContent = ausLoesung ? '🛢 SQL der Musterlösung' : '🛢 SQL erzeugen';
     const s = stufe();
-    document.getElementById('sql-erweitert-wrap').hidden = !!s;
+    document.getElementById('sql-erweitert-wrap').hidden = s === 'Einstieg' || s === 'Fortgeschritten';
     document.getElementById('sql-erweitert').checked = istErweitert();
     render();
     const backdrop = document.getElementById('modal-sql-backdrop');
@@ -455,6 +456,29 @@
     });
     backdrop.addEventListener('click', (e) => {
       if (e.target === backdrop) schliessen();
+    });
+
+    // Spaltenbreite: Trenner ziehen (links 240 px bis Gesamtbreite − 240 px)
+    const trenner = backdrop.querySelector('.sql-trenner');
+    const body = backdrop.querySelector('.sql-modal-body');
+    trenner.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const links = body.getBoundingClientRect().left;
+      const breite = body.getBoundingClientRect().width;
+      const ziehen = (ev) => {
+        const px = Math.max(240, Math.min(breite - 240, ev.clientX - links));
+        body.style.gridTemplateColumns = `${px}px 10px minmax(0, 1fr)`;
+      };
+      const loslassen = () => {
+        trenner.classList.remove('zieht');
+        document.body.classList.remove('sql-zieht');
+        window.removeEventListener('mousemove', ziehen);
+        window.removeEventListener('mouseup', loslassen);
+      };
+      trenner.classList.add('zieht');
+      document.body.classList.add('sql-zieht');
+      window.addEventListener('mousemove', ziehen);
+      window.addEventListener('mouseup', loslassen);
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && backdrop.style.display !== 'none') schliessen();

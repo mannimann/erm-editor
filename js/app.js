@@ -174,7 +174,7 @@ function getQuestSeries(mode = window.Quest?.state?.questMode) {
 // Titel eines neuen ERM in einer Szenario-Reihe, z. B. „ERM-Übung 2 – Krankenhaus-System“
 function applySzenarioTitle(reihe, quest) {
   if (!quest?.title) return;
-  state.diagramTitle = `${reihe.titel} ${quest.number} – ${quest.title}`;
+  state.diagramTitle = reihe.eigen ? quest.title : `${reihe.titel} ${quest.number} – ${quest.title}`;
   const titleInput = document.getElementById('erm-title-input');
   if (titleInput) titleInput.value = state.diagramTitle;
 }
@@ -578,6 +578,62 @@ function inferEdgeType(edge) {
     : 'attribute';
 }
 
+// Text für HTML-Vorlagen (Titel eigener Szenarien kommen von außen)
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+}
+
+// Quest-Menü aus den Reihen: Einstieg und Fortgeschritten nebeneinander, darunter die eigenen Szenarien
+// der Lehrkräfte mit „öffnen“ und „erstellen“; unter jeder Reihe ein Fortschrittsbalken.
+// Klicks behandelt ein Listener am Menü (DOMContentLoaded), deshalb lässt es sich neu aufbauen.
+function baueQuestMenu() {
+  const menu = document.getElementById('quests-menu');
+  if (!menu) return;
+  const reihen = window.Quest?.getSeriesList?.() || [];
+  const eintrag = (r) => `<button class="tab-dropdown-item" type="button" data-quest-series="${r.id}">
+      <div class="tab-dropdown-item-text">
+        <span class="tab-dropdown-item-title">${r.icon} ${escapeHtml(r.titel)}</span>
+        <span class="tab-dropdown-item-subtitle">${r.untertitel}</span>
+        <span class="quest-menu-progress" data-mode="${r.id}">
+          <span class="quest-menu-progress-track"><span class="quest-menu-progress-fill"></span></span>
+          <span class="quest-menu-progress-text"></span>
+        </span>
+      </div>
+    </button>`;
+  const gruppe = (titel, inhalt, klasse = '') =>
+    `<div class="quest-menu-group ${klasse}"><div class="quest-menu-group-title">${titel}</div>${inhalt}</div>`;
+  const stufen = [...new Set(reihen.filter((r) => !r.eigen).map((r) => r.stufe))];
+  const eigene = reihen
+    .filter((r) => r.eigen)
+    .map(
+      (r) => `<div class="quest-menu-eigen-zeile">${eintrag(r)}<button class="quest-menu-entfernen" type="button"
+        data-szenario-entfernen="${r.id}" title="Szenario entfernen" aria-label="Szenario entfernen">✕</button></div>`,
+    )
+    .join('');
+  menu.innerHTML =
+    stufen
+      .map((stufe) =>
+        gruppe(
+          stufe,
+          reihen
+            .filter((r) => r.stufe === stufe && !r.eigen)
+            .map(eintrag)
+            .join(''),
+        ),
+      )
+      .join('') +
+    gruppe(
+      'Eigene Szenarien',
+      `${eigene}<div class="quest-menu-aktionen">
+        <button type="button" class="quest-menu-aktion" data-szenario-aktion="oeffnen">📂 Szenario öffnen</button>
+        <button type="button" class="quest-menu-aktion" data-szenario-aktion="erstellen">🛠 Szenario erstellen (für Lehrkräfte)</button>
+      </div>`,
+      'quest-menu-eigene',
+    ) +
+    '<div class="quest-menu-legende">🔷 ER-Modell lernen · <svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg> Relationenmodell lernen · ✏️ üben</div>';
+  window.App?.updateQuestDots?.();
+}
+
 // ---- Tabs ----
 function initTabs() {
   const questsToggleBtn = document.getElementById('btn-quests-toggle');
@@ -600,36 +656,7 @@ function initTabs() {
   )
     return;
 
-  // Quest-Menü aus den Reihen aufbauen, gruppiert nach Stufe (Einstieg, Fortgeschritten);
-  // unter jeder Reihe ein Fortschrittsbalken
-  const reihen = window.Quest?.getSeriesList?.() || [];
-  [...new Set(reihen.map((r) => r.stufe))].forEach((stufe) => {
-    const group = document.createElement('div');
-    group.className = 'quest-menu-group';
-    group.innerHTML = `<div class="quest-menu-group-title">${stufe}</div>`;
-    reihen
-      .filter((r) => r.stufe === stufe)
-      .forEach((r) => {
-        group.insertAdjacentHTML(
-          'beforeend',
-          `<button class="tab-dropdown-item" type="button" data-quest-series="${r.id}">
-            <div class="tab-dropdown-item-text">
-              <span class="tab-dropdown-item-title">${r.icon} ${r.titel}</span>
-              <span class="tab-dropdown-item-subtitle">${r.untertitel}</span>
-              <span class="quest-menu-progress" data-mode="${r.id}">
-                <span class="quest-menu-progress-track"><span class="quest-menu-progress-fill"></span></span>
-                <span class="quest-menu-progress-text"></span>
-              </span>
-            </div>
-          </button>`,
-        );
-      });
-    questsMenu.appendChild(group);
-  });
-  questsMenu.insertAdjacentHTML(
-    'beforeend',
-    '<div class="quest-menu-legende">🔷 ER-Modell lernen · <svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg> Relationenmodell lernen · ✏️ üben</div>',
-  );
+  baueQuestMenu();
 
   let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
   let isDrawerOpen = false;
@@ -814,6 +841,9 @@ function initTabs() {
       setQuestsMenuOpen(false);
     }
   });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') setQuestsMenuOpen(false);
+  });
 
   // ---- Quest-Button & Item Hinweis-Punkte ----
   (function initQuestDots() {
@@ -884,19 +914,8 @@ function initTabs() {
       }
     }
 
-    // Initial render + attach click handlers so dots update on user interaction
+    // Erster Stand; danach beim Öffnen des Menüs und beim Start einer Reihe
     updateQuestDots();
-
-    const itemButtons = Array.from(
-      questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
-    );
-    itemButtons.forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const dot = btn.querySelector('.quest-item-dot');
-        if (dot) dot.remove();
-        updateQuestDots();
-      });
-    });
 
     // Expose for external updates (e.g. when quest progress is reset)
     if (!window.App) window.App = {};
@@ -1098,6 +1117,10 @@ function importJSON(file) {
   reader.onload = (e) => {
     try {
       const data = JSON.parse(e.target.result);
+      if (data?.format === window.Szenario?.FORMAT) {
+        window.Szenario.importieren(data);
+        return;
+      }
       if (!applyErmPayload(data, true)) throw new Error('Ungültiges Format');
     } catch (err) {
       window.App?.showAlertModal?.(`Fehler beim Importieren: ${err.message}`, 'Import fehlgeschlagen');
@@ -1319,6 +1342,12 @@ function clearDiagramSilent() {
   persistStateDebounced();
   verlaufNeu();
   aktiverArbeitsstand = null;
+}
+
+// ER-Modell einer Relationenmodell-Quest: aus files/ oder (eigenes Szenario) aus der Quest selbst
+async function loadQuestErm(quest) {
+  if (quest?.erm) applyErmPayload(JSON.parse(JSON.stringify(quest.erm)), true);
+  else if (quest?.jsonFile) await loadErmFromFile(quest.jsonFile).catch(() => {});
 }
 
 function loadErmFromFile(filename) {
@@ -1546,11 +1575,24 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
-  document.querySelectorAll('#quests-menu [data-quest-series]').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
+  window.App.startQuestSeries = startQuestSeriesFlow;
+  window.App.baueQuestMenu = baueQuestMenu;
+
+  // Ein Listener für das ganze Menü: Reihe starten, eigenes Szenario entfernen, öffnen oder erstellen
+  document.getElementById('quests-menu').addEventListener('click', (e) => {
+    const entfernen = e.target.closest('[data-szenario-entfernen]');
+    const aktion = e.target.closest('[data-szenario-aktion]');
+    const reihe = e.target.closest('[data-quest-series]');
+    if (entfernen) {
+      window.Szenario?.entfernen?.(entfernen.dataset.szenarioEntfernen);
+    } else if (aktion) {
+      closeQuestDropdownMenu();
+      if (aktion.dataset.szenarioAktion === 'oeffnen') window.Szenario?.dateiWaehlen?.();
+      else window.Szenario?.dialogOeffnen?.();
+    } else if (reihe) {
       e.preventDefault();
-      startQuestSeriesFlow(btn.dataset.questSeries);
-    });
+      startQuestSeriesFlow(reihe.dataset.questSeries);
+    }
   });
 
   // Quest-Close Button
@@ -1588,10 +1630,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (reihe) {
           // Relationenmodell-Szenario: ERM neu laden und Relationen leeren (SQL-Übung: vorgeben)
           const quest = window.Quest.getCurrentQuest?.();
-          if (quest?.jsonFile) {
-            try {
-              await loadErmFromFile(quest.jsonFile);
-            } catch (_) {}
+          if (quest?.jsonFile || quest?.erm) {
+            await loadQuestErm(quest);
             relationenmodellNeu(reihe);
             if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
             state.diagramLocked = true;
@@ -1684,7 +1724,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Direktstart über einen Link: ?reihe=erm-grundlagen&quest=3 (Quest nur, wenn freigeschaltet).
     // setTimeout: erst nach den übrigen DOMContentLoaded-Handlern (z. B. relmodel.js) starten.
+    const szenarioAusLink = async () => {
+      const hash = window.location.hash;
+      if (!hash.startsWith('#szenario=')) return false;
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      await window.Szenario?.ausLink?.(hash.slice('#szenario='.length));
+      return true;
+    };
+    window.addEventListener('hashchange', szenarioAusLink);
+
     setTimeout(async function startFromLink() {
+      if (await szenarioAusLink()) return;
       const params = new URLSearchParams(window.location.search);
       const reihe = params.get('reihe');
       if (!reihe) return;
@@ -1748,7 +1798,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const arrow = tooltip.querySelector('.tooltip-arrow');
       const text = String(target.getAttribute('data-tooltip') || '').trim();
       if (!text) return;
-      content.innerHTML = text;
+      content.textContent = text;
       tooltip.style.display = 'block';
       tooltip.style.visibility = 'hidden';
 
@@ -1977,11 +2027,7 @@ window.App = {
       return;
     }
 
-    if (quest?.jsonFile) {
-      try {
-        await loadErmFromFile(quest.jsonFile);
-      } catch (_) {}
-    }
+    await loadQuestErm(quest);
 
     const loaded = window.RelModel?.loadFromStorage?.(storageKey);
     if (!loaded) relationenmodellNeu(reihe);
@@ -2138,6 +2184,16 @@ window.App = {
       checkBtn.textContent = quest.abschluss ? 'Abschließen' : 'Überprüfen';
 
       actions.appendChild(checkBtn);
+
+      // Lehrkraft probiert ihr eigenes Szenario aus: zurück in den Dialog
+      if (window.Szenario?.istProbe?.(mode)) {
+        const zurueck = document.createElement('button');
+        zurueck.type = 'button';
+        zurueck.className = 'quest-btn quest-btn-menu';
+        zurueck.textContent = '✎ Zurück zum Bearbeiten';
+        zurueck.addEventListener('click', () => window.Szenario.zurueckZumBearbeiten());
+        actions.appendChild(zurueck);
+      }
 
       const isCurrentCompleted = (questState.completedQuests || []).includes(quest.number);
       if (isRelmodelSzenario && isCurrentCompleted && quest.number < total) {
@@ -2582,6 +2638,7 @@ window.App = {
 // ---- Globale Exports ----
 window.AppState = {
   state,
+  applyErmPayload,
   genId,
   getNodeById,
   isEntityNameTaken,

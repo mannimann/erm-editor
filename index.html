@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ERM-Editor</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
@@ -19,9 +20,15 @@
     <!-- ===== HEADER ===== -->
     <header id="app-header">
       <div id="header-left">
-        <span id="app-title">📊 ERM-Editor</span>
+        <span id="app-title"><img src="favicon.svg" alt="" />ERM-Editor</span>
         <div id="header-history" aria-label="Rückgängig und Wiederholen">
-          <button id="btn-undo" class="header-btn header-history-btn" type="button" title="Rückgängig (Strg+Z)" disabled>
+          <button
+            id="btn-undo"
+            class="header-btn header-history-btn"
+            type="button"
+            title="Rückgängig (Strg+Z)"
+            disabled
+          >
             ↶
           </button>
           <button
@@ -106,7 +113,11 @@
           <span class="legend-box entity-color"></span>
           <span class="tool-label">Entitätsklasse</span>
         </button>
-        <button class="tool-btn" data-tool="relationship" title="Neue Beziehung anlegen: erst der Dialog, dann die Raute">
+        <button
+          class="tool-btn"
+          data-tool="relationship"
+          title="Neue Beziehung anlegen: erst der Dialog, dann die Raute"
+        >
           <span class="legend-diamond relationship-color"></span>
           <span class="tool-label">Beziehung (Relationship)</span>
         </button>
@@ -179,7 +190,13 @@
       <main id="canvas-container" data-tab-content="diagram">
         <div id="viewport-controls" aria-label="Ansicht steuern">
           <button id="btn-zoom-out" class="viewport-btn" type="button" title="Verkleinern">−</button>
-          <button id="btn-zoom-100" class="viewport-btn zoom-level" type="button" title="Zurück auf 100 %" aria-live="polite">
+          <button
+            id="btn-zoom-100"
+            class="viewport-btn zoom-level"
+            type="button"
+            title="Zurück auf 100 %"
+            aria-live="polite"
+          >
             100%
           </button>
           <button id="btn-zoom-in" class="viewport-btn" type="button" title="Vergrößern">+</button>
@@ -293,10 +310,10 @@
         <div class="info-modal-body sql-modal-body">
           <div class="sql-einstellungen">
             <p class="table-preview-hint">
-              Der Code ist für <strong>SQLite</strong>, die Datenbank der SQL-Konsolen im Lehrbuch. Ihre Datentypen:
-              <strong>INTEGER</strong> (ganze Zahl), <strong>REAL</strong> (Kommazahl) und <strong>TEXT</strong>. Ein
-              Datum speicherst du als TEXT (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein
-              Fremdschlüssel übernimmt den Typ seines Primärschlüssels.
+              Der Code ist für <strong>SQLite</strong>. Dort gibt es die Datentypen: <strong>INTEGER</strong> (ganze
+              Zahl), <strong>REAL</strong> (Kommazahl) und <strong>TEXT</strong>. Ein Datum speicherst du als TEXT
+              (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den Typ
+              seines Primärschlüssels.
             </p>
             <label id="sql-erweitert-wrap" class="sql-erweitert">
               <input type="checkbox" id="sql-erweitert" />
@@ -304,6 +321,7 @@
             </label>
             <div id="sql-spalten"></div>
           </div>
+          <div class="sql-trenner" role="separator" aria-orientation="vertical" title="Breite der Spalten ziehen"></div>
           <div class="sql-code">
             <h4>SQL-Code <small>(geänderte Zeilen leuchten kurz auf)</small></h4>
             <div id="sql-fehler"></div>
@@ -313,6 +331,64 @@
               <button id="btn-sql-speichern" class="rel-btn" type="button">⬇ Als .sql speichern</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MODAL: Eigenes Szenario erstellen (js/szenario.js) ===== -->
+    <div
+      id="modal-szenario-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-szenario-title"
+    >
+      <div class="info-modal-card szenario-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-szenario-title">🛠 Eigenes Szenario erstellen</h3>
+          <button class="info-modal-close" id="btn-szenario-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <p class="table-preview-hint">
+            Für Lehrkräfte: Das ER-Modell, das gerade im Editor steht, ist die <strong>Musterlösung</strong>. Die
+            Schüler sehen nur deinen Text; der Editor prüft ihre Lösung gegen das Modell – Namen, Primärschlüssel und
+            auf Wunsch die Kardinalitäten. Beim Überführen ist das ER-Modell vorgegeben und der Editor prüft das
+            Relationenmodell.
+          </p>
+          <label class="szenario-feld"
+            >Titel <input id="szenario-titel" class="prop-input" type="text" maxlength="80" placeholder="z. B. Kino"
+          /></label>
+          <label class="szenario-feld"
+            >Aufgabentext
+            <textarea id="szenario-text" class="prop-input" rows="9" maxlength="8000"></textarea>
+            <small>Leerzeile = neuer Absatz · **Wort** = hervorgehoben · Zeile mit „- “ = Aufzählung</small>
+          </label>
+          <fieldset class="szenario-feld">
+            <legend>Aufgabe der Schüler</legend>
+            <label><input type="radio" name="szenario-aufgabe" value="erm" checked /> ER-Modell zeichnen</label>
+            <label
+              ><input type="radio" name="szenario-aufgabe" value="rm" /> Ins Relationenmodell überführen (das ER-Modell
+              ist vorgegeben)</label
+            >
+          </fieldset>
+          <label class="sql-erweitert"
+            ><input type="checkbox" id="szenario-kardinalitaeten" /> Kardinalitäten prüfen</label
+          >
+          <div id="szenario-bericht" class="szenario-bericht"></div>
+          <div class="sql-aktionen szenario-aktionen">
+            <button id="btn-szenario-laden" class="rel-btn" type="button" title="Gespeichertes Szenario bearbeiten">
+              📂 Szenario laden
+            </button>
+            <button id="btn-szenario-speichern" class="rel-btn" type="button">⬇ Als Datei speichern</button>
+            <button id="btn-szenario-link" class="rel-btn" type="button">🔗 Link erzeugen</button>
+            <button id="btn-szenario-testen" class="rel-btn primary" type="button">▶ Selbst ausprobieren</button>
+          </div>
+          <div id="szenario-link-wrap" class="szenario-link" hidden>
+            <input id="szenario-link" class="prop-input" type="text" readonly />
+            <small id="szenario-link-info"></small>
+          </div>
+          <input type="file" id="szenario-datei" accept=".json" style="display: none" />
         </div>
       </div>
     </div>
@@ -369,7 +445,8 @@
     <!-- ===== MODAL: Beziehung bearbeiten ===== -->
     <div id="modal-backdrop" style="display: none">
       <div id="modal-card">
-        <h3 id="modal-title">Beziehung bearbeiten</h3>
+        <button id="modal-close" class="info-modal-close modal-x" type="button" aria-label="Schließen">&times;</button>
+        <h3 id="modal-title" title="Zum Verschieben ziehen">Beziehung bearbeiten</h3>
         <p id="modal-subtitle" class="modal-subtitle"></p>
 
         <div class="modal-row modal-cardinality-row">
@@ -512,8 +589,8 @@
           </p>
           <h4>5. Selbstbeziehung</h4>
           <p>
-            Sie wird wie jede andere Beziehung abgebildet. Weil der FS auf die eigene Relation zeigt, wird er
-            umbenannt, z. B. <code>SchülerNr-Freund</code>.
+            Sie wird wie jede andere Beziehung abgebildet. Weil der FS auf die eigene Relation zeigt, wird er umbenannt,
+            z. B. <code>SchülerNr-Freund</code>.
           </p>
           <h4>6. Verbundschlüssel</h4>
           <p>Besteht ein PS aus mehreren Attributen, wandern als FS immer alle seine Attribute mit.</p>
@@ -581,8 +658,8 @@
           <h4>Hosting / Server-Logfiles</h4>
           <p>
             Beim Aufruf dieser Website verarbeitet der Hosting-Anbieter automatisch technische Daten (u.&nbsp;a.
-            IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Datei, verwendeter Browser) in Server-Logfiles.
-            Dies ist technisch erforderlich, um die Website bereitzustellen. Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1
+            IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Datei, verwendeter Browser) in Server-Logfiles. Dies
+            ist technisch erforderlich, um die Website bereitzustellen. Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1
             lit.&nbsp;f DSGVO (berechtigtes Interesse an einem sicheren und funktionsfähigen Betrieb).
           </p>
           <h4>Keine Cookies, kein Tracking</h4>
@@ -592,9 +669,10 @@
           </p>
           <h4>Lokale Speicherung im Browser</h4>
           <p>
-            Diagramme und Lernfortschritt werden ausschließlich lokal in deinem Browser (localStorage) gespeichert,
-            um deine Arbeit zwischen Besuchen zu erhalten. Diese Daten verlassen deinen Rechner nicht und werden
-            nicht an den Server übertragen.
+            Diagramme und Lernfortschritt werden ausschließlich lokal in deinem Browser (localStorage) gespeichert, um
+            deine Arbeit zwischen Besuchen zu erhalten. Diese Daten verlassen deinen Rechner nicht und werden nicht an
+            den Server übertragen. Ein Szenario-Link enthält das Szenario hinter dem Zeichen #; dieser Teil einer
+            Adresse wird ebenfalls nicht an den Server gesendet.
           </p>
           <h4>Deine Rechte</h4>
           <p>
@@ -675,5 +753,6 @@
     <script src="js/relmodel.js"></script>
     <script src="js/sql.js"></script>
     <script src="js/quest.js"></script>
+    <script src="js/szenario.js"></script>
   </body>
 </html>

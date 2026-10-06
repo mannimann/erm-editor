@@ -186,6 +186,12 @@ body.is-resizing-drawer {
   letter-spacing: 0.02em;
 }
 
+#app-title img {
+  height: 1.4em;
+  vertical-align: middle;
+  margin-right: 0.4em;
+}
+
 #header-left {
   display: flex;
   align-items: center;
@@ -1873,9 +1879,22 @@ body.is-resizing-drawer {
   min-width: 340px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
+#modal-card {
+  position: relative;
+}
+
 #modal-card h3 {
   font-size: 1.1rem;
   margin-bottom: 6px;
+  padding-right: 28px;
+  cursor: move;
+  user-select: none;
+}
+
+#modal-card .modal-x {
+  position: absolute;
+  top: 10px;
+  right: 12px;
 }
 
 @keyframes modal-shake {
@@ -3300,6 +3319,13 @@ body.is-resizing-drawer {
   transition: background 0.15s;
 }
 
+/* Leerzeichen zwischen den Wörtern einer markierten Wortgruppe („gilt für“) */
+.tm-luecke.tm-entitaet,
+.tm-luecke.tm-attribut,
+.tm-luecke.tm-beziehung {
+  border-radius: 0;
+}
+
 .tm-wort:hover {
   background: rgba(148, 163, 184, 0.25);
 }
@@ -3436,7 +3462,8 @@ body.is-resizing-drawer {
 .sql-modal-card {
   display: flex;
   flex-direction: column;
-  max-width: min(1280px, 96vw);
+  max-width: 96vw;
+  width: 1600px;
   height: 85vh;
   overflow: hidden;
 }
@@ -3445,8 +3472,25 @@ body.is-resizing-drawer {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr);
+  gap: 8px;
+}
+
+/* Trenner zwischen den Spalten: mit der Maus ziehen */
+.sql-trenner {
+  cursor: col-resize;
+  border-radius: 4px;
+  background: linear-gradient(90deg, transparent 4px, #cbd5e1 4px, #cbd5e1 6px, transparent 6px);
+}
+
+.sql-trenner:hover,
+.sql-trenner.zieht {
+  background: linear-gradient(90deg, transparent 3px, #3b82f6 3px, #3b82f6 7px, transparent 7px);
+}
+
+body.sql-zieht {
+  cursor: col-resize;
+  user-select: none;
 }
 
 .sql-einstellungen,
@@ -3493,11 +3537,150 @@ body.is-resizing-drawer {
   }
 
   .sql-modal-body {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+  }
+
+  .sql-trenner {
+    display: none;
   }
 }
 
 .viewport-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ===== Eigene Szenarien (js/szenario.js) ===== */
+.quest-menu-eigene {
+  grid-column: 1 / -1;
+  border-top: 1px solid rgba(71, 85, 105, 0.7);
+}
+
+.quest-menu-group.quest-menu-eigene {
+  border-left: none;
+  padding-left: 0;
+}
+
+.quest-menu-eigen-zeile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quest-menu-eigen-zeile .tab-dropdown-item {
+  flex: 1;
+}
+
+.quest-menu-entfernen,
+.quest-menu-aktion {
+  border: 1px solid rgba(100, 116, 139, 0.6);
+  border-radius: 6px;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.quest-menu-entfernen {
+  width: 30px;
+  height: 30px;
+}
+
+.quest-menu-entfernen:hover {
+  color: #fca5a5;
+  border-color: #f87171;
+}
+
+.quest-menu-aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 11px 4px;
+}
+
+.quest-menu-aktion {
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+.quest-menu-aktion:hover {
+  background: rgba(51, 65, 85, 0.55);
+  color: #fff;
+}
+
+.szenario-modal-card {
+  max-width: min(760px, 96vw);
+}
+
+.szenario-feld {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.szenario-feld small {
+  font-weight: 400;
+  color: #64748b;
+}
+
+.szenario-feld textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+fieldset.szenario-feld {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+fieldset.szenario-feld label {
+  font-weight: 400;
+}
+
+.szenario-bericht {
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 0.86rem;
+}
+
+.szenario-bericht p {
+  margin: 2px 0;
+}
+
+.szenario-bericht-ok {
+  color: #15803d;
+}
+
+.szenario-bericht-warnung {
+  color: #b45309;
+}
+
+.szenario-bericht-fehler {
+  color: #b91c1c;
+}
+
+.szenario-aktionen {
+  flex-wrap: wrap;
+}
+
+.szenario-aktionen button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.szenario-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.szenario-link small {
+  color: #64748b;
 }

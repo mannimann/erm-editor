@@ -89,7 +89,7 @@
   function fkMatches(studentName, solAttr) {
     if (fkRawNameMatches(studentName, solAttr.name)) return true;
     if (solAttr._fkBaseName && fkRawNameMatches(studentName, solAttr._fkBaseName)) return true;
-    // Fremdschlüssel nach der Zieltabelle benannt, z. B. „Gast“ statt „Gastnummer“ (wie im Lehrbuch: mannschaft↑)
+    // Fremdschlüssel nach der Zieltabelle benannt, z. B. „Gast“ statt „Gastnummer“
     return !!solAttr._fkTabelle && fkRawNameMatches(studentName, solAttr._fkTabelle);
   }
 

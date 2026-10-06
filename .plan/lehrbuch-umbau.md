@@ -93,7 +93,8 @@ angefangen hat, beginnt die Reihe neu — am besten in der Klasse ankündigen.
   (blau Entitätsklasse, gelb Attribut, grün Beziehung), sonst kurz durchgestrichen. Mehrzahl und Umlaut werden
   erkannt („Ärzte“ → Arzt). Die Klicks sind begrenzt, damit niemand einfach jedes Wort durchklickt: so viele,
   wie das Modell Elemente hat, plus 5 für Fehlgriffe, mindestens 20 (Hotel 22, Universität 32). Neben der
-  Legende steht „Klicks: 7 von 22“; Markierung entfernen kostet nichts. Im Unterricht als Lesestrategie
+  Legende steht „Klicks: 7 von 22“. Markierungen bleiben stehen (kein Wegklicken); Wortgruppen wie „gilt
+  für“ werden samt Leerzeichen markiert. Im Unterricht als Lesestrategie
   nutzbar: erst markieren, dann zeichnen.
 - **Speichern:** Das eigene Modell im freien Editor bleibt beim Start einer Quest erhalten und kommt beim
   Schließen zurück; jede Quest hat ihren eigenen Arbeitsstand. Die Warnung „… werden gelöscht“ gibt es nicht
@@ -103,6 +104,17 @@ angefangen hat, beginnt die Reihe neu — am besten in der Klasse ankündigen.
   Zeilen leuchten kurz auf. Oben steht, dass es SQLite-Datentypen sind (INTEGER, REAL, TEXT).
 - **SQL-Übung:** Das vorgegebene Relationenmodell ist gesperrt (kein Bearbeiten, Löschen, Hinzufügen), die
   Musterlösung ist ausgeblendet.
+
+### Für Lehrkräfte: eigene Szenarien
+
+Im Quest-Menü unter „Eigene Szenarien“: **🛠 Szenario erstellen** nimmt das ER-Modell im freien Editor als
+Musterlösung, dazu Titel und Aufgabentext (Leerzeile = Absatz, `**Wort**` = hervorgehoben, „- “ = Aufzählung)
+und die Aufgabe „ER-Modell zeichnen“ oder „Ins Relationenmodell überführen“. Ein Prüfbericht warnt vor fehlenden
+Primärschlüsseln, Kardinalitäten und Namen, die im Text nicht vorkommen. Weitergeben als Datei
+(`.erm-szenario.json`, Schüler: „📂 Szenario öffnen“) oder als Link (`…/#szenario=…`, gut 1 000 Zeichen; das
+Szenario steckt im Link, es liegt auf keinem Server). Der Editor prüft wie bei den eingebauten Szenarien, mit
+Checkliste und Textmarker. „▶ Selbst ausprobieren“ startet jedes Mal frisch; „✎ Zurück zum Bearbeiten“ im
+Quest-Fenster führt in den Dialog zurück. Passt z. B. zu Aufgaben, die im Lehrbuch bisher nur auf Papier stehen.
 
 ---
 
