@@ -273,9 +273,13 @@
 
     // Namen, die nach dem Vergleich der Prüfung (Groß/klein, Leerzeichen, ä/ae …) zusammenfallen
     const doppelt = (namen) => namen.filter((n, i) => namen.findIndex((x) => N(x) === N(n)) !== i);
+    // Gleich heißende Beziehungen gehen, wenn sie verschiedene Entitätsklassen verbinden („hat“ zweimal)
+    const paar = (r) => `${N(r.name)}|${[N(r.from), N(r.to)].sort().join('|')}`;
     const doppelte = [
       ...doppelt(m.entities),
-      ...doppelt(m.relationships.map((r) => r.name)),
+      ...m.relationships
+        .filter((r, i) => m.relationships.findIndex((x) => paar(x) === paar(r)) !== i)
+        .map((r) => r.name),
       ...m.entities.flatMap((n) => doppelt(m.attributes[n])),
     ];
     if (doppelte.length) fehler(`Doppelte Namen: ${liste([...new Set(doppelte)])}.`);

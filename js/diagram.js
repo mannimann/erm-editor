@@ -2266,7 +2266,8 @@
     modalCardinality.closest('.modal-row').style.display = withCardinalities() ? '' : 'none';
 
     modalBackdrop.style.display = '';
-    dialogVerschieben(dialogLage.x, dialogLage.y); // nach Größenänderung des Fensters wieder ins Bild
+    dialogLage.x = dialogLage.y = 0;
+    modalCard.style.left = modalCard.style.top = '0px';
 
     // Fokus auf das Namensfeld (vorgegebene Beziehung: auf die Kardinalität)
     setTimeout(() => {
@@ -2634,8 +2635,8 @@
     renderAll();
   }
 
-  // Dialog „Beziehung bearbeiten“: Kreuz schließt (wie Abbrechen), an der Überschrift verschieben.
-  // Die Lage bleibt für das nächste Öffnen, aber immer im Fenster.
+  // Dialog „Beziehung bearbeiten“: Kreuz schließt (wie Abbrechen), an der Überschrift verschieben,
+  // im Fenster bleiben. Jedes Öffnen beginnt wieder in der Mitte.
   const dialogLage = { x: 0, y: 0 };
   function dialogVerschieben(x, y) {
     const r = modalCard.getBoundingClientRect();

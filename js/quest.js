@@ -49,9 +49,25 @@
     );
   }
 
-  function getRelationshipByName(name) {
+  // spec ({ from, to }): Heißen zwei Beziehungen gleich („hat“), zählt die zwischen den erwarteten Entitätsklassen
+  function getRelationshipByName(name, spec = null) {
     const normalized = normalizeName(name);
-    return S().nodes?.find((n) => n.type === 'relationship' && normalizeName(n.name) === normalized) || null;
+    const kandidaten = (S().nodes || []).filter(
+      (n) => n.type === 'relationship' && normalizeName(n.name) === normalized,
+    );
+    if (kandidaten.length < 2 || !spec) return kandidaten[0] || null;
+    const verbunden = (rel, entityName) =>
+      S().edges.some(
+        (e) =>
+          e.edgeType === 'relationship' &&
+          [e.fromId, e.toId].includes(rel.id) &&
+          normalizeName(getNodeName(e.fromId === rel.id ? e.toId : e.fromId)) === normalizeName(entityName),
+      );
+    return kandidaten.find((r) => verbunden(r, spec.from) && verbunden(r, spec.to)) || kandidaten[0];
+  }
+
+  function getNodeName(id) {
+    return S().nodes.find((n) => n.id === id)?.name || '';
   }
 
   // '' = Kardinalität noch nicht festgelegt
@@ -129,7 +145,7 @@
 
   function validateRelationshipRequirements(spec) {
     for (const relationshipSpec of spec.relationships || []) {
-      const relationship = getRelationshipByName(relationshipSpec.name);
+      const relationship = getRelationshipByName(relationshipSpec.name, relationshipSpec);
       if (!relationship) {
         return { passed: false, error: `Die Beziehung „${relationshipSpec.name}“ fehlt.` };
       }
@@ -259,7 +275,7 @@
     const relationships = { total: 0, done: 0, items: [] };
     for (const rel of spec.relationships || []) {
       relationships.total++;
-      const relNode = getRelationshipByName(rel.name);
+      const relNode = getRelationshipByName(rel.name, rel);
       if (!relNode) {
         relationships.items.push({ label: rel.name, ok: false });
         continue;
@@ -320,7 +336,7 @@
     for (const rel of spec.relationships || []) {
       for (const attrName of rel.attributes || []) {
         attributes.total++;
-        const relNode = getRelationshipByName(rel.name);
+        const relNode = getRelationshipByName(rel.name, rel);
         const found = relNode ? !!getAttributeByName(relNode.id, attrName) : false;
         if (found) attributes.done++;
         attributes.items.push({ label: `${rel.name}.${attrName}`, ok: found });
@@ -358,7 +374,7 @@
     }
 
     for (const rel of spec.relationships || []) {
-      const relNode = getRelationshipByName(rel.name);
+      const relNode = getRelationshipByName(rel.name, rel);
       if (!relNode) {
         hints.push(`Die Beziehung „${rel.name}“ fehlt.`);
         continue;
@@ -2492,8 +2508,10 @@
       ]),
     ].map((e) => {
       const norm = e.name.split(/\s+/).map(normalizeName);
-      // Einzelwörter auch gebeugt, Wortgruppen (Beziehungen wie „ist Exemplar von“) nur genau
+      // Einzelwörter auch gebeugt, Wortgruppen (Beziehungen wie „ist Exemplar von“) nur genau.
+      // Beziehung als Verb: auch der Infinitiv („bestreitet“ → „bestreiten“, „bucht“ → „buchen“).
       const formen = norm.length === 1 ? wortformen(e.name) : null;
+      if (formen && e.art === 'beziehung') formen.add(normalizeName(e.name.replace(/e?t$/, 'en')));
       return { ...e, key: `${e.art}:${normalizeName(e.name)}`, norm, formen };
     });
 

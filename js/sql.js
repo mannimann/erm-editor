@@ -390,10 +390,27 @@
     const vorher = letzteZeilen;
     pre.textContent = '';
     zeilen.forEach((zeile, i) => {
-      pre.appendChild(el('span', vorher && !vorher.includes(zeile) ? 'sql-neu' : '', zeile));
+      const span = el('span', vorher && !vorher.includes(zeile) ? 'sql-neu' : '');
+      faerben(zeile).forEach((t) => span.appendChild(t));
+      pre.appendChild(span);
       if (i < zeilen.length - 1) pre.appendChild(document.createTextNode('\n'));
     });
     letzteZeilen = zeilen;
+  }
+
+  // Syntax-Hervorhebung: Schlüsselwörter, Datentypen, Klammern und Satzzeichen (nur Text, kein HTML)
+  const SQL_TOKEN =
+    /(\b(?:CREATE TABLE|PRIMARY KEY|FOREIGN KEY|NOT NULL|UNIQUE|REFERENCES)\b)|(\b(?:INTEGER|REAL|TEXT)\b)|([(),;])/g;
+  function faerben(zeile) {
+    const teile = [];
+    let stelle = 0;
+    for (const m of zeile.matchAll(SQL_TOKEN)) {
+      if (m.index > stelle) teile.push(document.createTextNode(zeile.slice(stelle, m.index)));
+      teile.push(el('span', m[1] ? 'sql-kw' : m[2] ? 'sql-typ' : 'sql-zeichen', m[0]));
+      stelle = m.index + m[0].length;
+    }
+    if (stelle < zeile.length) teile.push(document.createTextNode(zeile.slice(stelle)));
+    return teile;
   }
 
   function oeffnen(ausLoesung = false) {

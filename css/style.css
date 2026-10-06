@@ -1893,8 +1893,9 @@ body.is-resizing-drawer {
 
 #modal-card .modal-x {
   position: absolute;
-  top: 10px;
-  right: 12px;
+  top: 23px;
+  right: 18px;
+  z-index: 1; /* über der Überschrift, die die ganze Breite einnimmt */
 }
 
 @keyframes modal-shake {
@@ -3683,4 +3684,18 @@ fieldset.szenario-feld label {
 
 .szenario-link small {
   color: #64748b;
+}
+
+/* SQL-Code: Hervorhebung */
+.sql-kw {
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
+.sql-typ {
+  color: #fcd34d;
+}
+
+.sql-zeichen {
+  color: #94a3b8;
 }

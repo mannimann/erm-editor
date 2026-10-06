@@ -670,6 +670,50 @@ pruefe('Eigene Szenarien: Daten von außen werden geprüft', () => {
   assert(/Kardinalitäten/.test(Szenario.pruefeSzenario(ohneZahlen).fehler), 'Überführen braucht Kardinalitäten');
 });
 
+pruefe('Eigene Szenarien: zwei Beziehungen „hat“ zwischen verschiedenen Entitätsklassen', () => {
+  const k = (id, fromId, toId, chenTo) => ({ id, fromId, toId, edgeType: 'relationship', chenFrom: '1', chenTo });
+  const a = (id, fromId, toId) => ({ id, fromId, toId, edgeType: 'attribute' });
+  const erm = {
+    nodes: [
+      { id: 'e1', type: 'entity', name: 'Schule' },
+      { id: 'e2', type: 'entity', name: 'Klasse' },
+      { id: 'e3', type: 'entity', name: 'Lehrer' },
+      ...['e1', 'e2', 'e3'].map((e, i) => ({ id: `p${i}`, type: 'attribute', name: 'Nr', isPrimaryKey: true })),
+      { id: 'b1', type: 'relationship', name: 'hat' },
+      { id: 'b2', type: 'relationship', name: 'hat' },
+    ],
+    edges: [
+      a('a1', 'e1', 'p0'),
+      a('a2', 'e2', 'p1'),
+      a('a3', 'e3', 'p2'),
+      k('k1', 'b1', 'e1', '1'),
+      k('k2', 'b1', 'e2', 'n'),
+      k('k3', 'b2', 'e2', 'n'),
+      k('k4', 'b2', 'e3', 'm'),
+    ],
+  };
+  // Die zweite „hat“ steht im Modell zuerst: die Prüfung muss die passende nehmen
+  erm.nodes.reverse();
+  const { sz } = Szenario.pruefeSzenario({
+    format: 'erm-editor-szenario',
+    version: 1,
+    titel: 'Hat',
+    text: 'x',
+    aufgabe: 'erm',
+    kardinalitaeten: true,
+    erm,
+  });
+  assert(!Szenario.bericht({ ...sz, erm }).some((z) => z.art === 'fehler'), 'kein Fehler „doppelte Namen“');
+  Quest.setEigeneSzenarien([sz]);
+  context.AppState = { state: JSON.parse(JSON.stringify(erm)) };
+  const r = Quest.getSeries(`eigen-${sz.id}`).quests[0].validator();
+  assert(r.passed, r.error);
+  // falsche Kardinalität an der zweiten „hat“ wird bemerkt
+  context.AppState.state.edges.find((e) => e.id === 'k4').chenTo = '1';
+  assert(!Quest.getSeries(`eigen-${sz.id}`).quests[0].validator().passed, 'Fehler an der zweiten „hat“');
+  Quest.setEigeneSzenarien([]);
+});
+
 async function pruefeAsync(name, fn) {
   try {
     await fn();

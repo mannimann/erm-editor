@@ -1542,7 +1542,10 @@ document.addEventListener('DOMContentLoaded', () => {
     flushPersist();
     const ausFreiemModus = !window.Quest.state.questsPanelVisible;
     if (ausFreiemModus && (state.nodes.length || window.RelModel?.getStudentRelations?.().length)) {
-      window.App?.showTopToast?.('Dein eigenes Modell ist gespeichert – es kommt zurück, wenn du die Quest schließt.');
+      window.App?.showTopToast?.(
+        'Dein eigenes Modell ist gespeichert – es kommt zurück, wenn du die Quest schließt.',
+        7000,
+      );
     }
     window.App?.onBeforeQuestChange?.(window.Quest.state);
 
@@ -2556,7 +2559,7 @@ window.App = {
     });
   },
 
-  showTopToast(message) {
+  showTopToast(message, ms = 2400) {
     if (!message) return;
     let toast = document.getElementById('app-top-toast');
     if (!toast) {
@@ -2572,7 +2575,7 @@ window.App = {
     this._topToastTimer = setTimeout(() => {
       toast.classList.remove('visible');
       this._topToastTimer = null;
-    }, 2400);
+    }, ms);
   },
 
   showConfirmModal(message, title = 'Bitte bestätigen') {
