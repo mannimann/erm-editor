@@ -654,7 +654,6 @@ function initTabs() {
   const relmodelBtn = document.getElementById('btn-relmodel-toggle');
   const relmodelDrawer = document.getElementById('relmodel-drawer');
   const relmodelResizer = document.getElementById('relmodel-resizer');
-  const relmodelBackdrop = document.getElementById('relmodel-backdrop');
   const mainLayout = document.getElementById('main-layout');
   if (
     !questsToggleBtn ||
@@ -663,25 +662,19 @@ function initTabs() {
     !relmodelBtn ||
     !relmodelDrawer ||
     !relmodelResizer ||
-    !relmodelBackdrop ||
     !mainLayout
   )
     return;
 
   baueQuestMenu();
 
-  let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
+  // Schmale Bildschirme: höchstens die halbe Breite, damit das ERM daneben sichtbar bleibt
+  let lastOpenWidth = Math.min(relmodelDrawer.getBoundingClientRect().width || 460, window.innerWidth / 2);
   let isDrawerOpen = false;
-  const mobileMedia = window.matchMedia('(max-width: 860px)');
 
   const clampDrawerWidth = (value) => {
     const maxWidth = Math.max(320, Math.min(window.innerWidth * 0.72, mainLayout.getBoundingClientRect().width - 180));
     return Math.max(320, Math.min(maxWidth, value));
-  };
-
-  const syncBackdrop = () => {
-    const shouldShow = mobileMedia.matches && !relmodelDrawer.classList.contains('collapsed');
-    relmodelBackdrop.classList.toggle('visible', shouldShow);
   };
 
   const setQuestsMenuOpen = (open) => {
@@ -731,7 +724,6 @@ function initTabs() {
       }
     }
 
-    syncBackdrop();
     syncQuestPanelRight();
   };
 
@@ -768,7 +760,6 @@ function initTabs() {
   });
 
   relmodelResizer.addEventListener('pointerdown', (event) => {
-    if (mobileMedia.matches) return;
     if (relmodelDrawer.classList.contains('collapsed')) return;
     event.preventDefault();
     relmodelResizer.classList.add('is-dragging');
@@ -782,7 +773,6 @@ function initTabs() {
       lastOpenWidth = clampDrawerWidth(relmodelDrawer.getBoundingClientRect().width || lastOpenWidth);
       relmodelDrawer.style.width = `${lastOpenWidth}px`;
     }
-    syncBackdrop();
     syncQuestPanelRight();
     syncQuestPanelResizer();
   });
@@ -858,15 +848,6 @@ function initTabs() {
       syncQuestPanelResizer();
     };
   }
-
-  relmodelBackdrop.addEventListener('click', () => {
-    setDrawerState(false);
-  });
-
-  mobileMedia.addEventListener('change', () => {
-    setQuestsMenuOpen(false);
-    setDrawerState(isDrawerOpen);
-  });
 
   document.addEventListener('click', (event) => {
     if (!questsDropdown.contains(event.target)) {
