@@ -464,10 +464,17 @@
     return !!getStudentRelAttr(relName, attrName)?.isFk;
   }
 
-  // Fremdschlüssel (kein PS), der auf baseName zeigt – auch umbenannt wie „SchülerNr-Sprecher“.
+  // Fremdschlüssel (kein PS) in relName, die auf baseName zeigen – auch umbenannt („SchülerNr-Sprecher“)
+  // oder nach der Zieltabelle benannt („Klasse“).
   function getStudentFks(relName, baseName) {
+    const R = window.RelModel;
+    const solRel = (R.getCheckSolution?.() || []).find((r) => normalizeName(r.name) === normalizeName(relName));
+    const solFks = (solRel?.attrs || []).filter(
+      (a) => a.isFk && !a.isPk && normalizeName(a._fkBaseName || a.name) === normalizeName(baseName),
+    );
     return (getStudentRelByName(relName)?.attrs || []).filter(
-      (a) => a.isFk && !a.isPk && window.RelModel.fkRawNameMatches(a.name, baseName),
+      (a) =>
+        a.isFk && !a.isPk && (R.fkRawNameMatches(a.name, baseName) || solFks.some((sf) => R.fkMatches(a.name, sf))),
     );
   }
 
@@ -984,7 +991,7 @@
     {
       title: 'Selbstbeziehung',
       theory: `<p class="quest-begriff">Neuer Begriff: Selbstbeziehung · Symbol: Raute mit zwei Linien zur selben Entitätsklasse</p>
-        <p><strong>Selbstbeziehung:</strong> Eine Entitätsklasse steht mit sich selbst in Beziehung. Beide Seiten der Raute zeigen auf dieselbe Entitätsklasse.</p>`,
+        <p><strong>Selbstbeziehung</strong> (auch: rekursive Beziehung): Eine Entitätsklasse steht mit sich selbst in Beziehung. Beide Seiten der Raute zeigen auf dieselbe Entitätsklasse.</p>`,
       objective: `<p>Schüler sind miteinander befreundet: Ein Schüler kann mit vielen anderen Schülern befreundet sein.</p>
         <ol>
           <li>Erstelle die Beziehung <strong>„ist befreundet mit“</strong>.</li>
@@ -1448,7 +1455,7 @@
     return {
       title: s.title,
       szenario: `<p><strong>Überführe das ER-Modell „${s.title}“ in das Relationenmodell.</strong></p>
-        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel, auf den er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${regeln}`,
+        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${regeln}`,
       jsonFile: s.jsonFile,
       sqlRegeln: mitRegeln ? s.sqlRegeln : null,
       validator: function () {
@@ -1740,7 +1747,7 @@
     },
     {
       title: 'Selbstbeziehung „ist befreundet mit“',
-      theory: `<p><strong>Selbstbeziehung:</strong> Sie wird wie jede andere Beziehung abgebildet. Weil beide Fremdschlüssel auf dieselbe Relation zeigen, müssen sie <strong>umbenannt</strong> werden: Name des Primärschlüssels plus Zusatz mit - oder _, z. B. „SchülerNr“ und „SchülerNr-Freund“. Bei einer 1:n-Selbstbeziehung landet der umbenannte Fremdschlüssel in der Relation selbst, z. B. „SchülerNr-Pate“.</p>`,
+      theory: `<p><strong>Selbstbeziehung</strong> (rekursive Beziehung): Sie wird wie jede andere Beziehung abgebildet. Weil beide Fremdschlüssel auf dieselbe Relation zeigen, müssen sie <strong>umbenannt</strong> werden: Name des Primärschlüssels plus Zusatz mit - oder _, z. B. „SchülerNr“ und „SchülerNr-Freund“. Bei einer 1:n-Selbstbeziehung landet der umbenannte Fremdschlüssel in der Relation selbst, z. B. „SchülerNr-Pate“.</p>`,
       objective: `<p>Bilde die n:m-Selbstbeziehung <strong>„ist befreundet mit“</strong> als Beziehungstabelle ab. Beide Fremdschlüssel verweisen auf „SchülerNr“ – benenne sie so, dass sie sich unterscheiden.</p>`,
       validator: function () {
         const rel = getStudentRelByName('ist befreundet mit');

@@ -27,19 +27,24 @@
 
   // Mögliche Ziele eines Fremdschlüssels: Primärschlüssel, die so heißen wie er – exakt oder mit Zusatz
   // („SchülerNr-Freund“ → SchülerNr). Bevorzugt: Schlüssel, die nicht selbst Fremdschlüssel sind
-  // (Schüler.SchülerNr statt „ist befreundet mit“.SchülerNr), dann der exakte Name.
+  // (Schüler.SchülerNr statt „ist befreundet mit“.SchülerNr), dann der exakte Name. Danach zählt der
+  // Name der Zieltabelle, wenn sie genau einen Schlüssel hat („mannschaft“ → mannschaft(name)).
   function kandidaten(fk, rels) {
     const liste = [];
-    rels.forEach((rel) =>
-      primaerschluessel(rel).forEach((pk) => {
+    rels.forEach((rel) => {
+      const pks = primaerschluessel(rel);
+      pks.forEach((pk) => {
         if (pk === fk) return;
         const exakt = R().normalizeName(pk.name) === R().normalizeName(fk.name);
         if (!exakt && !R().selfRefFkRawNameMatchesBase(fk.name, pk.name)) return;
         liste.push({ rel, attr: pk, rang: (pk.isFk ? 2 : 0) + (exakt ? 0 : 1) });
-      }),
-    );
+      });
+      if (pks.length === 1 && pks[0] !== fk && R().fkRawNameMatches(fk.name, rel.name))
+        liste.push({ rel, attr: pks[0], rang: 1.5 });
+    });
     const besterRang = Math.min(...liste.map((k) => k.rang));
-    return liste.filter((k) => k.rang === besterRang);
+    const beste = liste.filter((k) => k.rang === besterRang);
+    return beste.filter((k, i) => beste.findIndex((b) => b.attr === k.attr) === i);
   }
 
   // Ziel eines Fremdschlüssels; bei mehreren oder keinen Kandidaten zählt die Wahl „verweist auf“ (fkTarget).

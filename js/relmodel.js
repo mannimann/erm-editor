@@ -88,7 +88,9 @@
    */
   function fkMatches(studentName, solAttr) {
     if (fkRawNameMatches(studentName, solAttr.name)) return true;
-    return !!solAttr._fkBaseName && fkRawNameMatches(studentName, solAttr._fkBaseName);
+    if (solAttr._fkBaseName && fkRawNameMatches(studentName, solAttr._fkBaseName)) return true;
+    // Fremdschlüssel nach der Zieltabelle benannt, z. B. „Gast“ statt „Gastnummer“ (wie im Lehrbuch: mannschaft↑)
+    return !!solAttr._fkTabelle && fkRawNameMatches(studentName, solAttr._fkTabelle);
   }
 
   function sortAttrsPrimaryFirst(attrs) {
@@ -553,6 +555,13 @@
         isPk: !!attr.isPk,
         isFk: !!attr.isFk,
         _fkBaseName: attr.isFk ? attr._fkBaseName || '' : '',
+        // Name der Zieltabelle, wenn der Fremdschlüssel allein auf ihren Schlüssel zeigt (erlaubt „mannschaft↑“)
+        _fkTabelle:
+          attr.isFk &&
+          rel.attrs.filter((a) => a.isFk && a._fkVia === attr._fkVia && a._fkSourceEntity === attr._fkSourceEntity)
+            .length === 1
+            ? attr._fkSourceEntity
+            : '',
       }));
     });
 
@@ -1201,6 +1210,7 @@
         (a) =>
           a.isFk &&
           (fkRawNameMatches(a.name, sourcePk) ||
+            fkRawNameMatches(a.name, sourceEntityName) ||
             (resolvedSourceFkName && fkRawNameMatches(a.name, resolvedSourceFkName))),
       );
       // Alternative Richtung: FK(targetPk) in source. Erkannt, wenn source mehr Attribute auf Basis von
@@ -1211,9 +1221,14 @@
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
       );
       const expectedInSource = (solSource?.attrs || []).filter(
-        (a) => a.isFk && normAttr(a._fkBaseName || a.name) === normAttr(targetPk),
+        (a) =>
+          a.isFk &&
+          (normAttr(a._fkBaseName || a.name) === normAttr(targetPk) ||
+            normAttr(a._fkTabelle) === normAttr(targetEntityName)),
       ).length;
-      const altCandidates = (studSource?.attrs || []).filter((a) => !a.isPk && fkRawNameMatches(a.name, targetPk));
+      const altCandidates = (studSource?.attrs || []).filter(
+        (a) => !a.isPk && (fkRawNameMatches(a.name, targetPk) || fkRawNameMatches(a.name, targetEntityName)),
+      );
       const hasAlt = altCandidates.length > expectedInSource;
       const altAttr = hasAlt
         ? altCandidates.find(
@@ -1250,7 +1265,13 @@
             adjTarget.attrs = adjTarget.attrs.filter((a) => normAttr(a.name) !== normAttr(raName));
           });
           // FK in source einfügen – nutze den tatsächlichen Student-Attribut-Namen
-          adjSource.attrs.push({ name: altAttr.name, isPk: false, isFk: true });
+          adjSource.attrs.push({
+            name: altAttr.name,
+            isPk: false,
+            isFk: true,
+            _fkBaseName: targetPk,
+            _fkTabelle: targetEntityName,
+          });
           // Beziehungsattribute in source einfügen
           relAttrNames.forEach((raName) => {
             adjSource.attrs.push({ name: raName, isPk: false, isFk: false });

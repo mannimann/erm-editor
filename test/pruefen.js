@@ -207,6 +207,34 @@ pruefe('Relationenmodell: umbenannte Fremdschlüssel nach Konvention werden erka
   assert(check(rels), 'ist befreundet mit (SchülerNr, Schuelernr-Freund)');
 });
 
+pruefe('Relationenmodell: Fremdschlüssel nach der Zieltabelle benannt (wie mannschaft↑ im Lehrbuch)', () => {
+  let rels = loesung('uebung-1-hotel.json');
+  attr(rels, 'Buchung', 'Gastnummer').name = 'Gast';
+  attr(rels, 'Buchung', 'Zimmernummer').name = 'Zimmer';
+  assert(check(rels), 'Hotel mit Gast↑ und Zimmer↑ in Buchung');
+
+  rels = loesung('experten-2-flugbetrieb.json');
+  const flug = rel(rels, 'Flug').attrs.filter((a) => a.isFk);
+  flug.find((a) => /lizenznummer/i.test(a.name)).name = 'Pilot';
+  flug
+    .filter((a) => /flughafencode/i.test(a.name))
+    .forEach((a, i) => (a.name = ['Flughafen-Start', 'Flughafen-Ziel'][i]));
+  rel(rels, 'Pilot').attrs.find((a) => a.isFk).name = 'Pilot-Ausbilder';
+  assert(check(rels), 'Flugbetrieb mit Pilot↑, Flughafen-Start↑, Flughafen-Ziel↑, Pilot-Ausbilder↑');
+
+  // NOT NULL-Regeln finden auch so benannte Fremdschlüssel
+  const fahrschule = Quest.getQuestsForMode('rm-experten').find((q) => q.title === 'Fahrschule');
+  rels = loesung(fahrschule.jsonFile);
+  attr(rels, 'Fahrstunde', 'Kundennummer').name = 'Fahrschüler';
+  attr(rels, 'Fahrstunde', 'Personalnummer').name = 'Fahrlehrer';
+  rel(rels, 'Fahrstunde')
+    .attrs.filter((a) => a.isFk)
+    .forEach((a) => (a.notNull = true));
+  RelModel.setStudentRelations(rels);
+  const result = fahrschule.validator();
+  assert(result.passed, result.message || result.error);
+});
+
 pruefe('Relationenmodell: 1:1-Fremdschlüssel auch in der anderen Richtung', () => {
   let rels = loesung('experten-3-universitaet.json');
   const hk = rel(rels, 'Hilfskraft');
@@ -360,6 +388,41 @@ CREATE TABLE unterrichtet (
     () => sqlite(`PRAGMA foreign_keys = ON;\n${sql}\nINSERT INTO schueler VALUES (1, 'Lena', 'M', '9z');`),
     /FOREIGN KEY constraint failed/,
   );
+});
+
+pruefe('SQL: Musterlösung aus dem Kapitel „Eigene Datenbank“ (Fremdschlüssel mannschaft)', () => {
+  const a = (name, sqlType, isPk = false, isFk = false) => ({ name, sqlType, isPk, isFk });
+  const rels = [
+    { name: 'mannschaft', attrs: [a('name', 'TEXT', true), a('gruendungsjahr', 'INTEGER'), a('stadion', 'TEXT')] },
+    {
+      name: 'spieler',
+      attrs: [
+        a('spielernr', 'INTEGER', true),
+        a('name', 'TEXT'),
+        a('geburtsjahr', 'INTEGER'),
+        a('position', 'TEXT'),
+        a('rueckennr', 'INTEGER'),
+        a('mannschaft', '', false, true),
+      ],
+    },
+  ];
+  const erwartet = `CREATE TABLE mannschaft (
+  name TEXT PRIMARY KEY,
+  gruendungsjahr INTEGER,
+  stadion TEXT
+);
+
+CREATE TABLE spieler (
+  spielernr INTEGER PRIMARY KEY,
+  name TEXT,
+  geburtsjahr INTEGER,
+  position TEXT,
+  rueckennr INTEGER,
+  mannschaft TEXT REFERENCES mannschaft(name)
+);`;
+  const { sql, fehler: f } = SQLExport.generateSQL(rels);
+  assert.strictEqual(f.length, 0, f.join('; '));
+  assert.strictEqual(sql, erwartet);
 });
 
 pruefe('SQL: Namen, Kollisionen, fehlender Primärschlüssel', () => {
