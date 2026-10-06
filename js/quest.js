@@ -1491,8 +1491,16 @@
     };
   }
 
+  // SQL-Übung: erst die Überführung, dann NOT NULL und UNIQUE nach den sqlRegeln der Quest
+  function sqlValidator() {
+    const result = window.RelModel?.checkAndGetResult?.() || { passed: false };
+    if (!result.passed) return result;
+    const regelCheck = checkSqlRegeln(this.sqlRegeln);
+    return regelCheck.passed ? regelCheck : { passed: false, message: regelCheck.error };
+  }
+
   // SQL-Übung: Das Relationenmodell ist vorgegeben, geübt werden NOT NULL und UNIQUE.
-  // Steigerung: 1. Spalten genannt, 2. Regeln genannt, ab 3. nur noch der Szenariotext.
+  // Steigerung: 1. Spalten genannt, 2. Regeln genannt, ab 3. nur noch der Szenariotext (in der Reihe Quest 2 bis 6).
   function sqlUebungQuest(s, stufe) {
     const spalte = (r) => {
       const was = [r.notNull && 'NOT NULL', r.unique && 'UNIQUE'].filter(Boolean).join(' und ') || 'kein NOT NULL';
@@ -1508,12 +1516,7 @@
       szenario: `<p><strong>Das Relationenmodell zu „${s.title}“ ist schon eingetragen.</strong> Öffne in der Seitenleiste <strong>„SQL erzeugen“</strong> und wähle die Datentypen.</p>${auftrag}`,
       jsonFile: s.jsonFile,
       sqlRegeln: s.sqlRegeln,
-      validator: function () {
-        const result = window.RelModel?.checkAndGetResult?.() || { passed: false };
-        if (!result.passed) return result;
-        const regelCheck = checkSqlRegeln(this.sqlRegeln);
-        return regelCheck.passed ? regelCheck : { passed: false, message: regelCheck.error };
-      },
+      validator: sqlValidator,
     };
   }
 
@@ -1536,7 +1539,44 @@
   const ermExpertenQuests = nummeriert(EXPERTEN.map(ermSzenarioQuest));
   const rmUebungQuests = nummeriert(UEBUNG.map(rmSzenarioQuest));
   const rmExpertenQuests = nummeriert(EXPERTEN.map(rmSzenarioQuest));
-  const sqlUebungQuests = nummeriert(EXPERTEN.map((s, i) => sqlUebungQuest(s, i + 1)));
+  // SQL-Übung: Quest 1 führt Muss, Kann und UNIQUE am Schul-Relationenmodell ein, danach die Szenarien
+  const sqlUebungQuests = nummeriert([
+    {
+      title: 'Muss, Kann und UNIQUE',
+      jsonFile: 'schule-auffrischung.json',
+      sqlRegeln: [
+        {
+          relation: 'Schüler',
+          spalte: 'Klassenstufe',
+          notNull: true,
+          grund: 'Jeder Schüler geht in genau eine Klasse.',
+        },
+        {
+          relation: 'Schüler',
+          spalte: 'Parallelklasse',
+          notNull: true,
+          grund: 'Jeder Schüler geht in genau eine Klasse.',
+        },
+        {
+          relation: 'Klasse',
+          spalte: 'SchülerNr',
+          unique: true,
+          grund: 'Ein Schüler ist höchstens in einer Klasse Klassensprecher (1:1).',
+        },
+      ],
+      theory: `<p class="quest-begriff">Neuer Begriff: Muss-Beziehung · Kann-Beziehung</p>
+        <p><strong>Muss-Beziehung → NOT NULL:</strong> Muss jede Zeile einen Partner haben, darf der Fremdschlüssel nicht leer bleiben. Bei einer <strong>Kann-Beziehung</strong> darf er leer (NULL) sein.</p>
+        <p><strong>1:1 → UNIQUE:</strong> Der Fremdschlüssel einer 1:1-Beziehung darf jeden Wert nur einmal enthalten – sonst wäre ein Schüler Sprecher mehrerer Klassen.</p>`,
+      szenario: `<p><strong>Das Relationenmodell der Schule ist schon eingetragen.</strong> Klicke in der Seitenleiste auf <strong>„SQL erzeugen“</strong>. Dort legst du für jede Spalte den Datentyp fest und setzt die Regeln:</p>
+        <ul>
+          <li>Jeder Schüler geht in genau eine Klasse (Muss-Beziehung): Setze bei „Klassenstufe“ und „Parallelklasse“ in „Schüler“ <strong>NOT NULL</strong>.</li>
+          <li>Ein Schüler ist höchstens in einer Klasse Klassensprecher (1:1): Setze bei „SchülerNr“ in „Klasse“ <strong>UNIQUE</strong>.</li>
+        </ul>
+        <p>Wähle passende Datentypen, z. B. INTEGER für SchülerNr und Klassenstufe.</p>`,
+      validator: sqlValidator,
+    },
+    ...EXPERTEN.map((s, i) => sqlUebungQuest(s, i + 1)),
+  ]);
 
   // ---- Quest-Datenbank: RELATIONENMODELL-GRUNDLAGEN (Stufe Einstieg, ERM aus files/schule-grundlagen.json) ----
   const rmGrundlagenQuests = nummeriert([
@@ -1740,8 +1780,9 @@
     },
     {
       title: '1:1-Beziehung „ist Klassensprecher“',
-      theory: `<p><strong>Regel 3 – 1:1:</strong> Der Primärschlüssel einer Seite wandert als Fremdschlüssel in die andere – in welche, ist frei, aber nur in eine. Wähle die Seite, die weniger Spalten braucht.</p>`,
-      objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. In „Schüler“ bräuchtest du ein zweites, umbenanntes Paar aus Klassenstufe und Parallelklasse – einfacher ist der Fremdschlüssel <strong>„SchülerNr“</strong> in <strong>„Klasse“</strong>.</p>`,
+      theory: `<p><strong>Regel 3 – 1:1:</strong> Der Fremdschlüssel kommt auf eine Seite – am besten dorthin, wo jede Entität sicher einen Partner hat – und bekommt UNIQUE.</p>`,
+      objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. Jede Klasse hat einen Klassensprecher, aber nicht jeder Schüler ist einer – der Fremdschlüssel <strong>„SchülerNr“</strong> kommt deshalb in <strong>„Klasse“</strong>. In „Schüler“ bräuchtest du außerdem ein zweites, umbenanntes Paar aus Klassenstufe und Parallelklasse.</p>
+        <p><em>UNIQUE sorgt dafür, dass jede SchülerNr in „Klasse“ nur einmal vorkommt – das setzt du später in der SQL-Übung.</em></p>`,
       validator: function () {
         if (getStudentFks('Klasse', 'SchülerNr').length) return { passed: true };
         return { passed: false, error: 'Füge „SchülerNr“ als Fremdschlüssel zur Relation „Klasse“ hinzu.' };
@@ -1786,41 +1827,6 @@
       },
     },
     {
-      title: 'Muss, Kann und UNIQUE',
-      // Prüft dieselben Regeln wie die Relationenmodell-Experten
-      sqlRegeln: [
-        {
-          relation: 'Schüler',
-          spalte: 'Klassenstufe',
-          notNull: true,
-          grund: 'Jeder Schüler geht in genau eine Klasse.',
-        },
-        {
-          relation: 'Schüler',
-          spalte: 'Parallelklasse',
-          notNull: true,
-          grund: 'Jeder Schüler geht in genau eine Klasse.',
-        },
-        {
-          relation: 'Klasse',
-          spalte: 'SchülerNr',
-          unique: true,
-          grund: 'Ein Schüler ist höchstens in einer Klasse Klassensprecher (1:1).',
-        },
-      ],
-      theory: `<p><strong>Muss-Beziehung → NOT NULL:</strong> Muss jede Zeile einen Partner haben, darf der Fremdschlüssel nicht leer bleiben. Bei einer <strong>Kann-Beziehung</strong> darf er leer (NULL) sein.</p>
-        <p><strong>1:1 → UNIQUE:</strong> Der Fremdschlüssel einer 1:1-Beziehung darf jeden Wert nur einmal enthalten – sonst wäre ein Schüler Sprecher mehrerer Klassen.</p>`,
-      objective: `<p>Klicke in der Seitenleiste auf <strong>„SQL erzeugen“</strong>. Dort legst du für jede Spalte den Datentyp fest und setzt die Regeln:</p>
-        <ul>
-          <li>Jeder Schüler geht in genau eine Klasse: Setze bei „Klassenstufe“ und „Parallelklasse“ in „Schüler“ <strong>NOT NULL</strong>.</li>
-          <li>Ein Schüler ist höchstens in einer Klasse Klassensprecher: Setze bei „SchülerNr“ in „Klasse“ <strong>UNIQUE</strong>.</li>
-        </ul>
-        <p>Wähle passende Datentypen, z. B. INTEGER für SchülerNr und Klassenstufe. Den Code kannst du kopieren oder als .sql-Datei speichern.</p>`,
-      validator: function () {
-        return checkSqlRegeln(this.sqlRegeln);
-      },
-    },
-    {
       title: '🎉 Abschluss',
       abschluss: true,
       theory: `<p><strong>Glückwunsch!</strong> Du hast die Transformationsregeln aufgefrischt:</p>
@@ -1829,13 +1835,9 @@
           <li>1:n und 1:1 mit (zusammengesetzten) Fremdschlüsseln abbilden</li>
           <li>n:m-Beziehungen als Beziehungstabelle abbilden</li>
           <li>Selbstbeziehungen mit umbenannten Fremdschlüsseln abbilden</li>
-          <li>Muss-Beziehungen mit NOT NULL und 1:1 mit UNIQUE absichern</li>
         </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
-        <ol>
-          <li>Speichere die Relationen in der Seitenleiste mit <strong>„JSON-Export“</strong></li>
-          <li>Speichere unter <strong>„SQL erzeugen“</strong> den Code als .sql-Datei</li>
-        </ol>
+        <p>Speichere die Relationen in der Seitenleiste mit <strong>„JSON-Export“</strong>.</p>
         <p>Danach geht es im Menü mit der Reihe „Relationenmodell-Experten“ weiter!</p>`,
       validator: function () {
         return { passed: true };
@@ -1846,6 +1848,7 @@
   // ---- Quest-Reihen: id steht auch im Link (?reihe=…) ----
   // art: 'erm' oder 'rm'; schritt: Schritt-für-Schritt-Reihe (ein Modell, Erklärkästen) statt Szenarien.
   // Symbole: 🔷 ER-Modell erarbeiten, Tabelle (ICON_RM) Relationenmodell erarbeiten, ✏️ üben.
+  // version: neuer Speicherplatz, wenn sich die Nummerierung einer Reihe ändert.
   // abschlussText: Glückwunsch, wenn alle Szenarien einer Übungsreihe gelöst sind.
   const ICON_RM = '<svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg>';
   const REIHEN = [
@@ -1961,9 +1964,11 @@
       schritt: false,
       icon: '✏️',
       titel: 'SQL-Übung',
-      untertitel: 'NOT NULL und UNIQUE setzen',
+      untertitel: 'Muss, Kann, NOT NULL und UNIQUE',
       // Das Relationenmodell ist vorgegeben (Musterlösung), geübt wird nur „SQL erzeugen“
       rmVorgabe: true,
+      // Version 2: Quest 1 „Muss, Kann und UNIQUE“ vor den Szenarien – der alte Stand passt nicht mehr
+      version: 2,
       abschlussText:
         'Du legst jetzt mit NOT NULL fest, welche Fremdschlüssel nicht leer bleiben dürfen, und sicherst 1:1-Beziehungen mit UNIQUE ab.',
       quests: sqlUebungQuests,
@@ -2122,7 +2127,7 @@
     },
 
     getStorageKey: function (mode = this.state.questMode) {
-      return 'erm-editor-quests-' + (mode || 'none') + '-v1';
+      return 'erm-editor-quests-' + (mode || 'none') + '-v' + (this.getSeries(mode)?.version || 1);
     },
 
     // Aufgaben, die zählen: alle Quests außer der Abschlussquest einer Schritt-Reihe
@@ -2160,7 +2165,8 @@
     getWorkKey: function (mode = this.state.questMode, number = this.state.currentQuestNumber) {
       const reihe = this.getSeries(mode);
       if (!reihe) return null;
-      return reihe.schritt ? `${QUEST_WORK_PREFIX}:${mode}` : `${QUEST_WORK_PREFIX}:${mode}:q${Number(number) || 1}`;
+      const id = reihe.version ? `${mode}-v${reihe.version}` : mode;
+      return reihe.schritt ? `${QUEST_WORK_PREFIX}:${id}` : `${QUEST_WORK_PREFIX}:${id}:q${Number(number) || 1}`;
     },
 
     init: function () {
@@ -2393,6 +2399,7 @@
         'erm-editor-quests-experten-v4',
         'erm-editor-quests-relmodel-grundlagen-v1',
         'erm-editor-quests-relmodel-experten-v1',
+        'erm-editor-quests-sql-uebung-v1',
         ...REIHEN.map((r) => this.getStorageKey(r.id)),
       ].forEach((key) => localStorage.removeItem(key));
 

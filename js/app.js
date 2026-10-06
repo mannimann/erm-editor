@@ -2353,14 +2353,14 @@ window.App = {
         setTimeout(startBarAnimation, 60);
       }
     }
-    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (nur Grundlagen).
+    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (Schritt-Reihen, SQL-Übung Quest 1).
     try {
       // Immer alte Box entfernen, damit beim Wechsel von Grundlagen -> Experten nichts "hängen bleibt".
       const existing = modal.querySelector('.quest-success-concept');
       if (existing) existing.remove();
 
       const currentQuest = window.Quest?.getCurrentQuest?.();
-      const theoryHtml = getQuestSeries()?.schritt ? currentQuest?.theory || '' : '';
+      const theoryHtml = currentQuest?.theory || '';
       if (theoryHtml) {
         const conceptDiv = document.createElement('div');
         conceptDiv.className = 'quest-concept quest-success-concept';

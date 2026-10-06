@@ -273,6 +273,18 @@ pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Expert
   RelModel.setStudentRelations(rels);
   assert(fahrschule.validator().passed, 'mit NOT NULL muss die Quest bestehen');
 
+  // Quest 1: Schul-Relationenmodell der Auffrischung
+  const schule = Quest.getQuestsForMode('sql-uebung')[0];
+  const s = loesung(schule.jsonFile);
+  RelModel.setStudentRelations(s);
+  assert(!schule.validator().passed, 'Schule ohne NOT NULL und UNIQUE');
+  attr(s, 'Schüler', 'Klassenstufe').notNull = true;
+  attr(s, 'Schüler', 'Parallelklasse').notNull = true;
+  attr(s, 'Klasse', 'SchülerNr').unique = true;
+  RelModel.setStudentRelations(s);
+  const mitRegeln = schule.validator();
+  assert(mitRegeln.passed, mitRegeln.message);
+
   const uni = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Universität');
   const u = loesung(uni.jsonFile);
   for (const r of u) for (const a of r.attrs) if (a.isFk && !a.isPk) a.notNull = true;
@@ -328,11 +340,7 @@ pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
   RelModel.setStudentRelations(loesung('schule-grundlagen.json'));
   bestehen('rm-grundlagen', 1, 99);
 
-  const rels = loesung('schule-auffrischung.json');
-  attr(rels, 'Schüler', 'Klassenstufe').notNull = true;
-  attr(rels, 'Schüler', 'Parallelklasse').notNull = true;
-  attr(rels, 'Klasse', 'SchülerNr').unique = true;
-  RelModel.setStudentRelations(rels);
+  RelModel.setStudentRelations(loesung('schule-auffrischung.json'));
   bestehen('rm-auffrischung', 1, 99);
 });
 
