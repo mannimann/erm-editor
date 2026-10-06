@@ -20,7 +20,7 @@ nur, wenn die Quest freigeschaltet ist; in Szenario-Reihen ist jede Quest außer
 „⚔️ Quests“ stehen die Reihen in zwei Spalten, „Einstieg“ und „Fortgeschritten“.
 
 | ID | Reihe | Quests |
-|---|---|---|
+| --- | --- | --- |
 | **Einstieg** | | |
 | `erm-grundlagen` | ERM-Grundlagen (ohne Kardinalitäten) | 1 Erste Entitätsklasse · 2 Attribute hinzufügen · 3 Primärschlüssel setzen · 4 Zweite Entitätsklasse · 5 Attribute für Klasse · 6 Beziehung erstellen · 7 Dritte Entitätsklasse · 8 Zweite Beziehung · 9 Beziehungsattribute · 10 Weitere Beziehung ergänzen · 11 Abschluss |
 | `erm-kardinalitaeten` | ERM-Kardinalitäten (neu) | 1 Kardinalität und Leserichtung („geht in“ n:1 vorgegeben) · 2 Beide Richtungen prüfen („unterrichtet“) · 3 Eins zu eins („ist Klassensprecher“, nur Sachverhalt) · 4 Eine Beziehung selbst bestimmen („ist Klassenleiter von“, Lehrer 1:n Klasse) · 5 Abschluss |
