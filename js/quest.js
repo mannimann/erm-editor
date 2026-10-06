@@ -616,6 +616,7 @@
           <li>Attribut <strong>„Vorname“</strong></li>
           <li>Attribut <strong>„Nachname“</strong></li>
         </ol>
+        <p><strong>So geht's:</strong> „Schüler“ anklicken, dann links auf <strong>„Attribut“</strong>.</p>
         <p><strong>Hinweis:</strong> Markiere sie NICHT als Primärschlüssel.</p>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
@@ -683,12 +684,12 @@
     {
       title: 'Beziehung erstellen',
       theory: `<p class="quest-begriff">Neuer Begriff: Beziehung · Symbol: Raute</p>
-        <p><strong>Beziehung (Relationship):</strong> Eine Raute, die die Verbindung zwischen zwei Entitätsklassen darstellt. Ihr Name wird von links nach rechts gelesen: Schüler (links) „geht in“ Klasse (rechts).</p>`,
+        <p><strong>Beziehung (Relationship):</strong> Eine Raute, die zwei Entitätsklassen verbindet. Mit ihnen zusammen ergibt ihr Name einen Satz: „Schüler geht in Klasse“. In welche Richtung der Satz gemeint ist, ergibt sich aus dem Sinn – nicht aus links und rechts, denn nach dem Verschieben oder dem Auto-Layout kann „Klasse“ auch links stehen.</p>`,
       objective: `<p>Erstelle eine Beziehung zwischen <strong>„Schüler“</strong> und <strong>„Klasse“</strong>:</p>
         <ol>
-          <li>Füge über die Werkzeugleiste eine <strong>Beziehung</strong> hinzu (Rechtsklick auf die Raute → Beziehung bearbeiten)</li>
+          <li>Klicke links auf <strong>„Beziehung“</strong>: Der Dialog „Beziehung bearbeiten“ öffnet sich.</li>
           <li>Name der Beziehung: <strong>„geht in“</strong></li>
-          <li><strong>„Schüler“</strong> auf der linken Seite, <strong>„Klasse“</strong> auf der rechten</li>
+          <li>Wähle die Entitätsklassen <strong>„Schüler“</strong> und <strong>„Klasse“</strong> und klicke auf <strong>„Speichern“</strong>.</li>
         </ol>`,
       validator: function () {
         return validateRelationshipRequirements({
@@ -730,7 +731,7 @@
       objective: `<p>Erstelle eine Beziehung zwischen <strong>„Lehrer“</strong> und <strong>„Klasse“</strong>:</p>
         <ol>
           <li>Name der Beziehung: <strong>„unterrichtet“</strong></li>
-          <li><strong>„Lehrer“</strong> auf der linken Seite, <strong>„Klasse“</strong> auf der rechten</li>
+          <li>Entitätsklassen: <strong>„Lehrer“</strong> und <strong>„Klasse“</strong></li>
         </ol>`,
       validator: function () {
         return validateRelationshipRequirements({
@@ -744,7 +745,7 @@
         <p><strong>Beziehungsattribut:</strong> Auch Beziehungen können Attribute haben! Ein Beispiel: Die Beziehung „unterrichtet“ kann das Attribut „Fach“ besitzen, um das in dieser Klasse unterrichtete Fach festzuhalten.</p>`,
       objective: `<ol>
           <li>Füge zur Beziehung <strong>„unterrichtet“</strong> ein Attribut mit dem Namen <strong>„Fach“</strong> hinzu</li>
-          <li>Rechtsklick auf die Beziehung → Attribut hinzufügen</li>
+          <li>Raute „unterrichtet“ anklicken, dann links auf <strong>„Attribut“</strong></li>
         </ol>`,
       validator: function () {
         const rel = getRelationshipByName('unterrichtet');
@@ -770,6 +771,7 @@
     },
     {
       title: '🎉 Abschluss',
+      abschluss: true,
       theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
         <p><strong>Du hast gelernt:</strong></p>
         <ul>
@@ -786,7 +788,7 @@
           <li>Klicke auf <strong>„JSON-Export“</strong> in der Titelleiste oben rechts und speichere die Datei</li>
           <li>Klicke auf <strong>„PNG-Export“</strong> und speichere das Bild</li>
         </ol>
-        <p>Danach geht es im Menü mit der Reihe „ERM-Kardinalitäten“ weiter: Dort bekommen deine Beziehungen Zahlen.</p>`,
+        <p>Danach geht es im Menü mit der Reihe „ERM-Übung“ weiter: Bearbeite dort Szenario 1 „Hotel-Verwaltung“ – auch noch ohne Kardinalitäten.</p>`,
       validator: function () {
         // Abschluss-Screen ist immer erfolgreich
         return { passed: true };
@@ -806,11 +808,12 @@
           <li><strong>1:n</strong> (eins zu vielen): Eine Klasse hat viele Schüler, ein Schüler gehört zu einer Klasse.</li>
           <li><strong>n:m</strong> (viele zu vielen): Ein Lehrer unterrichtet viele Schüler, ein Schüler hat Unterricht bei vielen Lehrern.</li>
         </ul>
-        <p>Gelesen wird von links nach rechts: Schüler (links) n : 1 Klasse (rechts) — viele Schüler gehen in eine Klasse.</p>`,
+        <p>Die Zahl steht an der Linie zu der Entitätsklasse, deren Anzahl sie angibt: Ein Schüler geht in <em>eine</em> Klasse – an der Linie zu „Klasse“ steht 1. Eine Klasse hat <em>viele</em> Schüler – an der Linie zu „Schüler“ steht n.</p>
+        <p>Im Dialog „Beziehung bearbeiten“ gehört die erste Zahl zur linken Auswahl, die zweite zur rechten: Schüler (links), Klasse (rechts) → n:1.</p>`,
       objective: `<p>Das Schul-ERM aus den Grundlagen ist geladen – dein eigenes, wenn du die Grundlagen abgeschlossen hast. An den Linien steht noch <strong>„?“</strong>: Die Kardinalitäten fehlen.</p>
         <ol>
           <li>Rechtsklick auf die Raute <strong>„geht in“</strong> → Beziehung bearbeiten</li>
-          <li>„Schüler“ links, „Klasse“ rechts, Kardinalität <strong>n:1</strong> (viele Schüler gehen in eine Klasse)</li>
+          <li>Im Dialog „Schüler“ links, „Klasse“ rechts, Kardinalität <strong>n:1</strong> (viele Schüler gehen in eine Klasse)</li>
         </ol>`,
       validator: function () {
         return validateRelationshipRequirements({
@@ -820,7 +823,7 @@
               from: 'Schüler',
               to: 'Klasse',
               cardinality: 'n:1',
-              hinweis: 'Wähle bei „geht in“ die Kardinalität n:1: viele Schüler (links) gehen in eine Klasse (rechts).',
+              hinweis: 'Wähle bei „geht in“ die Kardinalität n:1: Viele Schüler gehen in eine Klasse.',
             },
           ],
         });
@@ -828,9 +831,9 @@
     },
     {
       title: 'Beide Richtungen prüfen',
-      theory: `<p><strong>Beide Richtungen prüfen:</strong> Frage erst von links nach rechts, dann von rechts nach links. Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>
+      theory: `<p><strong>Beide Richtungen prüfen:</strong> Frage von jeder Seite aus, mit wie vielen Partnern sie verbunden ist. Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>
         <p><strong>Hinweis:</strong> Eine n:m-Beziehung wird im Relationenmodell später eine eigene Tabelle (Relation), die Beziehungstabelle.</p>`,
-      objective: `<p>Bestimme die Kardinalität von <strong>„unterrichtet“</strong> (Lehrer links, Klasse rechts). Prüfe beide Richtungen:</p>
+      objective: `<p>Bestimme die Kardinalität von <strong>„unterrichtet“</strong> zwischen „Lehrer“ und „Klasse“. Prüfe beide Richtungen:</p>
         <ul>
           <li>Wie viele Klassen kann ein Lehrer unterrichten?</li>
           <li>Von wie vielen Lehrern wird eine Klasse unterrichtet?</li>
@@ -875,7 +878,7 @@
       theory: `<p>Zwischen „Lehrer“ und „Klasse“ gibt es jetzt zwei Beziehungen mit verschiedener Bedeutung – und verschiedenen Kardinalitäten.</p>`,
       objective: `<p>Jede Klasse hat genau einen Klassenleiter. An unserer Schule leiten manche Lehrer auch zwei Klassen.</p>
         <ol>
-          <li>Erstelle die Beziehung <strong>„ist Klassenleiter von“</strong> zwischen „Lehrer“ (links) und „Klasse“ (rechts).</li>
+          <li>Klicke links auf <strong>„Beziehung“</strong> und lege <strong>„ist Klassenleiter von“</strong> zwischen „Lehrer“ und „Klasse“ an.</li>
           <li>Die Kardinalität bestimmst du selbst.</li>
         </ol>`,
       validator: function () {
@@ -895,18 +898,19 @@
     },
     {
       title: '🎉 Abschluss',
+      abschluss: true,
       theory: `<p><strong>Glückwunsch!</strong> Dein Schul-ERM ist jetzt vollständig.</p>
         <p><strong>Du hast gelernt:</strong></p>
         <ul>
           <li>Kardinalitäten 1:1, 1:n und n:m festlegen</li>
-          <li>von links nach rechts lesen</li>
+          <li>die Zahl an der richtigen Linie ablesen</li>
           <li>beide Richtungen prüfen</li>
         </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
           <li>Speichere dein ER-Modell mit <strong>„JSON-Export“</strong> und <strong>„PNG-Export“</strong></li>
         </ol>
-        <p>Danach geht es im Menü mit der Reihe „ERM-Übung“ weiter: Dort bestimmst du die Kardinalitäten selbst aus dem Text.</p>`,
+        <p>Danach geht es in der Reihe „ERM-Übung“ ab Szenario 2 weiter: erst mit vorgegebenen Kardinalitäten, dann bestimmst du sie selbst aus dem Text.</p>`,
       validator: function () {
         return { passed: true };
       },
@@ -920,11 +924,11 @@
       title: 'Entitätsklassen mit Schlüsseln',
       theory: `<p><strong>Entitätsklasse</strong> (Rechteck): eine Gruppe gleichartiger Objekte, z. B. alle Schüler. Ein einzelnes Objekt, z. B. die Schülerin Lena, ist eine <strong>Entität</strong>.</p>
         <p><strong>Attribut</strong> (Ellipse): eine Eigenschaft. Der <strong>Primärschlüssel</strong> (unterstrichen) kennzeichnet jede Entität eindeutig – jede Entitätsklasse braucht einen.</p>`,
-      objective: `<p>Modelliere die Schule mit drei Entitätsklassen und markiere jeweils den Primärschlüssel (steht zuerst):</p>
+      objective: `<p>Modelliere die Schule mit drei Entitätsklassen und markiere jeweils den Primärschlüssel (unterstrichen):</p>
         <ul>
-          <li><strong>„Schüler“</strong>: „SchülerNr“, „Vorname“, „Nachname“</li>
-          <li><strong>„Klasse“</strong>: „Bezeichnung“, „Klassenraum“</li>
-          <li><strong>„Lehrer“</strong>: „Lehrer-Kürzel“, „Vorname“, „Nachname“</li>
+          <li><strong>„Schüler“</strong>: „<u>SchülerNr</u>“, „Vorname“, „Nachname“</li>
+          <li><strong>„Klasse“</strong>: „<u>Bezeichnung</u>“, „Klassenraum“</li>
+          <li><strong>„Lehrer“</strong>: „<u>Lehrer-Kürzel</u>“, „Vorname“, „Nachname“</li>
         </ul>`,
       validator: function () {
         return validateExpertQuest({
@@ -940,12 +944,12 @@
     },
     {
       title: 'Beziehungen mit Kardinalitäten',
-      theory: `<p><strong>Beziehung</strong> (Raute): verbindet Entitätsklassen. Die <strong>Kardinalität</strong> sagt, wie viele Entitäten jeder Seite beteiligt sind: 1:1, 1:n oder n:m. Gelesen wird von links nach rechts.</p>
+      theory: `<p><strong>Beziehung</strong> (Raute): verbindet Entitätsklassen. Die <strong>Kardinalität</strong> sagt, wie viele Entitäten jeder Seite beteiligt sind: 1:1, 1:n oder n:m. Die Zahl steht an der Linie zu der Entitätsklasse, deren Anzahl sie angibt.</p>
         <p>Prüfe immer beide Richtungen: Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Also n:m.</p>`,
       objective: `<p>Verbinde die Entitätsklassen durch zwei Beziehungen:</p>
         <ol>
-          <li><strong>„geht in“</strong> zwischen „Schüler“ (links) und „Klasse“ (rechts), Kardinalität <strong>n:1</strong></li>
-          <li><strong>„unterrichtet“</strong> zwischen „Lehrer“ (links) und „Klasse“ (rechts), Kardinalität <strong>n:m</strong></li>
+          <li><strong>„geht in“</strong> zwischen „Schüler“ und „Klasse“: Schüler <strong>n : 1</strong> Klasse</li>
+          <li><strong>„unterrichtet“</strong> zwischen „Lehrer“ und „Klasse“: Lehrer <strong>n : m</strong> Klasse</li>
         </ol>`,
       validator: function () {
         return validateRelationshipRequirements({
@@ -1044,6 +1048,7 @@
     },
     {
       title: '🎉 Abschluss',
+      abschluss: true,
       theory: `<p><strong>Glückwunsch!</strong> Du hast das ER-Modell aufgefrischt:</p>
         <ul>
           <li>Entitätsklassen, Attribute und Primärschlüssel</li>
@@ -1076,8 +1081,7 @@
       szenario: `<p>Ein kleines Hotel möchte seine Reservierungen sauber modellieren. Dafür werden Gäste, Zimmer und einzelne Buchungen getrennt verwaltet, damit nachvollziehbar bleibt, wer wann welches Zimmer reserviert hat.</p>
         <p>Lege die Entitätsklasse <strong>„Gast“</strong> mit den Attributen <strong>„Gastnummer“</strong>, <strong>„Vorname“</strong>, <strong>„Nachname“</strong>, <strong>„E-Mail“</strong> und <strong>„Telefon“</strong> an. Verwende <strong>„Gastnummer“</strong> als Primärschlüssel.</p>
         <p>Lege außerdem die Entitätsklasse <strong>„Zimmer“</strong> mit den Attributen <strong>„Zimmernummer“</strong>, <strong>„Kategorie“</strong> und <strong>„PreisProNacht“</strong> an. <strong>„Zimmernummer“</strong> ist der Primärschlüssel. Jede Reservierung wird als Entitätsklasse <strong>„Buchung“</strong> mit den Attributen <strong>„Buchungsnummer“</strong>, <strong>„Anreisedatum“</strong>, <strong>„Abreisedatum“</strong> und <strong>„AnzahlNächte“</strong> modelliert; Primärschlüssel ist <strong>„Buchungsnummer“</strong>.</p>
-        <p>Verbinde das Modell über die Beziehungen <strong>„bucht“</strong> zwischen <strong>„Gast“</strong> und <strong>„Buchung“</strong> sowie <strong>„gilt für“</strong> zwischen <strong>„Zimmer“</strong> und <strong>„Buchung“</strong>.</p>
-        <p><em>Kardinalitäten brauchst du hier noch nicht.</em></p>`,
+        <p>Verbinde das Modell über die Beziehungen <strong>„bucht“</strong> zwischen <strong>„Gast“</strong> und <strong>„Buchung“</strong> sowie <strong>„gilt für“</strong> zwischen <strong>„Zimmer“</strong> und <strong>„Buchung“</strong>. Kardinalitäten brauchst du hier noch nicht.</p>`,
       masterlösung: {
         entities: ['Gast', 'Zimmer', 'Buchung'],
         attributes: {
@@ -1095,8 +1099,16 @@
     krankenhaus: {
       title: 'Krankenhaus-System',
       jsonFile: 'uebung-2-krankenhaus.json',
-      szenario: `<p>Ein Krankenhaus soll so modelliert werden, dass nachvollziehbar ist, welche Patienten behandelt werden, welche Ärzte die Behandlungen durchführen und auf welcher Station ein Patient liegt. Für Patient sollen Versicherungsnummer, Name, Geburtsdatum und Adresse gespeichert werden. Für Arzt werden Personalnummer, Name und Fachbereich geführt. Für Station werden Stationscode, Name und Bettenzahl erfasst.</p>
-        <p>Jeder konkrete medizinische Vorgang wird als Behandlung mit Behandlungsnummer, Datum, Diagnose und Medikation dokumentiert. Ein Patient kann im Zeitverlauf mehrere Behandlungen erhalten, jede Behandlung gehört aber genau zu einem Patienten (erhält). Ein Arzt kann mehrere Behandlungen durchführen, jede Behandlung wird jedoch genau von einem Arzt verantwortet (führt durch). Gleichzeitig ist ein Arzt einer Station zugeordnet, auf der mehrere Ärzte arbeiten können (arbeitet auf). Auch ein Patient liegt auf genau einer Station, während eine Station viele Patienten aufnehmen kann (liegt auf).</p>`,
+      // Übung 2: wichtige Wörter hervorgehoben, Kardinalitäten vorgegeben (ab Übung 3 nur noch im Text)
+      szenario: `<p>Ein Krankenhaus soll nachvollziehen können, welche Patienten behandelt werden, welche Ärzte die Behandlungen durchführen und auf welcher Station ein Patient liegt.</p>
+        <p>Für die Entitätsklasse <strong>„Patient“</strong> werden <strong>„Versicherungsnummer“</strong>, <strong>„Name“</strong>, <strong>„Geburtsdatum“</strong> und <strong>„Adresse“</strong> gespeichert, für <strong>„Arzt“</strong> <strong>„Personalnummer“</strong>, <strong>„Name“</strong> und <strong>„Fachbereich“</strong>, für <strong>„Station“</strong> <strong>„Stationscode“</strong>, <strong>„Name“</strong> und <strong>„Bettenzahl“</strong>. Jeder medizinische Vorgang wird als <strong>„Behandlung“</strong> mit <strong>„Behandlungsnummer“</strong>, <strong>„Datum“</strong>, <strong>„Diagnose“</strong> und <strong>„Medikation“</strong> dokumentiert. Primärschlüssel sind die Versicherungsnummer, die Personalnummer, der Stationscode und die Behandlungsnummer.</p>
+        <p>Lege diese Beziehungen mit ihren Kardinalitäten an:</p>
+        <ul>
+          <li><strong>„erhält“</strong>: Patient <strong>1 : n</strong> Behandlung – ein Patient erhält viele Behandlungen, jede Behandlung gehört zu genau einem Patienten.</li>
+          <li><strong>„führt durch“</strong>: Arzt <strong>1 : n</strong> Behandlung – ein Arzt führt viele Behandlungen durch, jede Behandlung verantwortet genau ein Arzt.</li>
+          <li><strong>„arbeitet auf“</strong>: Arzt <strong>n : 1</strong> Station – ein Arzt arbeitet auf genau einer Station, auf einer Station arbeiten viele Ärzte.</li>
+          <li><strong>„liegt auf“</strong>: Patient <strong>n : 1</strong> Station – ein Patient liegt auf genau einer Station, eine Station nimmt viele Patienten auf.</li>
+        </ul>`,
       masterlösung: {
         entities: ['Patient', 'Arzt', 'Behandlung', 'Station'],
         attributes: {
@@ -1191,8 +1203,9 @@
     fahrschule: {
       title: 'Fahrschule',
       jsonFile: 'experten-1-fahrschule.json',
-      szenario: `<p>Eine Fahrschule möchte ihre Ausbildung verwalten. Jeder Fahrschüler hat eine eindeutige Kundennummer; außerdem werden Name, Geburtsdatum und Führerscheinklasse gespeichert. Jeder Fahrlehrer hat eine eindeutige Personalnummer, dazu kommen Name und Telefonnummer. Ein Fahrschüler lernt im Lauf seiner Ausbildung bei mehreren Fahrlehrern, und ein Fahrlehrer hat viele Fahrschüler.</p>
-        <p>Festgehalten wird jede einzelne Fahrstunde mit eindeutiger Stundennummer, Datum, Uhrzeit und Art (z. B. Überlandfahrt). Derselbe Fahrschüler fährt oft viele Stunden beim selben Fahrlehrer. Jede Fahrstunde fährt genau ein Fahrschüler, ein Fahrschüler fährt viele Fahrstunden (fährt). Jede Fahrstunde gibt genau ein Fahrlehrer, ein Fahrlehrer gibt viele Fahrstunden (gibt).</p>`,
+      // Experten 1: wichtige Wörter hervorgehoben (ab Experten 2 nicht mehr)
+      szenario: `<p>Eine Fahrschule möchte ihre Ausbildung verwalten. Jeder <strong>Fahrschüler</strong> hat eine eindeutige <strong>Kundennummer</strong>; außerdem werden <strong>Name</strong>, <strong>Geburtsdatum</strong> und <strong>Führerscheinklasse</strong> gespeichert. Jeder <strong>Fahrlehrer</strong> hat eine eindeutige <strong>Personalnummer</strong>, dazu kommen <strong>Name</strong> und <strong>Telefonnummer</strong>. Ein Fahrschüler lernt im Lauf seiner Ausbildung bei mehreren Fahrlehrern, und ein Fahrlehrer hat viele Fahrschüler.</p>
+        <p>Festgehalten wird jede einzelne <strong>Fahrstunde</strong> mit eindeutiger <strong>Stundennummer</strong>, <strong>Datum</strong>, <strong>Uhrzeit</strong> und <strong>Art</strong> (z. B. Überlandfahrt). Derselbe Fahrschüler fährt oft viele Stunden beim selben Fahrlehrer. Jede Fahrstunde fährt genau ein Fahrschüler, ein Fahrschüler fährt viele Fahrstunden (<strong>fährt</strong>). Jede Fahrstunde gibt genau ein Fahrlehrer, ein Fahrlehrer gibt viele Fahrstunden (<strong>gibt</strong>).</p>`,
       masterlösung: {
         entities: ['Fahrschüler', 'Fahrlehrer', 'Fahrstunde'],
         attributes: {
@@ -1264,7 +1277,7 @@
       title: 'Universität',
       jsonFile: 'experten-3-universitaet.json',
       szenario: `<p>Eine Hochschule möchte ihre Lehrorganisation so modellieren, dass sichtbar wird, welche Dozenten welche Vorlesungen halten, welche Hilfskräfte sie dabei unterstützen und welche Seminare zu einer Vorlesung gehören. Für Dozent werden Dozentenkürzel, Name und Fachgebiet gespeichert. Für Student werden Matrikelnummer, Name, Telefonnummer und E-Mail erfasst. Nicht jeder Student arbeitet zusätzlich an der Hochschule, aber einige Studierende sind zugleich Hilfskraft. Für Hilfskraft sollen HiwiNummer, Wochenstunden und Vertragsbeginn gespeichert werden.</p>
-        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
+        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt, jedes Seminar mit Seminarnummer, Wochentag und Raum. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
         <p>Auch die Teilnahme der Studierenden soll abgebildet werden. Ein Student kann an mehreren Vorlesungen teilnehmen, und eine Vorlesung kann von vielen Studenten besucht werden (besucht). Dasselbe gilt für Seminare: Ein Student kann mehrere Seminare besuchen, und ein Seminar kann viele Studenten haben (nimmt teil an).</p>`,
       masterlösung: {
         entities: ['Dozent', 'Student', 'Hilfskraft', 'Vorlesung', 'Seminar'],
@@ -1446,33 +1459,40 @@
     };
   }
 
-  // mitRegeln (Stufe Fortgeschritten): zusätzlich NOT NULL und UNIQUE nach den Regeln des Szenarios
-  function rmSzenarioQuest(s, mitRegeln = false) {
-    const regeln = mitRegeln
-      ? `<p>Öffne danach <strong>„SQL erzeugen“</strong>: Wähle die Datentypen und setze <strong>NOT NULL</strong> und <strong>UNIQUE</strong>, wo diese Regeln es verlangen:</p>
-        <ul>${s.regeln.map((r) => `<li>${r}</li>`).join('')}</ul>`
-      : '';
+  function rmSzenarioQuest(s) {
     return {
       title: s.title,
       szenario: `<p><strong>Überführe das ER-Modell „${s.title}“ in das Relationenmodell.</strong></p>
-        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${regeln}`,
+        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>`,
       jsonFile: s.jsonFile,
-      sqlRegeln: mitRegeln ? s.sqlRegeln : null,
       validator: function () {
-        const result = window.RelModel?.checkAndGetResult?.() || { passed: false };
-        if (!result.passed || !this.sqlRegeln) return result;
-        const regelCheck = checkSqlRegeln(this.sqlRegeln);
-        return regelCheck.passed ? regelCheck : { passed: false, message: regelCheck.error };
+        return window.RelModel?.checkAndGetResult?.() || { passed: false };
       },
     };
   }
 
-  function szenarioAbschluss(text) {
+  // SQL-Übung: Das Relationenmodell ist vorgegeben, geübt werden NOT NULL und UNIQUE.
+  // Steigerung: 1. Spalten genannt, 2. Regeln genannt, ab 3. nur noch der Szenariotext.
+  function sqlUebungQuest(s, stufe) {
+    const spalte = (r) => {
+      const was = [r.notNull && 'NOT NULL', r.unique && 'UNIQUE'].filter(Boolean).join(' und ') || 'kein NOT NULL';
+      return `<li>„${r.spalte}“ in „${r.relation}“: <strong>${was}</strong> – ${r.grund}</li>`;
+    };
+    const auftrag = [
+      `<p>Setze diese Regeln:</p><ul>${s.sqlRegeln.map(spalte).join('')}</ul>`,
+      `<p>Setze NOT NULL und UNIQUE, wo diese Regeln es verlangen:</p><ul>${s.regeln.map((r) => `<li>${r}</li>`).join('')}</ul>`,
+      `<p>Die Regeln stehen im Szenario: „genau ein“ verlangt NOT NULL; bei „höchstens ein“ oder „nicht jeder“ darf der Fremdschlüssel leer bleiben; eine 1:1-Beziehung verlangt UNIQUE.</p>${s.szenario}`,
+    ][Math.min(stufe, 3) - 1];
     return {
-      title: '🎉 Abschluss',
-      szenario: `<p><strong>Glückwunsch!</strong> ${text}</p><p>Starke Leistung!</p>`,
+      title: s.title,
+      szenario: `<p><strong>Das Relationenmodell zu „${s.title}“ ist schon eingetragen.</strong> Öffne in der Seitenleiste <strong>„SQL erzeugen“</strong> und wähle die Datentypen.</p>${auftrag}`,
+      jsonFile: s.jsonFile,
+      sqlRegeln: s.sqlRegeln,
       validator: function () {
-        return { passed: true };
+        const result = window.RelModel?.checkAndGetResult?.() || { passed: false };
+        if (!result.passed) return result;
+        const regelCheck = checkSqlRegeln(this.sqlRegeln);
+        return regelCheck.passed ? regelCheck : { passed: false, message: regelCheck.error };
       },
     };
   }
@@ -1492,33 +1512,11 @@
     SZENARIEN.katastrophenschutz,
   ];
 
-  const ermUebungQuests = nummeriert([
-    ...UEBUNG.map(ermSzenarioQuest),
-    szenarioAbschluss(
-      'Du hast alle Übungsquests abgeschlossen. Du modellierst jetzt selbstständig Szenarien mit 1:1-, 1:n- und n:m-Beziehungen und Beziehungsattributen. Als Nächstes überführst du ER-Modelle ins Relationenmodell: Reihe „Relationenmodell-Grundlagen“.',
-    ),
-  ]);
-
-  const ermExpertenQuests = nummeriert([
-    ...EXPERTEN.map(ermSzenarioQuest),
-    szenarioAbschluss(
-      'Du hast alle Expertenquests abgeschlossen. Du modellierst jetzt auch knifflige Szenarien – mit vermittelnden Entitätsklassen, mehreren Beziehungen zwischen denselben Entitätsklassen, Selbstbeziehungen und Verbundschlüsseln.',
-    ),
-  ]);
-
-  const rmUebungQuests = nummeriert([
-    ...UEBUNG.map((s) => rmSzenarioQuest(s)),
-    szenarioAbschluss(
-      'Du hast alle Übungsquests zum Relationenmodell abgeschlossen. Du überführst jetzt ER-Modelle mit allen Beziehungstypen sicher ins Relationenmodell – mit Fremdschlüsseln und Beziehungstabellen.',
-    ),
-  ]);
-
-  const rmExpertenQuests = nummeriert([
-    ...EXPERTEN.map((s) => rmSzenarioQuest(s, true)),
-    szenarioAbschluss(
-      'Du hast alle Expertenquests zum Relationenmodell abgeschlossen. Du überführst jetzt auch Selbstbeziehungen und Verbundschlüssel und legst mit NOT NULL und UNIQUE fest, welche Fremdschlüssel leer bleiben dürfen.',
-    ),
-  ]);
+  const ermUebungQuests = nummeriert(UEBUNG.map(ermSzenarioQuest));
+  const ermExpertenQuests = nummeriert(EXPERTEN.map(ermSzenarioQuest));
+  const rmUebungQuests = nummeriert(UEBUNG.map(rmSzenarioQuest));
+  const rmExpertenQuests = nummeriert(EXPERTEN.map(rmSzenarioQuest));
+  const sqlUebungQuests = nummeriert(EXPERTEN.map((s, i) => sqlUebungQuest(s, i + 1)));
 
   // ---- Quest-Datenbank: RELATIONENMODELL-GRUNDLAGEN (Stufe Einstieg, ERM aus files/schule-grundlagen.json) ----
   const rmGrundlagenQuests = nummeriert([
@@ -1529,13 +1527,13 @@
       theory: `<p class="quest-begriff">Neuer Begriff: Relation · Symbol: Name (Attribut, Attribut, …)</p>
         <p><strong>Relationenmodell:</strong> Im Relationenmodell werden Daten in Tabellen (Relationen) organisiert. Jede Tabelle hat Spalten (Attribute) und Zeilen (Datensätze). Primärschlüssel identifizieren jede Zeile eindeutig.</p>
         <p>Die Überführung eines ER-Modells in ein Relationenmodell ist ein wichtiger Schritt beim Datenbank-Entwurf.</p>`,
-      objective: `<p>Öffne die Relationenmodell-Seitenleiste, um mit der Überführung zu beginnen.</p>
-        <p>Klicke dazu auf den Button <strong>„🗃 Relationenmodell“</strong> oben rechts in der Tab-Leiste.</p>`,
+      objective: `<p>Öffne die <strong>rechte Seitenleiste</strong> „Relationenmodell“, um mit der Überführung zu beginnen.</p>
+        <p>Klicke dazu oben rechts in der Tab-Leiste auf <strong>„Relationenmodell“</strong>.</p>`,
       validator: function () {
         const drawer = document.getElementById('relmodel-drawer');
         const isVisible = !!drawer && !drawer.classList.contains('collapsed') && drawer.offsetHeight > 0;
         if (!isVisible) {
-          return { passed: false, error: 'Öffne die Relationenmodell-Seitenleiste über den Button oben rechts.' };
+          return { passed: false, error: 'Öffne die rechte Seitenleiste über „Relationenmodell“ oben rechts.' };
         }
         return { passed: true };
       },
@@ -1550,7 +1548,7 @@
           <li><strong>„Klasse“</strong></li>
           <li><strong>„Lehrer“</strong></li>
         </ol>
-        <p><strong>Hinweis:</strong> Klicke auf „+ Relation hinzufügen“ in der Seitenleiste.</p>`,
+        <p><strong>Hinweis:</strong> Klicke in der rechten Seitenleiste auf „+ Relation hinzufügen“.</p>`,
       validator: function () {
         for (const name of ['Schüler', 'Klasse', 'Lehrer']) {
           if (!getStudentRelByName(name)) return { passed: false, error: `Die Relation „${name}“ fehlt.` };
@@ -1660,6 +1658,7 @@
     },
     {
       title: '🎉 Abschluss',
+      abschluss: true,
       theory: `<p><strong>Glückwunsch!</strong> Du hast die Überführung des ER-Modells in ein Relationenmodell erfolgreich abgeschlossen!</p>
         <p><strong>Du beherrschst jetzt:</strong></p>
         <ul>
@@ -1689,7 +1688,7 @@
     {
       title: 'Relationen mit Schlüsseln',
       theory: `<p><strong>Regel 1 – Entitätsklasse:</strong> Jede Entitätsklasse wird eine Relation mit allen ihren Attributen. Der Primärschlüssel bleibt Primärschlüssel – auch ein Verbundschlüssel aus mehreren Attributen.</p>`,
-      objective: `<p>Das Schul-ERM aus der ERM-Auffrischung ist geladen. Öffne die Seitenleiste <strong>„🗃 Relationenmodell“</strong> und lege für <strong>„Schüler“</strong>, <strong>„Klasse“</strong> und <strong>„Lehrer“</strong> je eine Relation mit allen Attributen an. Markiere die Primärschlüssel.</p>`,
+      objective: `<p>Das Schul-ERM aus der ERM-Auffrischung ist geladen. Öffne oben rechts die <strong>rechte Seitenleiste „Relationenmodell“</strong> und lege für <strong>„Schüler“</strong>, <strong>„Klasse“</strong> und <strong>„Lehrer“</strong> je eine Relation mit allen Attributen an. Markiere die Primärschlüssel.</p>`,
       validator: function () {
         const error =
           checkStudentRelation('Schüler', ['SchülerNr', 'Vorname', 'Nachname'], ['SchülerNr']) ||
@@ -1705,7 +1704,7 @@
     {
       title: 'Zusammengesetzter Fremdschlüssel',
       theory: `<p><strong>Regel 2 – 1:n:</strong> Der Primärschlüssel der 1-Seite wandert als Fremdschlüssel in die Relation der n-Seite. Ist er ein Verbundschlüssel, wandern <strong>alle</strong> seine Attribute mit – zusammen bilden sie einen zusammengesetzten Fremdschlüssel.</p>`,
-      objective: `<p>Bilde die Beziehung <strong>„geht in“</strong> (Schüler n : 1 Klasse) ab. Welche Relation bekommt den Fremdschlüssel, und aus welchen Attributen besteht er? Markiere sie als FS.</p>`,
+      objective: `<p>Bilde die Beziehung <strong>„geht in“</strong> (Schüler n : 1 Klasse) in der rechten Seitenleiste ab. Welche Relation bekommt den Fremdschlüssel, und aus welchen Attributen besteht er? Markiere sie als FS.</p>`,
       validator: function () {
         for (const attr of ['Klassenstufe', 'Parallelklasse']) {
           if (!getStudentFks('Schüler', attr).length)
@@ -1801,6 +1800,7 @@
     },
     {
       title: '🎉 Abschluss',
+      abschluss: true,
       theory: `<p><strong>Glückwunsch!</strong> Du hast die Transformationsregeln aufgefrischt:</p>
         <ul>
           <li>Entitätsklassen und Verbundschlüssel übernehmen</li>
@@ -1823,13 +1823,16 @@
 
   // ---- Quest-Reihen: id steht auch im Link (?reihe=…) ----
   // art: 'erm' oder 'rm'; schritt: Schritt-für-Schritt-Reihe (ein Modell, Erklärkästen) statt Szenarien.
+  // Symbole: 🔷 ER-Modell erarbeiten, Tabelle (ICON_RM) Relationenmodell erarbeiten, ✏️ üben.
+  // abschlussText: Glückwunsch, wenn alle Szenarien einer Übungsreihe gelöst sind.
+  const ICON_RM = '<svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg>';
   const REIHEN = [
     {
       id: 'erm-grundlagen',
       stufe: 'Einstieg',
       art: 'erm',
       schritt: true,
-      icon: '📚',
+      icon: '🔷',
       titel: 'ERM-Grundlagen',
       untertitel: 'Erstes ER-Modell, noch ohne Kardinalitäten',
       kardinalitaeten: false,
@@ -1840,11 +1843,13 @@
       stufe: 'Einstieg',
       art: 'erm',
       schritt: true,
-      icon: '🔢',
+      icon: '🔷',
       titel: 'ERM-Kardinalitäten',
       untertitel: 'Den Beziehungen Zahlen geben',
-      // Eigenes Schul-ERM aus den abgeschlossenen Grundlagen, sonst die Vorlage
+      // Eigenes Schul-ERM aus den abgeschlossenen Grundlagen, sonst die Vorlage. Das Startmodell ist
+      // gesperrt: nur Kardinalitäten ändern und neue Beziehungen anlegen.
       startModell: { reihe: 'erm-grundlagen', datei: 'schule-ohne-kardinalitaeten.json' },
+      nurKardinalitaeten: true,
       quests: ermKardinalitaetenQuests,
     },
     {
@@ -1855,6 +1860,8 @@
       icon: '✏️',
       titel: 'ERM-Übung',
       untertitel: 'Fünf Szenarien selbst modellieren',
+      abschlussText:
+        'Du modellierst jetzt selbstständig Szenarien mit 1:1-, 1:n- und n:m-Beziehungen und Beziehungsattributen. Als Nächstes überführst du ER-Modelle ins Relationenmodell: Reihe „Relationenmodell-Grundlagen“.',
       quests: ermUebungQuests,
     },
     {
@@ -1862,7 +1869,7 @@
       stufe: 'Einstieg',
       art: 'rm',
       schritt: true,
-      icon: '🗄',
+      icon: ICON_RM,
       titel: 'Relationenmodell-Grundlagen',
       untertitel: 'Das Schul-ERM Schritt für Schritt überführen',
       ermDatei: 'schule-grundlagen.json',
@@ -1876,6 +1883,8 @@
       icon: '✏️',
       titel: 'Relationenmodell-Übung',
       untertitel: 'Die Übungsszenarien überführen',
+      abschlussText:
+        'Du überführst jetzt ER-Modelle mit allen Beziehungstypen sicher ins Relationenmodell – mit Fremdschlüsseln und Beziehungstabellen.',
       quests: rmUebungQuests,
     },
     {
@@ -1883,7 +1892,7 @@
       stufe: 'Fortgeschritten',
       art: 'erm',
       schritt: true,
-      icon: '🔁',
+      icon: '🔷',
       titel: 'ERM-Auffrischung',
       untertitel: 'Alles Wichtige in großen Schritten',
       quests: ermAuffrischungQuests,
@@ -1893,9 +1902,11 @@
       stufe: 'Fortgeschritten',
       art: 'erm',
       schritt: false,
-      icon: '⚡',
+      icon: '✏️',
       titel: 'ERM-Experten',
       untertitel: 'Knifflige Szenarien selbst modellieren',
+      abschlussText:
+        'Du modellierst jetzt auch knifflige Szenarien – mit vermittelnden Entitätsklassen, mehreren Beziehungen zwischen denselben Entitätsklassen, Selbstbeziehungen und Verbundschlüsseln.',
       quests: ermExpertenQuests,
     },
     {
@@ -1903,7 +1914,7 @@
       stufe: 'Fortgeschritten',
       art: 'rm',
       schritt: true,
-      icon: '🔁',
+      icon: ICON_RM,
       titel: 'Relationenmodell-Auffrischung',
       untertitel: 'Transformationsregeln kompakt',
       ermDatei: 'schule-auffrischung.json',
@@ -1914,10 +1925,26 @@
       stufe: 'Fortgeschritten',
       art: 'rm',
       schritt: false,
-      icon: '⚡',
+      icon: '✏️',
       titel: 'Relationenmodell-Experten',
-      untertitel: 'Überführen mit NOT NULL und UNIQUE',
+      untertitel: 'Knifflige ER-Modelle überführen',
+      abschlussText:
+        'Du überführst jetzt auch Selbstbeziehungen, mehrere Beziehungen zwischen denselben Entitätsklassen und Verbundschlüssel. Weiter geht es mit der Reihe „SQL-Übung“.',
       quests: rmExpertenQuests,
+    },
+    {
+      id: 'sql-uebung',
+      stufe: 'Fortgeschritten',
+      art: 'rm',
+      schritt: false,
+      icon: '✏️',
+      titel: 'SQL-Übung',
+      untertitel: 'NOT NULL und UNIQUE setzen',
+      // Das Relationenmodell ist vorgegeben (Musterlösung), geübt wird nur „SQL erzeugen“
+      rmVorgabe: true,
+      abschlussText:
+        'Du legst jetzt mit NOT NULL fest, welche Fremdschlüssel nicht leer bleiben dürfen, und sicherst 1:1-Beziehungen mit UNIQUE ab.',
+      quests: sqlUebungQuests,
     },
   ];
 
@@ -1945,15 +1972,35 @@
       return 'erm-editor-quests-' + (mode || 'none') + '-v1';
     },
 
-    // Alle Aufgaben einer Reihe gelöst (die Abschlussquest zählt nicht)?
-    isSeriesDone: function (mode) {
+    // Aufgaben, die zählen: alle Quests außer der Abschlussquest einer Schritt-Reihe
+    getAufgaben: function (mode = this.state.questMode) {
+      return this.getQuestsForMode(mode).filter((q) => !q.abschluss);
+    },
+
+    // Fortschritt aus dem gespeicherten Stand: { erledigt, gesamt }
+    getFortschritt: function (mode) {
+      let done = [];
       try {
-        const done = JSON.parse(localStorage.getItem(this.getStorageKey(mode)) || '{}').completedQuests || [];
-        const total = this.getMaxQuests(mode);
-        return total > 1 && Array.from({ length: total - 1 }, (_, i) => i + 1).every((n) => done.includes(n));
+        done = JSON.parse(localStorage.getItem(this.getStorageKey(mode)) || '{}').completedQuests || [];
       } catch (_e) {
-        return false;
+        // leer lassen
       }
+      const aufgaben = this.getAufgaben(mode);
+      return { erledigt: aufgaben.filter((q) => done.includes(q.number)).length, gesamt: aufgaben.length };
+    },
+
+    // Alle Aufgaben einer Reihe gelöst?
+    isSeriesDone: function (mode) {
+      const { erledigt, gesamt } = this.getFortschritt(mode);
+      return gesamt > 0 && erledigt === gesamt;
+    },
+
+    // Szenario-Reihen: nächste offene Aufgabe nach der aktuellen, sonst die erste offene
+    getNextOpenQuest: function () {
+      const offen = this.getAufgaben()
+        .map((q) => q.number)
+        .filter((n) => !this.state.completedQuests.includes(n));
+      return offen.find((n) => n > this.state.currentQuestNumber) || offen[0] || null;
     },
 
     // Arbeitsstand: Schritt-Reihen bauen ein Modell auf (ein Speicherplatz), Szenario-Reihen speichern je Quest.
@@ -2059,7 +2106,7 @@
         const reihe = this.getSeries();
 
         if (result.passed) {
-          if (quest.number === maxQuests) {
+          if (quest.abschluss) {
             // Abschlussquest: nur bei manuellem Klick abschließen
             if (!forceRecheck) return { passed: false };
             // Bei der letzten Quest: Zeige das Erfolgs-Modal. Erst nach Klick auf OK
@@ -2075,7 +2122,8 @@
           if (isAlreadyCompleted && forceRecheck) {
             window.App?.showQuestSuccessModal?.(quest.number, () => {
               const nextNumber = quest.number + 1;
-              if (nextNumber <= maxQuests && nextNumber !== this.state.currentQuestNumber) {
+              // Nur Schritt-Reihen teilen ein Modell; Szenarien wechseln über die Kreise oder „Nächste Aufgabe“
+              if (reihe.schritt && nextNumber <= maxQuests && nextNumber !== this.state.currentQuestNumber) {
                 this.state.currentQuestNumber = nextNumber;
                 if (!this.state.unlockedQuests.includes(nextNumber)) {
                   this.state.unlockedQuests.push(nextNumber);
@@ -2091,10 +2139,31 @@
           // Als abgeschlossen markieren
           this.completeCurrentQuest();
 
-          // Modal → nächste Quest laden (Relationenmodell-Szenarien wechseln erst per „Nächste Aufgabe“)
+          // Modal → weiter: Schritt-Reihen zur nächsten Quest, ERM-Szenarien zur nächsten offenen Aufgabe,
+          // Relationenmodell-Szenarien erst per „Nächste Aufgabe“. Alles gelöst: Glückwunsch zur Reihe.
           window.App?.showQuestSuccessModal?.(quest.number, () => {
-            if (!(reihe?.art === 'rm' && !reihe.schritt)) {
+            if (reihe.schritt) {
               this.progressToNextQuest();
+            } else if (this.isSeriesDone(reihe.id)) {
+              window.App?.showSeriesDone?.(reihe);
+            } else if (reihe.art === 'erm') {
+              const naechste = this.getQuestByNumber(reihe.id, this.getNextOpenQuest());
+              // Nach dem Szenario ohne Kardinalitäten (Hotel) kommen erst die ERM-Kardinalitäten
+              if (
+                quest.kardinalitaeten === false &&
+                naechste.kardinalitaeten !== false &&
+                !this.isSeriesDone('erm-kardinalitaeten')
+              ) {
+                window.App?.showAppModal?.({
+                  title: 'Geschafft!',
+                  message: `Als Nächstes lernst du Kardinalitäten: Starte im Menü die Reihe „ERM-Kardinalitäten“. Danach geht es hier mit Szenario ${naechste.number} weiter.`,
+                  mode: 'alert',
+                  confirmLabel: 'OK',
+                });
+              } else {
+                this.jumpToQuest(naechste.number);
+                window.App?.onQuestChanged?.(this.getCurrentQuest(), this.state);
+              }
             }
             this.renderPanel();
             if (window.App?.updateQuestDots) window.App.updateQuestDots();
@@ -2209,10 +2278,11 @@
     },
 
     hidePanel: function () {
+      // Erst den Quest-Modus verlassen, dann das freie Modell zurückholen (ohne Quest-Sperren)
+      this.state.questsPanelVisible = false;
       if (window.App?.onQuestPanelClosing) {
         window.App.onQuestPanelClosing(this.state);
       }
-      this.state.questsPanelVisible = false;
       if (window.AppState?.state) window.AppState.state.diagramLocked = false;
       this.persist();
       this.renderPanel();
@@ -2243,7 +2313,8 @@
 
     getChecklistStatus: function () {
       const reihe = this.getSeries();
-      if (!reihe || reihe.schritt) return null;
+      // SQL-Übung: Relationen sind vorgegeben, eine Checkliste würde nichts zeigen
+      if (!reihe || reihe.schritt || reihe.rmVorgabe) return null;
       if (reihe.art === 'rm') return getRelmodelChecklistStatus();
       const quest = this.getCurrentQuest();
       return quest?.masterlösung ? getExpertChecklistStatus(quest.masterlösung) : null;
@@ -2257,8 +2328,153 @@
     },
   };
 
+  // ---- Textmarker: Wörter im Szenario anklicken; gehört ein Wort zum ER-Modell, wird es farbig ----
+  // Wortformen eines Namens mit Mehrzahl- und Fallendungen, auch mit Umlaut: „Ärzte“ zu „Arzt“,
+  // „Behandlungen“ zu „Behandlung“, „Räume“ zu „Raum“.
+  // ponytail: feste Endungsliste statt Grammatik – unregelmäßige Formen werden nicht erkannt.
+  const UMLAUT = { au: 'äu', a: 'ä', o: 'ö', u: 'ü', Au: 'Äu', A: 'Ä', O: 'Ö', U: 'Ü' };
+  function wortformen(name) {
+    const umlaut = name.replace(/(au|a|o|u)(?=[^aouäöü]*$)/i, (v) => UMLAUT[v] || v);
+    return new Set(
+      ['', 'e', 'en', 'n', 'er', 'ern', 's', 'es', 'nen'].flatMap((e) => [name + e, umlaut + e]).map(normalizeName),
+    );
+  }
+
+  // `${Reihe}:${Quest}` → { markiert: Set, klicks } – bleibt beim Neuzeichnen des Panels erhalten
+  const textmarkerStand = new Map();
+
+  // Klicks je Szenario: so viele, wie das ER-Modell Elemente hat, plus 5 für Fehlgriffe, mindestens 20 –
+  // genug zum Markieren, zu wenig, um einfach jedes Wort durchzuklicken (Szenarien: 94 bis 210 Wörter).
+  const textmarkerKlicks = (anzahlElemente) => Math.max(20, anzahlElemente + 5);
+
+  // kopf: Überschrift „Szenario“, dort stehen Legende und Klickzähler
+  function textmarker(container, spec, standKey, kopf) {
+    const elemente = [
+      ...(spec.entities || []).map((name) => ({ art: 'entitaet', name })),
+      ...Object.values(spec.attributes || {})
+        .flat()
+        .map((name) => ({ art: 'attribut', name })),
+      ...(spec.relationships || []).flatMap((r) => [
+        { art: 'beziehung', name: r.name },
+        ...(r.attributes || []).map((name) => ({ art: 'attribut', name })),
+      ]),
+    ].map((e) => {
+      const norm = e.name.split(/\s+/).map(normalizeName);
+      // Einzelwörter auch gebeugt, Wortgruppen (Beziehungen wie „ist Exemplar von“) nur genau
+      const formen = norm.length === 1 ? wortformen(e.name) : null;
+      return { ...e, key: `${e.art}:${normalizeName(e.name)}`, norm, formen };
+    });
+
+    // Wörter in <span> verpacken (auch über <strong>-Grenzen hinweg in Lesereihenfolge)
+    const woerter = [];
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    const textknoten = [];
+    while (walker.nextNode()) textknoten.push(walker.currentNode);
+    textknoten.forEach((knoten) => {
+      const text = knoten.nodeValue;
+      const teile = text.split(/([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)/u);
+      if (teile.length < 2) return;
+      const frag = document.createDocumentFragment();
+      teile.forEach((teil, i) => {
+        if (i % 2 === 0) {
+          if (teil) frag.appendChild(document.createTextNode(teil));
+          return;
+        }
+        const span = document.createElement('span');
+        span.className = 'tm-wort';
+        span.textContent = teil;
+        span.dataset.i = woerter.length;
+        woerter.push({ span, norm: normalizeName(teil) });
+        frag.appendChild(span);
+      });
+      knoten.parentNode.replaceChild(frag, knoten);
+    });
+
+    // Passt Element e ab Wort start?
+    const passt = (e, start) =>
+      start >= 0 &&
+      start + e.norm.length <= woerter.length &&
+      (e.formen ? e.formen.has(woerter[start].norm) : e.norm.every((n, k) => woerter[start + k].norm === n));
+
+    // Bestes Element für ein Wort: längste Wortgruppe zuerst („ist Exemplar von“ vor „Exemplar“),
+    // dann der genaue Name („Spieler“ vor „Spiel“ + er)
+    function elementBei(i) {
+      let bestes = null;
+      let rang = -1;
+      elemente.forEach((e) => {
+        for (let k = 0; k < e.norm.length; k++) {
+          if (!passt(e, i - k)) continue;
+          const r = e.norm.length * 2 + (woerter[i - k].norm === e.norm[0] ? 1 : 0);
+          if (r > rang) [bestes, rang] = [e, r];
+        }
+      });
+      return bestes;
+    }
+
+    const stand = textmarkerStand.get(standKey) || { markiert: new Set(), klicks: 0 };
+    textmarkerStand.set(standKey, stand);
+    const { markiert } = stand;
+    const erlaubt = textmarkerKlicks(new Set(elemente.map((e) => e.key)).size);
+
+    kopf.insertAdjacentHTML(
+      'beforeend',
+      ` <span class="tm-tipp">Wörter anklicken: <span class="tm-entitaet">Entitätsklasse</span> <span class="tm-attribut">Attribut</span> <span class="tm-beziehung">Beziehung</span> <span class="tm-zaehler"></span></span>`,
+    );
+    const zaehler = kopf.querySelector('.tm-zaehler');
+    const zaehlen = () => {
+      zaehler.textContent = `Klicks: ${stand.klicks} von ${erlaubt}`;
+      zaehler.classList.toggle('leer', stand.klicks >= erlaubt);
+    };
+    zaehlen();
+
+    function zeichnen() {
+      woerter.forEach((w) => (w.span.className = 'tm-wort'));
+      elemente
+        .filter((e) => markiert.has(e.key))
+        .forEach((e) => {
+          for (let i = 0; i < woerter.length; i++) {
+            if (passt(e, i) && elementBei(i) === e)
+              for (let k = 0; k < e.norm.length; k++) woerter[i + k].span.classList.add('tm-' + e.art);
+          }
+        });
+    }
+    zeichnen();
+
+    // Animation neu starten
+    const aufleuchten = (el, klasse) => {
+      el.classList.remove(klasse);
+      void el.offsetWidth;
+      el.classList.add(klasse);
+    };
+
+    container.addEventListener('click', (event) => {
+      const span = event.target.closest('.tm-wort');
+      if (!span) return;
+      const e = elementBei(Number(span.dataset.i));
+      // Markierung entfernen kostet keinen Klick
+      if (e && markiert.has(e.key)) {
+        markiert.delete(e.key);
+        zeichnen();
+        return;
+      }
+      if (stand.klicks >= erlaubt) {
+        aufleuchten(zaehler, 'tm-zaehler-aus');
+        return;
+      }
+      stand.klicks++;
+      zaehlen();
+      if (!e) {
+        aufleuchten(span, 'tm-nein');
+        return;
+      }
+      markiert.add(e.key);
+      zeichnen();
+    });
+  }
+
   // ---- Export ----
   window.Quest = QuestManager;
+  QuestManager.textmarker = textmarker;
   // Liefert eine Quest-Definition nach Reihenname und Nummer (für Tooltips/Labels)
   QuestManager.getQuestByNumber = function (mode, number) {
     const quests = QuestManager.getQuestsForMode(mode);

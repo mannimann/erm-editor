@@ -126,6 +126,21 @@
     return window.AppState.state;
   }
 
+  // Reihe ERM-Kardinalitäten: Das Startmodell ist vorgegeben – nur Kardinalitäten ändern, neue Beziehungen anlegen
+  function nurKardinalitaeten() {
+    return !!window.Quest?.state?.questsPanelVisible && !!window.Quest.getSeries?.()?.nurKardinalitaeten;
+  }
+
+  function istFest(node) {
+    return !!node?.vorgegeben && nurKardinalitaeten();
+  }
+
+  function festHinweis() {
+    window.App?.showTopToast?.(
+      'Das ER-Modell ist vorgegeben: Hier änderst du nur Kardinalitäten und legst neue Beziehungen an.',
+    );
+  }
+
   function requestRelModelSync(debounced = true) {
     if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
     if (!window.RelModel) return;
@@ -168,7 +183,7 @@
   const btnZoomOut = document.getElementById('btn-zoom-out');
   const btnZoom100 = document.getElementById('btn-zoom-100');
   const btnCenter = document.getElementById('btn-center');
-  const zoomLevel = document.getElementById('zoom-level');
+  const zoomLevel = btnZoom100; // zeigt die Prozentzahl, Klick: zurück auf 100 %
   const gridBackground = document.getElementById('canvas-grid-bg');
   const snapGridToggle = document.getElementById('toggle-snap-grid');
   const autoLayoutButton = document.getElementById('btn-auto-layout');
@@ -178,7 +193,6 @@
   let spacePressed = false;
   let hasPanned = false;
   let selectedNodeId = null;
-  let suppressClick = false;
   let ctxTarget = null;
   let activeModalCleanup = null;
   const viewState = { x: 0, y: 0, scale: 1 };
@@ -237,7 +251,6 @@
     if (!zoomLevel) return;
     const zoomPercent = Math.round(viewState.scale * 100);
     zoomLevel.textContent = `${zoomPercent}%`;
-    zoomLevel.style.display = zoomPercent === 100 ? 'none' : 'inline-flex';
   }
 
   function isRelationshipEdge(edge) {
@@ -2022,7 +2035,7 @@
       isPrimaryKey: false,
     };
     S().nodes.push(node);
-    renderAll();
+    selectNodeFn(node.id); // die zuletzt hinzugefügte Form ist ausgewählt
     setTimeout(() => startInlineEdit(node), 30);
     return node;
   }
@@ -2065,6 +2078,7 @@
     const attrNode = addNode('attribute', p.x, p.y);
     attrNode.name = getUniqueOwnerAttributeName(entityNode.id, attrNode.name || 'Attribut', attrNode.id);
     createEdge(entityNode.id, attrNode.id, 'attribute');
+    selectNodeFn(attrNode.id); // Eigenschaften-Panel mit Entitätsklasse
   }
 
   function getAttributeSpawnPositionForNode(node) {
@@ -2092,11 +2106,39 @@
     const attrNode = addNode('attribute', p.x, p.y);
     attrNode.name = getUniqueOwnerAttributeName(relationshipNode.id, attrNode.name || 'Attribut', attrNode.id);
     createEdge(relationshipNode.id, attrNode.id, 'attribute');
+    selectNodeFn(attrNode.id);
+  }
+
+  // Werkzeug „Attribut“: an die ausgewählte Entitätsklasse oder Beziehung, bei einem ausgewählten
+  // Attribut an dessen Entitätsklasse bzw. Beziehung
+  function attributZiel(node = byId(selectedNodeId)) {
+    if (node?.type === 'attribute') return getOwningNodeForAttribute(node.id);
+    return node?.type === 'entity' || node?.type === 'relationship' ? node : null;
+  }
+
+  function addAttributeAction() {
+    const ziel = attributZiel();
+    if (ziel?.type === 'entity') addAttributeToEntity(ziel.id);
+    if (ziel?.type === 'relationship') addAttributeToRelationship(ziel.id);
+  }
+
+  // Neue Beziehung: erst der Dialog, beim Speichern die Raute zwischen die Entitätsklassen setzen
+  function relationshipSpawnPosition(entityIds) {
+    const ents = entityIds.map(byId).filter(Boolean);
+    const size = getNodeSize('relationship');
+    if (!ents.length) {
+      const p = getSpawnPosition('relationship');
+      return { x: p.x + size.w / 2, y: p.y + size.h / 2 };
+    }
+    if (ents.length === 2 && ents[0] !== ents[1])
+      return findFreePosition('relationship', (ents[0].x + ents[1].x) / 2, (ents[0].y + ents[1].y) / 2);
+    // eine Entitätsklasse oder Selbstbeziehung: rechts daneben
+    return findFreePosition('relationship', ents[0].x + getNodeSize('entity', ents[0]).w / 2 + size.w, ents[0].y);
   }
 
   function addRelationshipAction() {
-    const p = getSpawnPosition('relationship');
-    addNode('relationship', p.x, p.y);
+    const node = byId(selectedNodeId);
+    openRelationshipModal(null, node?.type === 'entity' ? node.id : '');
   }
 
   function bindToolbarActions() {
@@ -2108,8 +2150,13 @@
           return;
         }
         const tool = btn.dataset.tool;
+        if (tool !== 'relationship' && nurKardinalitaeten()) {
+          festHinweis();
+          return;
+        }
         if (tool === 'entity') addEntityAction();
         if (tool === 'relationship') addRelationshipAction();
+        if (tool === 'attribute') addAttributeAction();
         setSelectModeVisual();
       });
     });
@@ -2188,49 +2235,44 @@
     return edge.id;
   }
 
-  function openRelationshipModal(relationshipId) {
-    const relationshipNode = byId(relationshipId);
-    if (!relationshipNode || relationshipNode.type !== 'relationship') return;
+  // relationshipId null: neue Beziehung – sie entsteht erst beim Speichern (vorauswahl: Entitätsklasse links)
+  function openRelationshipModal(relationshipId, vorauswahl = '') {
+    const relationshipNode = relationshipId ? byId(relationshipId) : null;
+    if (relationshipId && relationshipNode?.type !== 'relationship') return;
 
     if (activeModalCleanup) activeModalCleanup();
 
     const entities = S().nodes.filter((node) => node.type === 'entity');
-    const existingEdges = getRelationshipEntityEdges(relationshipId).slice(0, 2);
+    const existingEdges = relationshipId ? getRelationshipEntityEdges(relationshipId).slice(0, 2) : [];
+    const fest = istFest(relationshipNode);
 
-    modalTitle.textContent = 'Beziehung bearbeiten';
-    // Kein einleitender Satz anzeigen (Subtitle entfernt auf Wunsch)
-    modalSubtitle.textContent = '';
+    modalTitle.textContent = relationshipNode ? 'Beziehung bearbeiten' : 'Neue Beziehung';
+    modalSubtitle.textContent = fest ? 'Vorgegeben: Hier änderst du nur die Kardinalität.' : '';
 
-    // Set relationship name field (if present in the modal)
-    if (modalName) modalName.value = relationshipNode.name || '';
+    if (modalName) modalName.value = relationshipNode?.name || '';
 
     fillEntitySelect(
       modalEntity1,
       entities,
-      existingEdges[0] ? getRelationshipEntityId(existingEdges[0], relationshipId) : '',
+      existingEdges[0] ? getRelationshipEntityId(existingEdges[0], relationshipId) : vorauswahl,
     );
     fillEntitySelect(
       modalEntity2,
       entities,
       existingEdges[1] ? getRelationshipEntityId(existingEdges[1], relationshipId) : '',
     );
+    [modalName, modalEntity1, modalEntity2].forEach((feld) => feld && (feld.disabled = fest));
     modalCardinality.value = getCardinalityTypeFromEdges(existingEdges);
     modalCardinality.closest('.modal-row').style.display = withCardinalities() ? '' : 'none';
 
     modalBackdrop.style.display = '';
 
-    // Fokus auf das Namensfeld setzen (falls vorhanden)
-    if (modalName) {
-      setTimeout(() => {
-        try {
-          modalName.focus();
-          // Select all text for quicker Umbenennen
-          modalName.select && modalName.select();
-        } catch (err) {
-          /* ignore */
-        }
-      }, 10);
-    }
+    // Fokus auf das Namensfeld (vorgegebene Beziehung: auf die Kardinalität)
+    setTimeout(() => {
+      const feld = fest ? modalCardinality : modalName;
+      feld?.focus();
+      if (!fest) feld?.select?.();
+    }, 10);
 
     const cleanup = () => {
       modalOk.removeEventListener('click', onOk);
@@ -2240,13 +2282,18 @@
     };
 
     const onOk = () => {
-      // Apply name change from modal (if present)
-      if (modalName) {
-        relationshipNode.name = String(modalName.value || '').trim();
-      }
-
       const entityId1 = modalEntity1.value;
       const entityId2 = modalEntity2.value;
+      const name = String(modalName?.value || '').trim();
+      let node = relationshipNode;
+      if (!node) {
+        const p = relationshipSpawnPosition([entityId1, entityId2].filter(Boolean));
+        node = { id: genId(), type: 'relationship', x: p.x, y: p.y, name: name || 'Beziehung', isPrimaryKey: false };
+        S().nodes.push(node);
+        relationshipId = node.id;
+      } else if (!fest) {
+        node.name = name;
+      }
       const [leftCardinality, rightCardinality] = getCardinalityParts(modalCardinality.value);
 
       S().edges = S().edges.filter((edge) => {
@@ -2285,11 +2332,17 @@
     if (type === 'node') {
       const node = byId(id);
       if (!node) return;
-      showRename = true;
+      const fest = istFest(node);
+      showRename = !fest;
       showEditRelationship = node.type === 'relationship';
-      showAddAttr = node.type === 'entity' || node.type === 'relationship';
-      showTogglePk = node.type === 'attribute' && !attributeBelongsToRelationship(node.id);
-      showDelete = true;
+      showAddAttr = !nurKardinalitaeten() && (node.type === 'entity' || node.type === 'relationship');
+      showTogglePk = !fest && node.type === 'attribute' && !attributeBelongsToRelationship(node.id);
+      showDelete = !fest;
+      if (fest && node.type !== 'relationship') {
+        festHinweis();
+        ctxTarget = null;
+        return;
+      }
 
       if (showTogglePk) {
         ctxTogglePk.textContent = node.isPrimaryKey ? 'Primärschlüssel entfernen' : 'Als Primärschlüssel markieren';
@@ -2327,8 +2380,6 @@
   // --- Node interaction via event delegation ---
   // nodesLayer persists across renderAll() calls, so listeners here
   // are registered once and always work regardless of re-renders.
-  let nodeClickTimer = null;
-
   function bindNodeLayerEvents() {
     function getNodeFromTarget(target) {
       const g = target.closest('.node');
@@ -2359,15 +2410,14 @@
         // Reset so a third click doesn't re-trigger
         lastMousedownNodeId = null;
         lastMousedownTime = 0;
-        // Cancel pending single-click modal (relationship nodes)
-        if (nodeClickTimer !== null) {
-          clearTimeout(nodeClickTimer);
-          nodeClickTimer = null;
-        }
         e.preventDefault();
         // For relationships: open the edit modal on double-click instead of inline rename
         if (node.type === 'relationship') {
           openRelationshipModal(node.id);
+          return;
+        }
+        if (istFest(node)) {
+          festHinweis();
           return;
         }
         startInlineEdit(node);
@@ -2393,29 +2443,12 @@
                 .map((edge) => (edge.fromId === node.id ? edge.toId : edge.fromId))
             : [],
       };
-      suppressClick = false;
       e.preventDefault();
     });
 
+    // Ein Klick wählt nur aus; bearbeitet wird eine Beziehung per Doppelklick oder Rechtsklick
     nodesLayer.addEventListener('click', (e) => {
-      const node = getNodeFromTarget(e.target);
-      if (!node) return;
-      e.stopPropagation();
-      if (suppressClick) {
-        suppressClick = false;
-        return;
-      }
-      if (node.type === 'relationship') {
-        if (S().diagramLocked) {
-          window.App?.showLockedWarning?.();
-          return;
-        }
-        const capturedId = node.id;
-        nodeClickTimer = setTimeout(() => {
-          nodeClickTimer = null;
-          openRelationshipModal(capturedId);
-        }, DBLCLICK_MS + 50);
-      }
+      if (getNodeFromTarget(e.target)) e.stopPropagation();
     });
 
     nodesLayer.addEventListener('contextmenu', (e) => {
@@ -2463,7 +2496,6 @@
         attrNode.y += dy;
       });
     }
-    suppressClick = true;
     renderAll();
   });
 
@@ -2539,6 +2571,10 @@
         return;
       }
       if (selectedNodeId) {
+        if (istFest(byId(selectedNodeId))) {
+          festHinweis();
+          return;
+        }
         deleteNode(selectedNodeId);
         return;
       }
@@ -2760,7 +2796,8 @@
     const cleanup = () => {
       document.removeEventListener('pointerdown', onOutsidePointerDown, true);
       if (nodesLayer.contains(fo)) nodesLayer.removeChild(fo);
-      document.getElementById('prop-name').value = node.name;
+      // Eigenschaften-Panel und Werkzeug „Attribut“ mit dem neuen Namen
+      if (selectedNodeId) window.AppSelect.selectNode(selectedNodeId);
       renderAll();
       requestRelModelSync();
     };
@@ -2840,6 +2877,10 @@
 
   window.Diagram = {
     renderAll,
+    istFest,
+    nurKardinalitaeten,
+    festHinweis,
+    attributZiel,
     selectNode: selectNodeFn,
     clearSelection: deselectAll,
     deleteNode,

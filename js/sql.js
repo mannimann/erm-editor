@@ -205,6 +205,10 @@
   // ======================================================================
 
   let erweitertFrei = false; // Wahl ohne laufende Quest
+  // Quelle: Relationen des Schülers oder (Button an der Musterlösung) eine Kopie der Musterlösung.
+  // Die Kopie übernimmt Datentyp, NOT NULL und UNIQUE gleichnamiger Spalten des Schülers.
+  let loesung = null;
+  let letzteZeilen = null; // Code der letzten Anzeige: geänderte Zeilen leuchten kurz auf
 
   // Stufe der laufenden Quest-Reihe: 'Einstieg', 'Fortgeschritten' oder null (keine Quest)
   function stufe() {
@@ -226,13 +230,32 @@
     return node;
   }
 
-  // Änderung an einer Spalte in den Relationen des Schülers speichern
+  function relationen() {
+    return loesung || R().getStudentRelations();
+  }
+
+  function loesungKopie() {
+    const eigene = R().getStudentRelations();
+    const N = R().normalizeName;
+    return R()
+      .loesungAlsRelationen()
+      .map((rel) => {
+        const eigeneRel = eigene.find((r) => N(r.name) === N(rel.name));
+        rel.attrs.forEach((a) => {
+          const vorbild = eigeneRel?.attrs.find((x) => N(x.name) === N(a.name));
+          if (vorbild) Object.assign(a, { sqlType: vorbild.sqlType, notNull: vorbild.notNull, unique: vorbild.unique });
+        });
+        return rel;
+      });
+  }
+
+  // Änderung an einer Spalte speichern: in den Relationen des Schülers oder in der Kopie der Musterlösung
   function aendern(relId, attrId, werte) {
-    const rels = R().getStudentRelations();
+    const rels = relationen();
     const attr = rels.find((r) => r.id === relId)?.attrs.find((a) => a.id === attrId);
     if (!attr) return;
     Object.assign(attr, werte);
-    R().setStudentRelations(rels);
+    if (!loesung) R().setStudentRelations(rels);
     render();
   }
 
@@ -257,9 +280,7 @@
   }
 
   function render() {
-    const rels = R()
-      .getStudentRelations()
-      .map((rel) => ({ ...rel, attrs: rel.attrs.filter(hatName) }));
+    const rels = relationen().map((rel) => ({ ...rel, attrs: rel.attrs.filter(hatName) }));
     const erweitert = istErweitert();
     const container = document.getElementById('sql-spalten');
     container.innerHTML = '';
@@ -355,13 +376,29 @@
       fehler.forEach((f) => liste.appendChild(el('li', '', f)));
       fehlerBox.appendChild(liste);
     }
-    document.getElementById('sql-ausgabe').textContent = sql;
+    zeigeSql(sql);
     document.getElementById('sql-ausgabe').hidden = !sql;
     document.getElementById('btn-sql-kopieren').disabled = !sql;
     document.getElementById('btn-sql-speichern').disabled = !sql;
   }
 
-  function oeffnen() {
+  // Code zeilenweise ausgeben; Zeilen, die neu sind oder sich geändert haben, leuchten kurz auf
+  function zeigeSql(sql) {
+    const pre = document.getElementById('sql-ausgabe');
+    const zeilen = sql ? sql.split('\n') : [];
+    const vorher = letzteZeilen;
+    pre.textContent = '';
+    zeilen.forEach((zeile, i) => {
+      pre.appendChild(el('span', vorher && !vorher.includes(zeile) ? 'sql-neu' : '', zeile));
+      if (i < zeilen.length - 1) pre.appendChild(document.createTextNode('\n'));
+    });
+    letzteZeilen = zeilen;
+  }
+
+  function oeffnen(ausLoesung = false) {
+    loesung = ausLoesung ? loesungKopie() : null;
+    letzteZeilen = null;
+    document.getElementById('modal-sql-title').textContent = ausLoesung ? '🛢 SQL der Musterlösung' : '🛢 SQL erzeugen';
     const s = stufe();
     document.getElementById('sql-erweitert-wrap').hidden = !!s;
     document.getElementById('sql-erweitert').checked = istErweitert();
@@ -407,7 +444,8 @@
   document.addEventListener('DOMContentLoaded', () => {
     const backdrop = document.getElementById('modal-sql-backdrop');
     if (!backdrop) return;
-    document.getElementById('btn-sql').addEventListener('click', oeffnen);
+    document.getElementById('btn-sql').addEventListener('click', () => oeffnen());
+    document.getElementById('btn-sql-solution').addEventListener('click', () => oeffnen(true));
     document.getElementById('btn-sql-close').addEventListener('click', schliessen);
     document.getElementById('btn-sql-kopieren').addEventListener('click', kopieren);
     document.getElementById('btn-sql-speichern').addEventListener('click', speichern);

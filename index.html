@@ -7,16 +7,34 @@
     <link rel="stylesheet" href="css/style.css" />
   </head>
   <body>
+    <!-- Symbol Relationenmodell (Tabelle): <svg class="icon-rm"><use href="#icon-tabelle"></use></svg> -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="icon-tabelle" viewBox="0 0 16 16">
+        <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" fill="#ecfdf5" stroke="#059669" />
+        <path d="M1.5 4a1.5 1.5 0 0 1 1.5-1.5h10A1.5 1.5 0 0 1 14.5 4v2h-13z" fill="#10b981" />
+        <path d="M1.5 9.75h13M6 6v7.5M10.5 6v7.5" stroke="#059669" fill="none" />
+      </symbol>
+    </svg>
+
     <!-- ===== HEADER ===== -->
     <header id="app-header">
       <div id="header-left">
         <span id="app-title">📊 ERM-Editor</span>
+        <div id="header-history" aria-label="Rückgängig und Wiederholen">
+          <button id="btn-undo" class="header-btn header-history-btn" type="button" title="Rückgängig (Strg+Z)" disabled>
+            ↶
+          </button>
+          <button
+            id="btn-redo"
+            class="header-btn header-history-btn"
+            type="button"
+            title="Wiederholen (Strg+Y)"
+            disabled
+          >
+            ↷
+          </button>
+        </div>
         <div id="header-layout-controls">
-          <label class="header-switch" for="toggle-snap-grid" title="Ausrichten an Raster ein- oder ausschalten">
-            <input id="toggle-snap-grid" type="checkbox" />
-            <span class="header-switch-track" aria-hidden="true"></span>
-            <span class="header-switch-label">Am Raster ausrichten</span>
-          </label>
           <label
             class="header-switch"
             for="toggle-cardinalities"
@@ -25,6 +43,12 @@
             <input id="toggle-cardinalities" type="checkbox" checked />
             <span class="header-switch-track" aria-hidden="true"></span>
             <span class="header-switch-label">Kardinalitäten</span>
+          </label>
+          <span class="header-divider" aria-hidden="true"></span>
+          <label class="header-switch" for="toggle-snap-grid" title="Ausrichten an Raster ein- oder ausschalten">
+            <input id="toggle-snap-grid" type="checkbox" />
+            <span class="header-switch-track" aria-hidden="true"></span>
+            <span class="header-switch-label">Am Raster ausrichten</span>
           </label>
           <button
             id="btn-auto-layout"
@@ -39,7 +63,7 @@
       <div id="header-right">
         <button id="btn-import" class="header-btn" title="Diagramm aus JSON-Datei laden">⬆ Importieren</button>
         <button id="btn-export-json" class="header-btn" title="Diagramm als JSON speichern">⬇ JSON-Export</button>
-        <button id="btn-export-png" class="header-btn" title="Diagramm als PNG-Bild exportieren">🖼 PNG-Export</button>
+        <button id="btn-export-png" class="header-btn" title="Diagramm als PNG-Bild exportieren">📷 PNG-Export</button>
         <button id="btn-clear" class="header-btn danger" title="Alles löschen">🗑 Neu</button>
         <input type="file" id="file-input" accept=".json" style="display: none" />
       </div>
@@ -67,7 +91,8 @@
       </div>
       <div class="tabs-spacer"></div>
       <button id="btn-relmodel-toggle" class="tab-btn tab-btn-right" data-tab="relmodel">
-        🗃 Relationenmodell <span class="relmodel-toggle-chevron">&#x276F;</span>
+        <svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg> Relationenmodell
+        <span class="relmodel-toggle-chevron">&#x276F;</span>
       </button>
     </div>
 
@@ -81,13 +106,18 @@
           <span class="legend-box entity-color"></span>
           <span class="tool-label">Entitätsklasse</span>
         </button>
-        <button class="tool-btn" data-tool="relationship" title="Neue Beziehung hinzufügen">
+        <button class="tool-btn" data-tool="relationship" title="Neue Beziehung anlegen: erst der Dialog, dann die Raute">
           <span class="legend-diamond relationship-color"></span>
           <span class="tool-label">Beziehung (Relationship)</span>
         </button>
+        <button class="tool-btn" data-tool="attribute" type="button" disabled>
+          <span class="legend-ellipse attribute-color"></span>
+          <span class="tool-label"
+            >Attribut <small class="tool-sublabel">erst Entitätsklasse oder Beziehung wählen</small></span
+          >
+        </button>
 
-        <div class="toolbar-hint">Attribute durch Rechtsklick auf ▬ / ◇ hinzufügen</div>
-        <div class="toolbar-hint">Beziehungen durch Rechtsklick auf ◇ bearbeiten</div>
+        <div class="toolbar-hint">Beziehung bearbeiten: Doppelklick oder Rechtsklick auf die Raute ◇</div>
 
         <hr class="tool-divider" />
 
@@ -148,10 +178,11 @@
       <!-- === CANVAS-BEREICH: ER-Diagramm === -->
       <main id="canvas-container" data-tab-content="diagram">
         <div id="viewport-controls" aria-label="Ansicht steuern">
-          <span id="zoom-level" class="zoom-level" aria-live="polite">100%</span>
+          <button id="btn-zoom-out" class="viewport-btn" type="button" title="Verkleinern">−</button>
+          <button id="btn-zoom-100" class="viewport-btn zoom-level" type="button" title="Zurück auf 100 %" aria-live="polite">
+            100%
+          </button>
           <button id="btn-zoom-in" class="viewport-btn" type="button" title="Vergrößern">+</button>
-          <button id="btn-zoom-out" class="viewport-btn" type="button" title="Verkleinern">-</button>
-          <button id="btn-zoom-100" class="viewport-btn" type="button" title="Zoom auf 100%">100%</button>
           <button id="btn-center" class="viewport-btn" type="button" title="Diagramm zentrieren">zentrieren</button>
         </div>
         <svg id="er-canvas" xmlns="http://www.w3.org/2000/svg">
@@ -189,7 +220,7 @@
                 ⬇ JSON-Export
               </button>
               <button id="btn-relmodel-export-png" class="rel-btn" title="Relationenmodell als PNG-Bild exportieren">
-                🖼 PNG-Export
+                📷 PNG-Export
               </button>
               <input type="file" id="relmodel-file-input" accept=".json" style="display: none" />
             </div>
@@ -199,7 +230,7 @@
 
           <div id="relmodel-columns">
             <div id="student-input-area">
-              <h3>Deine Relationen</h3>
+              <h3 id="student-relations-title">Deine Relationen</h3>
               <div id="student-relations-list"></div>
               <div id="student-actions-row">
                 <button id="btn-add-relation" class="rel-btn primary">+ Relation hinzufügen</button>
@@ -229,6 +260,14 @@
                 >
                   🧾 Tabellenvorschau
                 </button>
+                <button
+                  id="btn-sql-solution"
+                  class="rel-btn"
+                  style="display: none"
+                  title="SQL-Code (CREATE TABLE) der Musterlösung erzeugen"
+                >
+                  🛢 SQL erzeugen
+                </button>
               </div>
               <div id="solution-display" style="display: none"></div>
             </div>
@@ -251,23 +290,28 @@
           <h3 id="modal-sql-title">🛢 SQL erzeugen</h3>
           <button class="info-modal-close" id="btn-sql-close" aria-label="Schließen">&times;</button>
         </div>
-        <div class="info-modal-body">
-          <p class="table-preview-hint">
-            Wähle für jede Spalte einen Datentyp: <strong>INTEGER</strong> (ganze Zahl), <strong>REAL</strong>
-            (Kommazahl) oder <strong>TEXT</strong>. Ein Datum speicherst du als TEXT (z.&nbsp;B. 2026-10-06), einen
-            Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den Typ seines Primärschlüssels.
-          </p>
-          <label id="sql-erweitert-wrap" class="sql-erweitert">
-            <input type="checkbox" id="sql-erweitert" />
-            NOT NULL (Muss-Beziehung) und UNIQUE (1:1-Beziehung) einstellen
-          </label>
-          <div id="sql-spalten"></div>
-          <h4>SQL-Code</h4>
-          <div id="sql-fehler"></div>
-          <pre id="sql-ausgabe" class="sql-ausgabe"></pre>
-          <div class="sql-aktionen">
-            <button id="btn-sql-kopieren" class="rel-btn primary" type="button">📋 Kopieren</button>
-            <button id="btn-sql-speichern" class="rel-btn" type="button">⬇ Als .sql speichern</button>
+        <div class="info-modal-body sql-modal-body">
+          <div class="sql-einstellungen">
+            <p class="table-preview-hint">
+              Der Code ist für <strong>SQLite</strong>, die Datenbank der SQL-Konsolen im Lehrbuch. Ihre Datentypen:
+              <strong>INTEGER</strong> (ganze Zahl), <strong>REAL</strong> (Kommazahl) und <strong>TEXT</strong>. Ein
+              Datum speicherst du als TEXT (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein
+              Fremdschlüssel übernimmt den Typ seines Primärschlüssels.
+            </p>
+            <label id="sql-erweitert-wrap" class="sql-erweitert">
+              <input type="checkbox" id="sql-erweitert" />
+              NOT NULL (Muss-Beziehung) und UNIQUE (1:1-Beziehung) einstellen
+            </label>
+            <div id="sql-spalten"></div>
+          </div>
+          <div class="sql-code">
+            <h4>SQL-Code <small>(geänderte Zeilen leuchten kurz auf)</small></h4>
+            <div id="sql-fehler"></div>
+            <pre id="sql-ausgabe" class="sql-ausgabe"></pre>
+            <div class="sql-aktionen">
+              <button id="btn-sql-kopieren" class="rel-btn primary" type="button">📋 Kopieren</button>
+              <button id="btn-sql-speichern" class="rel-btn" type="button">⬇ Als .sql speichern</button>
+            </div>
           </div>
         </div>
       </div>

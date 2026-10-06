@@ -7,7 +7,7 @@
 const state = {
   snapToGrid: true,
   kardinalitaeten: true, // false: ER-Modell ohne Kardinalitäten (Schalter im Header)
-  diagramTitle: 'er-diagramm',
+  diagramTitle: '',
   nodes: [], // { id, type, x, y, name, isPrimaryKey }
   edges: [], // { id, fromId, toId, edgeType, (relationship: chenFrom, chenTo) }
   nextId: 1,
@@ -159,6 +159,8 @@ function buildPersistPayload() {
 }
 
 const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
+const RELMODEL_ERM_QUEST_KEY = 'erm-relmodel-erm-quest-v1'; // Relationenmodell während einer ERM-Quest
+let aktiverArbeitsstand = null; // Speicherschlüssel des ER-Modells, das gerade aus einer ERM-Quest geladen ist
 
 function getQuestWorkStorageKey(mode, questNumber) {
   return window.Quest?.getWorkKey?.(mode, questNumber) || null;
@@ -172,24 +174,33 @@ function getQuestSeries(mode = window.Quest?.state?.questMode) {
 // Titel eines neuen ERM in einer Szenario-Reihe, z. B. „ERM-Übung 2 – Krankenhaus-System“
 function applySzenarioTitle(reihe, quest) {
   if (!quest?.title) return;
-  const total = window.Quest?.getMaxQuests?.(reihe.id) || 0;
-  state.diagramTitle = quest.number < total ? `${reihe.titel} ${quest.number} – ${quest.title}` : quest.title;
+  state.diagramTitle = `${reihe.titel} ${quest.number} – ${quest.title}`;
   const titleInput = document.getElementById('erm-title-input');
   if (titleInput) titleInput.value = state.diagramTitle;
 }
 
 // Startmodell einer Reihe (ERM-Kardinalitäten): das eigene Modell der abgeschlossenen Vorgänger-Reihe,
-// sonst die Vorlage aus files/
+// sonst die Vorlage aus files/. nurKardinalitaeten: Seine Formen sind vorgegeben (gesperrt).
 async function loadStartModel(reihe) {
   const start = reihe?.startModell;
   if (!start) return false;
-  if (window.Quest.isSeriesDone(start.reihe) && loadErmSnapshot(getQuestWorkStorageKey(start.reihe, 1))) return true;
-  try {
-    await loadErmFromFile(start.datei);
-    return true;
-  } catch (_) {
-    return false;
+  let geladen = window.Quest.isSeriesDone(start.reihe) && loadErmSnapshot(getQuestWorkStorageKey(start.reihe, 1));
+  if (!geladen) {
+    try {
+      await loadErmFromFile(start.datei);
+      geladen = true;
+    } catch (_) {
+      return false;
+    }
   }
+  if (reihe.nurKardinalitaeten) state.nodes.forEach((n) => (n.vorgegeben = true));
+  return true;
+}
+
+// Leeres Relationenmodell für eine Szenario-Quest; SQL-Übung: die Musterlösung ist vorgegeben
+function relationenmodellNeu(reihe) {
+  window.RelModel?.reset?.();
+  if (reihe?.rmVorgabe) window.RelModel?.setStudentRelations?.(window.RelModel.loesungAlsRelationen());
 }
 
 function hasStorageEntry(storageKey) {
@@ -229,6 +240,8 @@ function applyErmPayload(data, shouldPersist = true) {
   if (window.Diagram?.centerView) window.Diagram.centerView();
   if (window.RelModel) window.RelModel.syncFromDiagram();
   if (shouldPersist) persistStateDebounced();
+  verlaufNeu();
+  aktiverArbeitsstand = null; // ein anderes Modell liegt jetzt auf der Zeichenfläche
   return true;
 }
 
@@ -261,21 +274,91 @@ function persistStateNow() {
   }
 }
 
+// Gespeichert wird getrennt: Das freie Modell (PERSIST_KEY) nur außerhalb von Quests, in einer
+// ERM-Quest ihr Arbeitsstand. So bleibt das eigene Modell beim Start einer Quest erhalten.
+function persistTick() {
+  verlaufMerken();
+  const reihe = getQuestSeries();
+  if (!window.Quest?.state?.questsPanelVisible) {
+    persistStateNow();
+  } else if (reihe?.art === 'erm') {
+    saveErmSnapshot(getQuestWorkStorageKey(reihe.id, window.Quest.state.currentQuestNumber || 1));
+    // Live-Checkliste aktualisieren, wenn eine Szenario-Quest aktiv ist
+    if (!reihe.schritt) updateExpertChecklist();
+  }
+}
+
 let _persistTimer = null;
 function persistStateDebounced(delay = 260) {
   if (_persistTimer) clearTimeout(_persistTimer);
   _persistTimer = setTimeout(() => {
     _persistTimer = null;
-    persistStateNow();
-
-    const reihe = getQuestSeries();
-    if (reihe?.art === 'erm' && window.Quest.state.questsPanelVisible) {
-      saveErmSnapshot(getQuestWorkStorageKey(reihe.id, window.Quest.state.currentQuestNumber || 1));
-      // Live-Checkliste aktualisieren, wenn eine Szenario-Quest aktiv ist
-      if (!reihe.schritt) updateExpertChecklist();
-    }
+    persistTick();
   }, delay);
 }
+
+// Offene Änderung sofort speichern (vor einem Wechsel zwischen freiem Modus und Quest)
+function flushPersist() {
+  if (!_persistTimer) return;
+  clearTimeout(_persistTimer);
+  _persistTimer = null;
+  persistTick();
+}
+
+// ---- Rückgängig / Wiederholen (Strg+Z / Strg+Y) ----
+// Jeder gespeicherte Stand ist ein Schritt; ein neu geladenes Modell beginnt einen neuen Verlauf.
+const verlauf = { zurueck: [], vor: [], stand: null };
+
+function modellStand() {
+  return JSON.stringify({ nodes: state.nodes, edges: state.edges, nextId: state.nextId });
+}
+
+function verlaufButtons() {
+  const undo = document.getElementById('btn-undo');
+  const redo = document.getElementById('btn-redo');
+  if (undo) undo.disabled = !verlauf.zurueck.length;
+  if (redo) redo.disabled = !verlauf.vor.length;
+}
+
+function verlaufMerken() {
+  const jetzt = modellStand();
+  if (verlauf.stand !== null && jetzt !== verlauf.stand) {
+    verlauf.zurueck.push(verlauf.stand);
+    if (verlauf.zurueck.length > 100) verlauf.zurueck.shift();
+    verlauf.vor = [];
+  }
+  verlauf.stand = jetzt;
+  verlaufButtons();
+}
+
+function verlaufNeu() {
+  verlauf.zurueck = [];
+  verlauf.vor = [];
+  verlauf.stand = modellStand();
+  verlaufButtons();
+}
+
+function verlaufSchritt(von, nach) {
+  if (state.diagramLocked) {
+    window.App?.showLockedWarning?.();
+    return;
+  }
+  flushPersist();
+  if (!von.length) return;
+  nach.push(verlauf.stand);
+  verlauf.stand = von.pop();
+  const data = JSON.parse(verlauf.stand);
+  state.nodes = data.nodes;
+  state.edges = data.edges;
+  state.nextId = data.nextId;
+  clearSelection();
+  if (window.Diagram) window.Diagram.renderAll();
+  if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
+  verlaufButtons();
+}
+
+const rueckgaengig = () => verlaufSchritt(verlauf.zurueck, verlauf.vor);
+const wiederholen = () => verlaufSchritt(verlauf.vor, verlauf.zurueck);
 
 /** Aktualisiert nur die Checklisten-Einträge in-place (ohne volles Panel-Rerender). */
 function updateExpertChecklist() {
@@ -517,7 +600,8 @@ function initTabs() {
   )
     return;
 
-  // Quest-Menü aus den Reihen aufbauen, gruppiert nach Stufe (Einstieg, Fortgeschritten)
+  // Quest-Menü aus den Reihen aufbauen, gruppiert nach Stufe (Einstieg, Fortgeschritten);
+  // unter jeder Reihe ein Fortschrittsbalken
   const reihen = window.Quest?.getSeriesList?.() || [];
   [...new Set(reihen.map((r) => r.stufe))].forEach((stufe) => {
     const group = document.createElement('div');
@@ -530,14 +614,22 @@ function initTabs() {
           'beforeend',
           `<button class="tab-dropdown-item" type="button" data-quest-series="${r.id}">
             <div class="tab-dropdown-item-text">
-              <span class="tab-dropdown-item-title">${r.icon} ${r.titel} <span class="quest-progress-badge" data-mode="${r.id}"></span></span>
+              <span class="tab-dropdown-item-title">${r.icon} ${r.titel}</span>
               <span class="tab-dropdown-item-subtitle">${r.untertitel}</span>
+              <span class="quest-menu-progress" data-mode="${r.id}">
+                <span class="quest-menu-progress-track"><span class="quest-menu-progress-fill"></span></span>
+                <span class="quest-menu-progress-text"></span>
+              </span>
             </div>
           </button>`,
         );
       });
     questsMenu.appendChild(group);
   });
+  questsMenu.insertAdjacentHTML(
+    'beforeend',
+    '<div class="quest-menu-legende">🔷 ER-Modell lernen · <svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg> Relationenmodell lernen · ✏️ üben</div>',
+  );
 
   let lastOpenWidth = relmodelDrawer.getBoundingClientRect().width || 460;
   let isDrawerOpen = false;
@@ -750,25 +842,16 @@ function initTabs() {
           if (dot) dot.remove();
         }
 
-        // Fortschritt-Badge aktualisieren
-        const badge = btn.querySelector('.quest-progress-badge');
-        if (badge && window.Quest) {
-          const mode = badge.getAttribute('data-mode');
-          if (mode) {
-            const maxQuests = window.Quest.getMaxQuests?.(mode) || 0;
-            const storageKey = window.Quest.getStorageKey(mode);
-            let completedCount = 0;
-            try {
-              const saved = localStorage.getItem(storageKey);
-              if (saved) {
-                const data = JSON.parse(saved);
-                completedCount = (data.completedQuests || []).filter((n) => Number(n) < maxQuests).length || 0;
-              }
-            } catch (_) {}
-            const effectiveTotal = Math.max(1, maxQuests - 1);
-            badge.textContent = `(${completedCount}/${effectiveTotal})`;
-            badge.style.display = effectiveTotal > 0 ? 'inline' : 'none';
-          }
+        // Fortschrittsbalken aktualisieren
+        const fortschritt = btn.querySelector('.quest-menu-progress');
+        if (fortschritt && window.Quest) {
+          const { erledigt, gesamt } = window.Quest.getFortschritt(fortschritt.dataset.mode);
+          const fertig = gesamt > 0 && erledigt === gesamt;
+          fortschritt.classList.toggle('fertig', fertig);
+          fortschritt.querySelector('.quest-menu-progress-fill').style.width = `${(erledigt / (gesamt || 1)) * 100}%`;
+          fortschritt.querySelector('.quest-menu-progress-text').textContent = fertig
+            ? `✓ ${gesamt} von ${gesamt}`
+            : `${erledigt} von ${gesamt}`;
         }
       });
 
@@ -846,8 +929,13 @@ function selectNode(id) {
   if (node.type === 'attribute') {
     document.getElementById('prop-pk').checked = !!node.isPrimaryKey;
   }
+  // Vorgegebene Formen (ERM-Kardinalitäten) bleiben unverändert
+  const fest = !!window.Diagram?.istFest?.(node);
+  document.getElementById('prop-name').disabled = fest;
+  document.getElementById('prop-pk').disabled = fest;
 
   renderRelatedInfo(node);
+  syncAttributButton();
 }
 
 function clearSelection() {
@@ -856,6 +944,21 @@ function clearSelection() {
   document.getElementById('prop-node').style.display = 'none';
   document.getElementById('prop-related-row').style.display = 'none';
   document.getElementById('prop-relationships-row').style.display = 'none';
+  syncAttributButton();
+}
+
+// Werkzeug „Attribut“: nur klickbar, wenn eine Entitätsklasse, Beziehung oder ein Attribut ausgewählt ist
+function syncAttributButton() {
+  const btn = document.querySelector('.tool-btn[data-tool="attribute"]');
+  if (!btn) return;
+  const ziel =
+    _selectedNodeId && !window.Diagram?.nurKardinalitaeten?.()
+      ? window.Diagram?.attributZiel?.(getNodeById(_selectedNodeId))
+      : null;
+  btn.disabled = !ziel;
+  btn.querySelector('.tool-sublabel').textContent = ziel
+    ? `zu „${ziel.name || (ziel.type === 'entity' ? 'Entitätsklasse' : 'Beziehung')}“`
+    : 'erst Entitätsklasse oder Beziehung wählen';
 }
 
 function initPropertiesPanel() {
@@ -1207,10 +1310,15 @@ function clearDiagramSilent() {
   state.nodes = [];
   state.edges = [];
   state.nextId = 1;
+  state.diagramTitle = '';
+  const titleInput = document.getElementById('erm-title-input');
+  if (titleInput) titleInput.value = '';
   clearSelection();
   if (window.Diagram) window.Diagram.renderAll();
   if (window.RelModel) window.RelModel.reset();
   persistStateDebounced();
+  verlaufNeu();
+  aktiverArbeitsstand = null;
 }
 
 function loadErmFromFile(filename) {
@@ -1281,7 +1389,26 @@ document.addEventListener('DOMContentLoaded', () => {
       window.App?.showLockedWarning?.();
       return;
     }
+    if (window.Diagram?.nurKardinalitaeten?.()) {
+      window.Diagram.festHinweis();
+      return;
+    }
     clearAll();
+  });
+
+  document.getElementById('btn-undo')?.addEventListener('click', rueckgaengig);
+  document.getElementById('btn-redo')?.addEventListener('click', wiederholen);
+  document.addEventListener('keydown', (e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const key = e.key.toLowerCase();
+    if (key !== 'z' && key !== 'y') return;
+    // In Eingabefeldern gilt das Rückgängig des Feldes; offene Dialoge zuerst schließen
+    if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+    if (document.querySelector('#modal-backdrop:not([style*="none"]), #app-modal-backdrop:not([style*="none"])'))
+      return;
+    e.preventDefault();
+    if (key === 'y' || e.shiftKey) wiederholen();
+    else rueckgaengig();
   });
 
   const cardinalityToggle = document.getElementById('toggle-cardinalities');
@@ -1352,6 +1479,10 @@ document.addEventListener('DOMContentLoaded', () => {
       window.App?.showLockedWarning?.();
       return;
     }
+    if (window.Diagram?.nurKardinalitaeten?.()) {
+      window.Diagram.festHinweis();
+      return;
+    }
     document.getElementById('file-input').click();
   });
   document.getElementById('file-input').addEventListener('change', (e) => {
@@ -1372,32 +1503,23 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.setAttribute('aria-expanded', 'false');
   };
 
-  // Startet eine Quest-Reihe; fragt vorher nach, weil das aktuelle Modell ersetzt wird.
-  // nurBeiInhalt: nur fragen, wenn ER- oder Relationenmodell etwas enthalten (Start über Link).
-  async function startQuestSeriesFlow(mode, { nurBeiInhalt = false } = {}) {
+  // Startet eine Quest-Reihe. Das freie Modell bleibt gespeichert und kommt beim Schließen der Quest zurück.
+  async function startQuestSeriesFlow(mode) {
     const reihe = getQuestSeries(mode);
     if (!window.Quest || !reihe) return false;
-    const hatInhalt = state.nodes.length > 0 || (window.RelModel?.getStudentRelations?.() || []).length > 0;
-    if (!nurBeiInhalt || hatInhalt) {
-      const decision = await window.App?.showAppModal?.({
-        title: `${reihe.titel} starten`,
-        message:
-          'Die Quest-Reihe wird gestartet. Das ER-Modell und das Relationenmodell werden gelöscht. Falls vorhanden, wird dein letzter Arbeitsstand automatisch geladen.',
-        mode: 'confirm',
-        confirmLabel: 'Starten',
-        cancelLabel: 'Abbrechen',
-      });
-      if (!decision) return false;
-    }
     closeQuestDropdownMenu();
 
-    // Erst den ggf. aktiven Quest-Stand sichern (onBeforeQuestChange), dann wechseln.
+    // Offene Änderungen sichern: im freien Modus das eigene Modell, sonst den Stand der laufenden Quest
+    flushPersist();
+    const ausFreiemModus = !window.Quest.state.questsPanelVisible;
+    if (ausFreiemModus && (state.nodes.length || window.RelModel?.getStudentRelations?.().length)) {
+      window.App?.showTopToast?.('Dein eigenes Modell ist gespeichert – es kommt zurück, wenn du die Quest schließt.');
+    }
     window.App?.onBeforeQuestChange?.(window.Quest.state);
 
     if (reihe.art === 'erm') {
-      // Beim Start von ERM-Questreihen soll das Relationenmodell immer geleert sein:
-      // auf den normalen Persist-Key wechseln und nur den normalen RelModel-Stand leeren.
-      window.RelModel?.setPersistKey?.(RELMODEL_PERSIST_KEY);
+      // ERM-Reihen: Relationenmodell auf einem eigenen Übungsplatz, leer zum Start
+      window.RelModel?.setPersistKey?.(RELMODEL_ERM_QUEST_KEY);
       window.RelModel?.reset?.();
       window.AppTabs?.setDrawerState?.(false);
     }
@@ -1455,6 +1577,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const reihe = getQuestSeries();
 
         window.Quest.resetCurrentSeriesProgress();
+        aktiverArbeitsstand = null;
 
         // Leere/reload Modelle je nach Quest-Reihe
         if (reihe?.art === 'erm') {
@@ -1463,13 +1586,13 @@ document.addEventListener('DOMContentLoaded', () => {
           // Relationenmodell-Schritt-Reihe: ERM bleibt, Relationen leeren
           if (window.RelModel) window.RelModel.reset();
         } else if (reihe) {
-          // Relationenmodell-Szenario: ERM neu laden und Relationen leeren
+          // Relationenmodell-Szenario: ERM neu laden und Relationen leeren (SQL-Übung: vorgeben)
           const quest = window.Quest.getCurrentQuest?.();
           if (quest?.jsonFile) {
             try {
               await loadErmFromFile(quest.jsonFile);
             } catch (_) {}
-            if (window.RelModel) window.RelModel.reset();
+            relationenmodellNeu(reihe);
             if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
             state.diagramLocked = true;
           }
@@ -1488,12 +1611,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const qMode = window.Quest.state?.questMode || '';
       const isCompleted = window.Quest.state.completedQuests.includes(questNum);
-      const maxQuests = window.Quest.getMaxQuests?.(qMode) || 0;
 
-      // Letzte Aufgabe: Kann nur gestartet werden, wenn alle Vorgänger abgeschlossen sind
-      if (questNum === maxQuests && !isCompleted) {
-        const allPreviousCompleted = Array.from({ length: maxQuests - 1 }, (_, i) => i + 1).every((n) =>
-          window.Quest.state.completedQuests.includes(n),
+      // Abschlussquest einer Schritt-Reihe: erst, wenn alle Aufgaben gelöst sind
+      if (window.Quest.getQuestByNumber(qMode, questNum)?.abschluss && !isCompleted) {
+        const allPreviousCompleted = window.Quest.getAufgaben(qMode).every((q) =>
+          window.Quest.state.completedQuests.includes(q.number),
         );
         if (!allPreviousCompleted) {
           await window.App?.showAppModal?.({
@@ -1575,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         return;
       }
-      if (!(await startQuestSeriesFlow(reihe, { nurBeiInhalt: true }))) return;
+      if (!(await startQuestSeriesFlow(reihe))) return;
       const questNum = parseInt(params.get('quest'), 10);
       if (questNum >= 1 && questNum <= window.Quest.getMaxQuests()) await switchQuestWithGuards(questNum);
     }, 0);
@@ -1811,22 +1933,19 @@ window.App = {
     if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
   },
 
+  // Quest schließen: ihren Stand sichern und das freie Modell (ER- und Relationenmodell) zurückholen
   onQuestPanelClosing(questState) {
     const reihe = getQuestSeries(questState?.questMode);
     if (!reihe) return;
     const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);
+    if (reihe.art === 'erm') saveErmSnapshot(storageKey);
+    else window.RelModel?.saveToStorage?.(storageKey);
 
-    if (reihe.art === 'erm') {
-      saveErmSnapshot(storageKey);
-      persistStateNow();
-      return;
+    if (!loadPersistedState()) {
+      applyErmPayload({ nodes: [], edges: [], nextId: 1, diagramTitle: '', snapToGrid: state.snapToGrid }, false);
     }
-
-    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
-    if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
-    persistStateNow();
-    if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(RELMODEL_PERSIST_KEY);
-    if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(RELMODEL_PERSIST_KEY);
+    window.RelModel?.setPersistKey?.(RELMODEL_PERSIST_KEY);
+    if (!window.RelModel?.loadFromStorage?.()) window.RelModel?.reset?.();
   },
 
   async onQuestChanged(quest, questState) {
@@ -1836,8 +1955,10 @@ window.App = {
     const storageKey = getQuestWorkStorageKey(reihe.id, questNumber);
 
     if (reihe.art === 'erm') {
-      const geladen = loadErmSnapshot(storageKey);
+      // Schritt-Reihen teilen ein Modell: Beim Weiterschalten bleibt es stehen (Auswahl und Ansicht auch)
+      const geladen = storageKey === aktiverArbeitsstand || loadErmSnapshot(storageKey);
       if (!geladen && !(await loadStartModel(reihe))) clearDiagramSilent();
+      aktiverArbeitsstand = storageKey;
       // Den Kardinalitäten-Modus legt die Quest bzw. Reihe fest (ERM-Grundlagen: ohne)
       state.kardinalitaeten = quest?.kardinalitaeten ?? reihe.kardinalitaeten ?? true;
       syncCardinalitySwitch();
@@ -1863,7 +1984,7 @@ window.App = {
     }
 
     const loaded = window.RelModel?.loadFromStorage?.(storageKey);
-    if (!loaded && window.RelModel) window.RelModel.reset();
+    if (!loaded) relationenmodellNeu(reihe);
     if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
     state.diagramLocked = true;
     // Checkliste nach Laden des gespeicherten Arbeitsstands neu rendern
@@ -1883,13 +2004,19 @@ window.App = {
     const isRelmodelSzenario = reihe?.art === 'rm' && !isSchritt;
     const hasChecklist = !isSchritt;
 
-    // Update Title & Progress (count completed quests, exclude final completion task)
+    // Titel & Fortschritt (die Abschlussquest einer Schritt-Reihe zählt nicht)
     const titleEl = panel.querySelector('#quest-title');
     const progressEl = panel.querySelector('#quest-progress');
     const total = window.Quest?.getMaxQuests?.(mode) || 9;
-    const effectiveTotal = Math.max(1, total - 1);
-    const completedCount = (questState.completedQuests || []).filter((n) => Number(n) < total).length || 0;
-    if (titleEl) titleEl.textContent = `${quest.number}. ${quest.title}`;
+    const aufgaben = window.Quest?.getAufgaben?.(mode) || [];
+    const effectiveTotal = Math.max(1, aufgaben.length);
+    const completedCount = aufgaben.filter((q) => (questState.completedQuests || []).includes(q.number)).length;
+    if (titleEl) {
+      titleEl.textContent = `${quest.number}. ${quest.title}`;
+      // Quests ohne Kardinalitäten sind schon im Titel gekennzeichnet
+      if ((quest.kardinalitaeten ?? reihe?.kardinalitaeten) === false)
+        titleEl.insertAdjacentHTML('beforeend', ' <span class="quest-title-badge">ohne Kardinalitäten</span>');
+    }
     if (progressEl) progressEl.textContent = `${completedCount} / ${effectiveTotal}`;
 
     // Update Progress Bar (based on completed quests excluding final)
@@ -1934,6 +2061,10 @@ window.App = {
         : rawTaskHtml;
       taskContent.innerHTML = taskHtml;
       taskSection.appendChild(taskContent);
+      // ERM-Szenarien: Wörter anklicken, die zum ER-Modell gehören, werden farbig markiert
+      if (quest.masterlösung && !isSchritt) {
+        window.Quest.textmarker(taskContent, quest.masterlösung, `${mode}:${quest.number}`, taskHeader);
+      }
 
       // Experten (ERM + Relmodel): Wrapper für Side-by-Side-Layout
       let questBody;
@@ -2004,7 +2135,7 @@ window.App = {
       checkBtn.id = 'btn-quest-check-manual';
       checkBtn.type = 'button';
       checkBtn.className = 'quest-btn quest-btn-check';
-      checkBtn.textContent = quest.number === total ? 'Abschließen' : 'Überprüfen';
+      checkBtn.textContent = quest.abschluss ? 'Abschließen' : 'Überprüfen';
 
       actions.appendChild(checkBtn);
 
@@ -2027,6 +2158,17 @@ window.App = {
       feedback.textContent = '';
       feedback.className = 'quest-feedback';
     }
+  },
+
+  // Alle Szenarien einer Übungsreihe gelöst
+  showSeriesDone(reihe) {
+    this.playFullscreenConfetti();
+    return this.showAppModal({
+      title: `🎉 ${reihe.titel} geschafft!`,
+      message: `Glückwunsch! ${reihe.abschlussText || ''}`,
+      mode: 'alert',
+      confirmLabel: 'Super!',
+    });
   },
 
   showQuestFeedback(message, type = 'progress') {

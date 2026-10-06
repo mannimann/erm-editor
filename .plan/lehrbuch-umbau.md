@@ -16,25 +16,38 @@ Die Grundkurs-Kapitel sind als geprüft markiert: Änderungen dort nur nach Best
 ### Quest-Reihen
 
 Direktstart über einen Link: `https://erm-editor.jmann.info/?reihe=<ID>`, optional `&quest=<Nummer>` (springt
-nur, wenn die Quest freigeschaltet ist; in Szenario-Reihen ist jede Quest außer dem Abschluss frei). Im Menü
-„⚔️ Quests“ stehen die Reihen in zwei Spalten, „Einstieg“ und „Fortgeschritten“.
+nur, wenn die Quest freigeschaltet ist; in Übungsreihen ist jede Quest frei). Im Menü „⚔️ Quests“ stehen die
+Reihen in zwei Spalten, „Einstieg“ und „Fortgeschritten“, jede mit Fortschrittsbalken. Einheitliche Symbole:
+🔷 ER-Modell lernen, ▦ Relationenmodell lernen (grünes Tabellen-Symbol, auch am Knopf „Relationenmodell“),
+✏️ üben. Zwischen „Einstieg“ und „Fortgeschritten“ steht eine senkrechte Linie.
+
+Nur die Lernreihen (🔷, ▦) enden mit einer Abschlussquest (Zusammenfassung, Ergebnis speichern). Die
+Übungsreihen (✏️) haben keine gesperrte letzte Aufgabe mehr: Sind alle Szenarien gelöst, gratuliert der Editor
+direkt und nennt die nächste Reihe.
 
 | ID | Reihe | Quests |
 | --- | --- | --- |
 | **Einstieg** | | |
-| `erm-grundlagen` | ERM-Grundlagen (ohne Kardinalitäten) | 1 Erste Entitätsklasse · 2 Attribute hinzufügen · 3 Primärschlüssel setzen · 4 Zweite Entitätsklasse · 5 Attribute für Klasse · 6 Beziehung erstellen · 7 Dritte Entitätsklasse · 8 Zweite Beziehung · 9 Beziehungsattribute · 10 Weitere Beziehung ergänzen · 11 Abschluss |
-| `erm-kardinalitaeten` | ERM-Kardinalitäten (neu) | 1 Kardinalität und Leserichtung („geht in“ n:1 vorgegeben) · 2 Beide Richtungen prüfen („unterrichtet“) · 3 Eins zu eins („ist Klassensprecher“, nur Sachverhalt) · 4 Eine Beziehung selbst bestimmen („ist Klassenleiter von“, Lehrer 1:n Klasse) · 5 Abschluss |
-| `erm-uebung` | ERM-Übung | 1 Hotel-Verwaltung (ohne Kardinalitäten) · 2 Krankenhaus-System · 3 Bibliothek · 4 Fußball-Turnier · 5 Fitnessstudio-Kursplanung · 6 Abschluss |
-| `rm-grundlagen` | Relationenmodell-Grundlagen | 1 Seitenleiste öffnen · 2 Relationen anlegen · 3 Attribute hinzufügen · 4 Primärschlüssel markieren · 5 1:n „geht in“ · 6 1:1 „ist Klassensprecher“ · 7 n:m „unterrichtet“ · 8 Beziehungsattribut „Fach“ · 9 Abschluss |
-| `rm-uebung` | Relationenmodell-Übung | dieselben fünf Szenarien wie ERM-Übung (ER-Modell wird geladen) · 6 Abschluss |
+| `erm-grundlagen` | 🔷 ERM-Grundlagen (ohne Kardinalitäten) | 1 Erste Entitätsklasse · 2 Attribute hinzufügen · 3 Primärschlüssel setzen · 4 Zweite Entitätsklasse · 5 Attribute für Klasse · 6 Beziehung erstellen · 7 Dritte Entitätsklasse · 8 Zweite Beziehung · 9 Beziehungsattribute · 10 Weitere Beziehung ergänzen · 11 Abschluss |
+| `erm-kardinalitaeten` | 🔷 ERM-Kardinalitäten (neu, Modell gesperrt) | 1 Kardinalität und Leserichtung („geht in“ n:1 vorgegeben) · 2 Beide Richtungen prüfen („unterrichtet“) · 3 Eins zu eins („ist Klassensprecher“, nur Sachverhalt) · 4 Eine Beziehung selbst bestimmen („ist Klassenleiter von“, Lehrer 1:n Klasse) · 5 Abschluss |
+| `erm-uebung` | ✏️ ERM-Übung | 1 Hotel-Verwaltung (ohne Kardinalitäten, Wörter hervorgehoben) · 2 Krankenhaus-System (Wörter hervorgehoben, Kardinalitäten vorgegeben) · 3 Bibliothek · 4 Fußball-Turnier · 5 Fitnessstudio-Kursplanung (ab 3 stehen die Kardinalitäten nur im Text) |
+| `rm-grundlagen` | ▦ Relationenmodell-Grundlagen | 1 Seitenleiste öffnen · 2 Relationen anlegen · 3 Attribute hinzufügen · 4 Primärschlüssel markieren · 5 1:n „geht in“ · 6 1:1 „ist Klassensprecher“ · 7 n:m „unterrichtet“ · 8 Beziehungsattribut „Fach“ · 9 Abschluss |
+| `rm-uebung` | ✏️ Relationenmodell-Übung | dieselben fünf Szenarien wie ERM-Übung (ER-Modell wird geladen) |
 | **Fortgeschritten** | | |
-| `erm-auffrischung` | ERM-Auffrischung | 1 Entitätsklassen mit Schlüsseln · 2 Beziehungen mit Kardinalitäten · 3 Beziehungsattribut · 4 Zwei Beziehungen zwischen denselben Klassen · 5 Selbstbeziehung · 6 Verbundschlüssel (Klassenstufe + Parallelklasse) · 7 Abschluss |
-| `erm-experten` | ERM-Experten | 1 Fahrschule · 2 Flugbetrieb · 3 Universität · 4 Tagung · 5 Katastrophenschutz-Leitstelle · 6 Abschluss |
-| `rm-auffrischung` | Relationenmodell-Auffrischung | 1 Relationen mit Schlüsseln · 2 Zusammengesetzter Fremdschlüssel · 3 1:1 „ist Klassensprecher“ · 4 Beziehungstabelle „unterrichtet“ · 5 Selbstbeziehung „ist befreundet mit“ · 6 Muss, Kann und UNIQUE · 7 Abschluss |
-| `rm-experten` | Relationenmodell-Experten | dieselben fünf Szenarien wie ERM-Experten, zusätzlich NOT NULL und UNIQUE nach Regeln im Aufgabentext · 6 Abschluss |
+| `erm-auffrischung` | 🔷 ERM-Auffrischung | 1 Entitätsklassen mit Schlüsseln · 2 Beziehungen mit Kardinalitäten · 3 Beziehungsattribut · 4 Zwei Beziehungen zwischen denselben Klassen · 5 Selbstbeziehung · 6 Verbundschlüssel (Klassenstufe + Parallelklasse) · 7 Abschluss |
+| `erm-experten` | ✏️ ERM-Experten | 1 Fahrschule (Wörter hervorgehoben) · 2 Flugbetrieb · 3 Universität · 4 Tagung · 5 Katastrophenschutz-Leitstelle |
+| `rm-auffrischung` | ▦ Relationenmodell-Auffrischung | 1 Relationen mit Schlüsseln · 2 Zusammengesetzter Fremdschlüssel · 3 1:1 „ist Klassensprecher“ · 4 Beziehungstabelle „unterrichtet“ · 5 Selbstbeziehung „ist befreundet mit“ · 6 Muss, Kann und UNIQUE · 7 Abschluss |
+| `rm-experten` | ✏️ Relationenmodell-Experten | dieselben fünf Szenarien wie ERM-Experten, nur die Überführung |
+| `sql-uebung` | ✏️ SQL-Übung (neu) | dieselben fünf Szenarien; das Relationenmodell ist vorgegeben, unter „SQL erzeugen“ setzt man NOT NULL und UNIQUE: 1 Fahrschule (Spalten genannt) · 2 Flugbetrieb (Regeln genannt) · 3 Universität · 4 Tagung · 5 Katastrophenschutz (Regeln nur im Szenariotext) |
+
+Reihenfolge in Klasse 9: Die ERM-Grundlagen verweisen am Ende auf ERM-Übung, Szenario 1 „Hotel-Verwaltung“
+(noch ohne Kardinalitäten). Nach dem Hotel schickt der Editor zur Reihe ERM-Kardinalitäten, solange sie nicht
+erledigt ist; deren Abschluss verweist zurück auf ERM-Übung ab Szenario 2.
 
 Die ERM-Kardinalitäten übernehmen das eigene Schul-ERM, wenn alle Aufgaben der ERM-Grundlagen gelöst sind
-(der Abschluss zählt nicht); sonst lädt der Editor eine Vorlage. Während der Quest steht an jeder Linie „?“,
+(der Abschluss zählt nicht); sonst lädt der Editor eine Vorlage. Dieses Startmodell ist gesperrt:
+Entitätsklassen, Attribute und vorhandene Beziehungen lassen sich weder löschen noch umbenennen, nur die
+Kardinalitäten ändern; neue Beziehungen (Quest 4) sind erlaubt. Während der Quest steht an jeder Linie „?“,
 bis die Kardinalität gesetzt ist. Im freien Editor bleibt eine fehlende Kardinalität einfach leer.
 
 Gespeicherter Fortschritt aus den alten Reihen wird **nicht übernommen** (neue Speicherschlüssel). Wer schon
@@ -63,6 +76,33 @@ angefangen hat, beginnt die Reihe neu — am besten in der Klasse ankündigen.
   Beziehung)“. Neue Begriffe stehen in der ersten Zeile des Erklärkastens nach einer gelösten Quest:
   „Neuer Begriff: Entitätsklasse · Symbol: Rechteck“.
 - **Checkliste** im Quest-Fenster jetzt auch in den Relationenmodell-Szenarien (Übung und Experten).
+- **Bedienung:** „Beziehung“ öffnet zuerst den Dialog, die Raute erscheint beim Speichern zwischen den beiden
+  Entitätsklassen. Ein Klick auf eine Raute wählt sie nur aus; bearbeitet wird per Doppelklick oder
+  Rechtsklick. Neues Werkzeug **„Attribut“** links: hängt ein Attribut an die ausgewählte Entitätsklasse oder
+  Beziehung (bei einem ausgewählten Attribut an dessen Besitzer). Jede neue Form ist sofort ausgewählt.
+  **Rückgängig/Wiederholen** ↶ ↷ links oben im Header (oder Strg+Z / Strg+Y). Zoom rechts oben: − 100 % +,
+  ein Klick auf die Prozentzahl setzt auf 100 % zurück. PNG-Export hat das Symbol 📷 (ER- und
+  Relationenmodell). Anleitungen im Lehrbuch, die „Rechtsklick auf die Raute → Attribut hinzufügen“ oder
+  „Klick auf die Raute öffnet den Dialog“ beschreiben, anpassen. Die Relationenmodell-Quests sprechen von der
+  „rechten Seitenleiste“.
+- **Leserichtung:** Der Erklärkasten „Beziehung“ sagt nicht mehr „von links nach rechts“, weil links und rechts
+  sich im Editor beim Verschieben oder Auto-Layout ändern: Die Richtung des Satzes ergibt sich aus dem Sinn,
+  eine Kardinalität steht an der Linie zu der Entitätsklasse, deren Anzahl sie angibt. Für die festen Bilder im
+  Lehrbuch („Lies von links nach rechts“) ist das kein Widerspruch.
+- **Textmarker in den ERM-Szenarien:** Wörter im Text anklicken; gehört ein Wort zum ER-Modell, wird es farbig
+  (blau Entitätsklasse, gelb Attribut, grün Beziehung), sonst kurz durchgestrichen. Mehrzahl und Umlaut werden
+  erkannt („Ärzte“ → Arzt). Die Klicks sind begrenzt, damit niemand einfach jedes Wort durchklickt: so viele,
+  wie das Modell Elemente hat, plus 5 für Fehlgriffe, mindestens 20 (Hotel 22, Universität 32). Neben der
+  Legende steht „Klicks: 7 von 22“; Markierung entfernen kostet nichts. Im Unterricht als Lesestrategie
+  nutzbar: erst markieren, dann zeichnen.
+- **Speichern:** Das eigene Modell im freien Editor bleibt beim Start einer Quest erhalten und kommt beim
+  Schließen zurück; jede Quest hat ihren eigenen Arbeitsstand. Die Warnung „… werden gelöscht“ gibt es nicht
+  mehr. Neu laden mitten in einer Quest führt zurück in den freien Editor.
+- **„SQL erzeugen“ an der Musterlösung:** erscheint nur, solange die Musterlösung eingeblendet ist.
+- **Dialog „SQL erzeugen“** zweispaltig: links Datentypen, NOT NULL und UNIQUE, rechts der Code; geänderte
+  Zeilen leuchten kurz auf. Oben steht, dass es SQLite-Datentypen sind (INTEGER, REAL, TEXT).
+- **SQL-Übung:** Das vorgegebene Relationenmodell ist gesperrt (kein Bearbeiten, Löschen, Hinzufügen), die
+  Musterlösung ist ausgeblendet.
 
 ---
 
@@ -89,7 +129,7 @@ Kapitel ‚Kardinalitäten‘“). Jetzt passt der Editor dazu.
   „ist befreundet mit“.
 - Aufgabe Hotel (Abschnitt „Modellieren“): Reihe **„ERM-Übung“**, Quest 1 „Hotel-Verwaltung“; Link
   `?reihe=erm-uebung&quest=1`. Den Satz „… auch Schreibweisen wie ‚AnzahlNaechte‘“ streichen. Die Quest fragt
-  keine Kardinalitäten mehr ab.
+  keine Kardinalitäten mehr ab. Der Abschluss der ERM-Grundlagen verweist selbst auf dieses Szenario.
 - Aufgabe „Mensch – Handy“: „… auf Papier oder im ERM-Editor (Schalter ‚Kardinalitäten‘ oben aus)“.
 
 ### `src/modules/klasse9/lb1/Kardinalitaeten.vue`
@@ -103,12 +143,15 @@ Kapitel ‚Kardinalitäten‘“). Jetzt passt der Editor dazu.
   Knopf: `?reihe=erm-kardinalitaeten`. Der Abschnitt „1:1, 1:n, n:m“ bleibt als Sicherung.
 - Abschnitt „Modellieren“, Lead: „… die Übungsquests im ERM-Editor prüfen dein Modell.“
 - Aufgabe „Starte im ERM-Editor die Reihe ‚ERM-Experten-Quests‘“ → Reihe **„ERM-Übung“**, Teilaufgaben mit
-  neuen Nummern (Knackpunkte bleiben gleich): Quest 3 „Bibliothek“ (bisher 2), Quest 4 „Fußball-Turnier“
-  (bisher 3), Quest 5 „Fitnessstudio-Kursplanung“ (bisher 5). Link `?reihe=erm-uebung&quest=3`.
-- „Schon fertig?“: Quest 2 „Krankenhaus-System“ (bisher 4). Knackpunkt-Vorschlag: „Behandlung vermittelt
-  zwischen Patient und Arzt — zwei 1:n-Beziehungen statt n:m. Station hängt über zwei n:1-Beziehungen an
-  Patient und an Arzt.“ Die Universität ist jetzt **ERM-Experten 3** (Stufe Fortgeschritten) — für Klasse 9
-  streichen oder als „Für Profis“ verlinken (`?reihe=erm-experten&quest=3`).
+  neuen Nummern und einer Steigerung:
+  - Quest 2 „Krankenhaus-System“ (bisher 4) als **Einstieg**: wichtige Wörter hervorgehoben, Kardinalitäten
+    vorgegeben (Patient 1 : n Behandlung …), jeweils mit dem Satz dazu. Knackpunkt-Vorschlag: „Behandlung
+    vermittelt zwischen Patient und Arzt — zwei 1:n-Beziehungen statt n:m. Station hängt über zwei
+    n:1-Beziehungen an Patient und an Arzt.“ Link `?reihe=erm-uebung&quest=2`.
+  - Quest 3 „Bibliothek“ (bisher 2), Quest 4 „Fußball-Turnier“ (bisher 3), Quest 5
+    „Fitnessstudio-Kursplanung“ (bisher 5): Kardinalitäten nur im Text. Knackpunkte bleiben gleich.
+- Die Universität ist jetzt **ERM-Experten 3** (Stufe Fortgeschritten) — für Klasse 9 streichen oder als „Für
+  Profis“ verlinken (`?reihe=erm-experten&quest=3`).
 - Aufgabe „Mensch – Handy“ mit Kardinalität: „Schalte im ERM-Editor die Kardinalitäten ein und ergänze …“.
 - Hinweis zum Zusatz „Flug startet von Flughafen“: Genau dieses Modell (Start- **und** Zielflughafen) ist im
   Grundkurs die ERM-Experten-Quest 2 „Flugbetrieb“ — kein Konflikt, eher ein schöner Bogen.
@@ -135,7 +178,9 @@ die Schüler jedes ERM erst selbst nachzeichnen.
   - Quest 5 „Fitnessstudio-Kursplanung“: Zwei Beziehungstabellen, „belegt“ und „leitet“; Anmeldedatum wandert
     in belegt, Wochentag in leitet.
 - Regel 1:1 „… oder beide Tabellen zusammenlegen“: Der Editor erkennt nur die Variante mit Fremdschlüssel auf
-  einer Seite. Bei Editor-Aufgaben dazuschreiben: „Im Editor: Fremdschlüssel auf eine Seite.“
+  einer Seite (geprüft und bewusst so gelassen, siehe Abschnitt 3). Bei Editor-Aufgaben dazuschreiben: „Im
+  Editor: Fremdschlüssel auf eine Seite.“ Seine Musterlösung setzt den Fremdschlüssel auf die Seite, die dafür
+  weniger Spalten braucht.
 - Ausblick am Ende oder Verweis ins Kapitel „Eigene Datenbank“: „SQL erzeugen“ macht aus den Relationen
   `CREATE TABLE`-Befehle.
 
@@ -184,24 +229,34 @@ die Schüler jedes ERM erst selbst nachzeichnen.
   „Relationen und Verbundschlüssel, zusammengesetzte Fremdschlüssel, 1:n, 1:1, n:m, Beziehungsattribute,
   Selbstbeziehungen und — mit ‚SQL erzeugen‘ — NOT NULL und UNIQUE.“
 - Aufgabe „Starte im ERM-Editor die Reihe ‚Relationenmodell-Experten-Quests‘“: Reihe
-  **„Relationenmodell-Experten“**. Die Aufgabe nennt jetzt Geschäftsregeln; nach den Relationen setzen die
-  Schüler unter „SQL erzeugen“ NOT NULL und UNIQUE, der Editor prüft beides. Satz zu den Namen: „Ein
-  Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Rolle schreibst du als
-  Zusatz (Personalnr-Vorgesetzter).“ Knackpunkte:
-  - Quest 1 „Fahrschule“: Beide Fremdschlüssel landen in fahrstunde, Kundennummer↑ und Personalnummer↑. Jede
-    Fahrstunde hat genau einen Fahrschüler und einen Fahrlehrer: beide NOT NULL.
+  **„Relationenmodell-Experten“** — nur die Überführung, ohne NOT NULL und UNIQUE (die Reihe ist schwer genug).
+  Satz zu den Namen: „Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt;
+  eine Rolle schreibst du als Zusatz (Personalnr-Vorgesetzter).“ Knackpunkte:
+  - Quest 1 „Fahrschule“: Beide Fremdschlüssel landen in fahrstunde, Kundennummer↑ und Personalnummer↑.
   - Quest 2 „Flugbetrieb“: flug bekommt drei Fremdschlüssel — zweimal den Flughafencode (umbenannt, etwa
-    Flughafencode-Start und Flughafencode-Ziel) und Lizenznummer↑, alle NOT NULL. pilot bekommt einen
-    umbenannten Fremdschlüssel auf sich selbst (Lizenznummer-Ausbilder), der leer bleiben darf.
-  - Quest 3 „Universität“: Für „ist“ (1:1) kommt Matrikelnummer↑ auf die Muss-Seite hilfskraft, mit NOT NULL
-    und UNIQUE. Die 1:n-Beziehungen geben NOT-NULL-Fremdschlüssel an vorlesung, hilfskraft und seminar;
-    „besucht“ und „nimmt teil an“ werden Beziehungstabellen.
-  - Zusatz Quest 4 „Tagung“: vortrag bekommt Referentennummer↑ (NOT NULL) und den zusammengesetzten
-    Fremdschlüssel aus Gebäude↑ und Raumnummer↑ — ohne NOT NULL, weil der Raum noch fehlen darf. betreut hat
-    einen Schlüssel aus drei Spalten, „arbeitet ein“ zwei umbenannte Helfernummern.
-  - Zusatz Quest 5 „Katastrophenschutz-Leitstelle“: einsatzkraft bekommt Teamname↑ (NOT NULL) und einen
-    umbenannten Fremdschlüssel auf sich selbst, team den Funkrufname↑ der Leitung (NOT NULL). bearbeitet und
-    nutzt übernehmen den dreiteiligen Schlüssel von einsatz als zusammengesetzten Fremdschlüssel.
+    Flughafencode-Start und Flughafencode-Ziel) und Lizenznummer↑. pilot bekommt einen umbenannten
+    Fremdschlüssel auf sich selbst (Lizenznummer-Ausbilder).
+  - Quest 3 „Universität“: Für „ist“ (1:1) kommt Matrikelnummer↑ nach hilfskraft (die andere Richtung erkennt
+    der Editor auch). Die 1:n-Beziehungen geben Fremdschlüssel an vorlesung, hilfskraft und seminar; „besucht“
+    und „nimmt teil an“ werden Beziehungstabellen.
+  - Zusatz Quest 4 „Tagung“: vortrag bekommt Referentennummer↑ und den zusammengesetzten Fremdschlüssel aus
+    Gebäude↑ und Raumnummer↑. betreut hat einen Schlüssel aus drei Spalten, „arbeitet ein“ zwei umbenannte
+    Helfernummern.
+  - Zusatz Quest 5 „Katastrophenschutz-Leitstelle“: einsatzkraft bekommt Teamname↑ und einen umbenannten
+    Fremdschlüssel auf sich selbst, team den Funkrufname↑ der Leitung. bearbeitet und nutzt übernehmen den
+    dreiteiligen Schlüssel von einsatz als zusammengesetzten Fremdschlüssel.
+- **Neu: SQL-Übung** (`?reihe=sql-uebung`) nach der Merkkarte „Muss, Kann und die Wahl des Schlüssels“. Das
+  Relationenmodell ist vorgegeben; geübt wird nur, was die Merkkarte einführt. Steigerung: Quest 1 nennt die
+  Spalten, Quest 2 die Geschäftsregeln, ab Quest 3 stehen die Regeln nur im Szenariotext. Knackpunkte:
+  - Quest 1 „Fahrschule“: Kundennummer↑ und Personalnummer↑ in fahrstunde NOT NULL.
+  - Quest 2 „Flugbetrieb“: alle drei Fremdschlüssel in flug NOT NULL; Lizenznummer-Ausbilder in pilot bleibt
+    ohne NOT NULL („nicht jeder hat einen Ausbilder“).
+  - Quest 3 „Universität“: Matrikelnummer↑ in hilfskraft NOT NULL und UNIQUE (1:1, Muss-Seite); die
+    Fremdschlüssel in vorlesung, hilfskraft und seminar NOT NULL.
+  - Zusatz Quest 4 „Tagung“: Referentennummer↑ NOT NULL, Gebäude↑ und Raumnummer↑ ohne NOT NULL (Raum noch
+    offen).
+  - Zusatz Quest 5 „Katastrophenschutz-Leitstelle“: Teamname↑ in einsatzkraft und Funkrufname↑ in team NOT
+    NULL.
 - Hinweis „Im ERM-Editor lässt sich zu jedem ER-Modell die Relationenmodell-Ansicht einblenden — praktisch zum
   Gegenprüfen“: Die Musterlösung des Editors benennt doppelte Fremdschlüssel mit vorangestelltem
   Entitätsnamen (`Band-Name`, `Bühne-Name`), das Kapitel mit Tabellen- oder Rollennamen (`band↑`,
@@ -211,6 +266,8 @@ die Schüler jedes ERM erst selbst nachzeichnen.
 
 - Optional bei „Das Festival selbst anlegen“: „Zum Vergleich: ‚SQL erzeugen‘ im ERM-Editor schreibt
   `CREATE TABLE` mit NOT NULL, UNIQUE und REFERENCES in derselben Reihenfolge. CHECK ergänzt du selbst.“
+  Wer NOT NULL und UNIQUE noch einmal üben will: Reihe „SQL-Übung“ (`?reihe=sql-uebung`), dort lässt sich der
+  Code jeder Quest kopieren und in der Konsole ausführen.
 
 ### `src/modules/grundkurs/lb5/Normalisierung.vue`
 
@@ -235,7 +292,11 @@ Nach Gewicht geordnet; die ersten drei hängen direkt am Umbau.
 5. **Schreibweise der Relationen uneinheitlich.** Klasse 9 schreibt im Einstieg `mannschaft(…)`, in den
    Regel-Aufgaben `Wohnsitz(…)`, `Hört(…)`. Der Editor ist hier tolerant; es geht nur um ein einheitliches Bild.
 6. **`REFERENCES` ohne Wirkung in Klasse 9** (Konsolen ohne `fremdschluessel-pruefen`, siehe oben).
-7. **1:1 „Tabellen zusammenlegen“** (Klasse 9) kennt der Editor nicht — nur als Hinweis bei Editor-Aufgaben.
+7. **1:1 „Tabellen zusammenlegen“** (Klasse 9) kennt der Editor nicht — geprüft und bewusst weggelassen:
+   Fachlich passt das Zusammenlegen nur, wenn beide Seiten Muss-Seiten sind, und das steht nicht im ER-Modell
+   (der Editor kennt nur 1, n, m). Außerdem müssten alle Fremdschlüssel, die auf die verschwundene Tabelle
+   zeigen, mit umziehen. Der Grundkurs lehrt ohnehin nur „Fremdschlüssel auf die Muss-Seite + UNIQUE“.
+   Lösung im Lehrbuch: bei Editor-Aufgaben „Im Editor: Fremdschlüssel auf eine Seite“.
 8. **„Für Schnelle: Universität“** in Klasse 9 „Kardinalitäten“ zeigt jetzt in die Stufe Fortgeschritten.
 
 ---
@@ -248,3 +309,5 @@ Nach Gewicht geordnet; die ersten drei hängen direkt am Umbau.
    ER-Modell) oder als Übung **danach**?
 3. Universität für schnelle Klasse-9-Schüler: streichen oder auf ERM-Experten 3 verlinken?
 4. `fremdschluessel-pruefen` in Klasse 9 „Eigene Datenbank“ einschalten?
+5. SQL-Übung: im Grundkurs-Kapitel „Relationenmodell“ nach der Muss/Kann-Merkkarte (Empfehlung, dort werden
+   NOT NULL und UNIQUE eingeführt) oder erst in „SQL: CRUD & eigene Datenbank“, wo `CREATE TABLE` kommt?

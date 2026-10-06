@@ -519,17 +519,20 @@
         // Eigene Beziehungsattribute in N-Seite
         relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(nSide.name), rel.name, a.name));
       } else if (type === '1:1') {
-        // 1:1-Beziehung: Standard-Richtung wählen, aber beide Richtungen werden beim Check akzeptiert
+        // 1:1-Beziehung: Standard-Richtung wählen, aber beide Richtungen werden beim Check akzeptiert.
+        // Der Fremdschlüssel kommt auf die Seite, die dafür weniger Spalten braucht (SchülerNr in Klasse
+        // statt Klassenstufe und Parallelklasse in Schüler); bei Gleichstand bleibt die Reihenfolge.
         const ids = entityEdges.map((e) => (e.fromId === rel.id ? e.toId : e.fromId));
+        if (getPkAttrs(ids[0]).length > getPkAttrs(ids[1]).length) ids.reverse();
         const sourceEntity = getNode(ids[0]);
         const targetEntity = getNode(ids[1]);
 
         if (sourceEntity && targetEntity) {
           const srcPk = getPkAttr(sourceEntity.id);
           const tgtPk = getPkAttr(targetEntity.id);
-          if (srcPk) {
-            addAttr(ensureEntityRelation(targetEntity.name), srcPk, false, true, sourceEntity.name, rel.id);
-          }
+          getPkAttrs(sourceEntity.id).forEach((pk) =>
+            addAttr(ensureEntityRelation(targetEntity.name), pk, false, true, sourceEntity.name, rel.id),
+          );
           relAttrs.forEach((a) => addRelationshipAttr(ensureEntityRelation(targetEntity.name), rel.name, a.name));
 
           // Metadata für bidirektionale Prüfung speichern
@@ -671,14 +674,24 @@
     document.getElementById('solution-display').style.display = 'none';
     document.getElementById('btn-hide-solution').style.display = 'none';
     document.getElementById('btn-preview-solution').style.display = 'none';
+    document.getElementById('btn-sql-solution').style.display = 'none';
     document.getElementById('btn-show-solution').style.display = '';
     renderStudentForm();
     renderSolution();
   }
 
+  // SQL-Übung: Das Relationenmodell ist vorgegeben – nur ansehen, eingestellt wird unter „SQL erzeugen“
+  function rmGesperrt() {
+    return !!window.Quest?.state?.questsPanelVisible && !!window.Quest.getSeries?.()?.rmVorgabe;
+  }
+
   // ---- Render: Schüler-Eingabe ----
   function renderStudentForm() {
     ensureStudentIds();
+    const gesperrt = rmGesperrt();
+    document.getElementById('relmodel-drawer')?.classList.toggle('rm-gesperrt', gesperrt);
+    const titel = document.getElementById('student-relations-title');
+    if (titel) titel.textContent = gesperrt ? 'Vorgegebene Relationen' : 'Deine Relationen';
     const container = document.getElementById('student-relations-list');
     container.innerHTML = '';
     _studentRelations.forEach((rel) => {
@@ -707,7 +720,8 @@
   }
 
   function buildRelationCard(rel) {
-    const isEditing = rel.isEditing !== false;
+    const gesperrt = rmGesperrt();
+    const isEditing = rel.isEditing !== false && !gesperrt;
     const card = document.createElement('div');
     card.className = 'relation-card';
     card.dataset.id = rel.id;
@@ -794,7 +808,7 @@
     actions.appendChild(modeBtn);
     actions.appendChild(delBtn);
 
-    header.appendChild(actions);
+    if (!gesperrt) header.appendChild(actions);
     card.appendChild(header);
 
     if (rel.inlineError) {
@@ -1705,6 +1719,7 @@
         if (showBtn) showBtn.style.display = 'none';
         if (hideBtn) hideBtn.style.display = '';
         if (previewBtn) previewBtn.style.display = '';
+        document.getElementById('btn-sql-solution').style.display = '';
         solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
       };
       cancelBtn.addEventListener('click', onCancel);
@@ -1720,6 +1735,7 @@
       if (showBtn) showBtn.style.display = '';
       if (hideBtn) hideBtn.style.display = 'none';
       if (previewBtn) previewBtn.style.display = 'none';
+      document.getElementById('btn-sql-solution').style.display = 'none';
     });
 
     document.getElementById('btn-preview-student').addEventListener('click', () => {
@@ -1889,6 +1905,14 @@
     stripForeignKeyMarker,
     // Musterlösung, angepasst an die vom Schüler gewählte 1:1-Richtung (für die Checkliste)
     getCheckSolution: () => getAdjustedSolution().solution,
+    // Musterlösung im Format der Schüler-Relationen (SQL-Übung, „SQL erzeugen“ an der Musterlösung)
+    loesungAlsRelationen: () =>
+      generateSolution(window.AppState.state).map((rel, i) => ({
+        id: `m${i}`,
+        name: rel.name,
+        isEditing: false,
+        attrs: rel.attrs.map((a, j) => ({ id: `m${i}_${j}`, name: a.name, isPk: a.isPk, isFk: a.isFk })),
+      })),
     syncFromDiagram,
     requestSyncFromDiagramDebounced,
     reset,

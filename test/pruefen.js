@@ -223,7 +223,7 @@ pruefe('Relationenmodell: Fremdschlüssel nach der Zieltabelle benannt (wie mann
   assert(check(rels), 'Flugbetrieb mit Pilot↑, Flughafen-Start↑, Flughafen-Ziel↑, Pilot-Ausbilder↑');
 
   // NOT NULL-Regeln finden auch so benannte Fremdschlüssel
-  const fahrschule = Quest.getQuestsForMode('rm-experten').find((q) => q.title === 'Fahrschule');
+  const fahrschule = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Fahrschule');
   rels = loesung(fahrschule.jsonFile);
   attr(rels, 'Fahrstunde', 'Kundennummer').name = 'Fahrschüler';
   attr(rels, 'Fahrstunde', 'Personalnummer').name = 'Fahrlehrer';
@@ -249,8 +249,12 @@ pruefe('Relationenmodell: 1:1-Fremdschlüssel auch in der anderen Richtung', () 
   assert(check(rels), 'Fußball: Teamname-Kapitän in Spieler');
 });
 
-pruefe('Relationenmodell-Experten: NOT NULL und UNIQUE nach den Regeln', () => {
-  const fahrschule = Quest.getQuestsForMode('rm-experten').find((q) => q.title === 'Fahrschule');
+pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Experten ohne', () => {
+  assert(
+    Quest.getQuestsForMode('rm-experten').every((q) => !q.sqlRegeln),
+    'Relationenmodell-Experten prüfen nur die Überführung',
+  );
+  const fahrschule = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Fahrschule');
   const rels = loesung(fahrschule.jsonFile);
   RelModel.setStudentRelations(rels);
   const ohne = fahrschule.validator();
@@ -261,7 +265,7 @@ pruefe('Relationenmodell-Experten: NOT NULL und UNIQUE nach den Regeln', () => {
   RelModel.setStudentRelations(rels);
   assert(fahrschule.validator().passed, 'mit NOT NULL muss die Quest bestehen');
 
-  const uni = Quest.getQuestsForMode('rm-experten').find((q) => q.title === 'Universität');
+  const uni = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Universität');
   const u = loesung(uni.jsonFile);
   for (const r of u) for (const a of r.attrs) if (a.isFk && !a.isPk) a.notNull = true;
   RelModel.setStudentRelations(u);
@@ -322,6 +326,76 @@ pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
   attr(rels, 'Klasse', 'SchülerNr').unique = true;
   RelModel.setStudentRelations(rels);
   bestehen('rm-auffrischung', 1, 99);
+});
+
+pruefe('Relationenmodell: 1:1 mit Verbundschlüssel – Fremdschlüssel auf der Seite mit weniger Spalten', () => {
+  // Schul-ERM der Auffrischung, „ist Klassensprecher“ mit Klasse als erster Seite
+  const state = ermLaden('schule-auffrischung.json');
+  const sprecher = state.nodes.find((n) => n.name === 'ist Klassensprecher');
+  state.edges
+    .filter((e) => e.fromId === sprecher.id)
+    .reverse()
+    .forEach((e, i) => (e.id = `x${i}`));
+  state.edges.sort((a, b) => (a.fromId === sprecher.id) - (b.fromId === sprecher.id) || a.id.localeCompare(b.id));
+  context.AppState = { state };
+  const rels = kopie(RelModel.generateSolution(state));
+  assert(attr(rels, 'Klasse', 'SchülerNr').isFk, 'SchülerNr als Fremdschlüssel in Klasse');
+  assert(
+    !rel(rels, 'Schüler').attrs.some((a) => a.isFk && /sprecher/i.test(a.name)),
+    'kein zweites Klassen-Paar in Schüler',
+  );
+
+  // Beide Seiten mit Verbundschlüssel: alle Schlüsselteile wandern mit
+  const zwei = {
+    nodes: [
+      { id: 'e1', type: 'entity', name: 'Raum' },
+      { id: 'a1', type: 'attribute', name: 'Gebäude', isPrimaryKey: true },
+      { id: 'a2', type: 'attribute', name: 'Nummer', isPrimaryKey: true },
+      { id: 'e2', type: 'entity', name: 'Beamer' },
+      { id: 'a3', type: 'attribute', name: 'Hersteller', isPrimaryKey: true },
+      { id: 'a4', type: 'attribute', name: 'Seriennummer', isPrimaryKey: true },
+      { id: 'b1', type: 'relationship', name: 'hängt in' },
+    ],
+    edges: [
+      { id: 'k1', fromId: 'e1', toId: 'a1', edgeType: 'attribute' },
+      { id: 'k2', fromId: 'e1', toId: 'a2', edgeType: 'attribute' },
+      { id: 'k3', fromId: 'e2', toId: 'a3', edgeType: 'attribute' },
+      { id: 'k4', fromId: 'e2', toId: 'a4', edgeType: 'attribute' },
+      { id: 'k5', fromId: 'b1', toId: 'e1', edgeType: 'relationship', chenFrom: '1', chenTo: '1' },
+      { id: 'k6', fromId: 'b1', toId: 'e2', edgeType: 'relationship', chenFrom: '1', chenTo: '1' },
+    ],
+  };
+  const r2 = kopie(RelModel.generateSolution(zwei));
+  const fks = rel(r2, 'Beamer').attrs.filter((a) => a.isFk);
+  assert.deepStrictEqual(fks.map((a) => a.name).sort(), ['Gebäude', 'Nummer'], 'beide Teile von Raum in Beamer');
+  const { fehler: f } = SQLExport.generateSQL(r2);
+  assert.strictEqual(f.length, 0, f.join('; '));
+});
+
+pruefe('Quest-Reihen: Schritt-Reihen enden mit Abschluss, Übungsreihen ohne', () => {
+  for (const reihe of reihen) {
+    const letzte = reihe.quests[reihe.quests.length - 1];
+    if (reihe.schritt) assert(letzte.abschluss, `${reihe.id}: letzte Quest ist der Abschluss`);
+    else {
+      assert(
+        reihe.quests.every((q) => !q.abschluss),
+        `${reihe.id}: keine gesperrte Abschlussquest`,
+      );
+      assert(reihe.abschlussText, `${reihe.id}: Glückwunschtext`);
+    }
+    // 🔷 ER-Modell lernen, Tabellen-Symbol Relationenmodell lernen, ✏️ üben
+    const erwartet = !reihe.schritt ? '✏️' : reihe.art === 'erm' ? '🔷' : 'icon-tabelle';
+    assert(reihe.icon.includes(erwartet), `${reihe.id}: Symbol ${reihe.icon}`);
+  }
+  storage.set(Quest.getStorageKey('erm-uebung'), JSON.stringify({ completedQuests: [1, 2, 3, 4, 5] }));
+  assert(Quest.isSeriesDone('erm-uebung'), 'ERM-Übung mit fünf gelösten Szenarien ist fertig');
+  storage.set(
+    Quest.getStorageKey('erm-grundlagen'),
+    JSON.stringify({ completedQuests: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }),
+  );
+  assert(Quest.isSeriesDone('erm-grundlagen'), 'ERM-Grundlagen ohne die Abschlussquest fertig');
+  assert.deepStrictEqual({ ...Quest.getFortschritt('erm-grundlagen') }, { erledigt: 10, gesamt: 10 });
+  storage.clear();
 });
 
 pruefe('Relationenmodell: fehlende Kardinalitäten ergeben keine falsche 1:1-Lösung', () => {

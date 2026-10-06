@@ -3094,10 +3094,6 @@ body.is-resizing-drawer {
 }
 
 /* ===== SQL erzeugen ===== */
-.sql-modal-card {
-  max-width: min(980px, 96vw);
-}
-
 .sql-erweitert {
   display: flex;
   align-items: center;
@@ -3183,7 +3179,7 @@ body.is-resizing-drawer {
 
 /* Schalter während einer Quest gesperrt (die Reihe legt den Modus fest) */
 .header-switch:has(input:disabled) {
-  opacity: 0.5;
+  opacity: 0.75;
 }
 
 .header-switch:has(input:disabled),
@@ -3195,4 +3191,313 @@ body.is-resizing-drawer {
   margin-bottom: 8px;
   font-size: 0.85rem;
   color: #b45309;
+}
+
+/* ===== Quest-Menü: Trennlinien und Fortschrittsbalken ===== */
+.quest-menu-group .tab-dropdown-item {
+  border-radius: 0;
+  border-width: 0 0 1px;
+  border-bottom-color: rgba(71, 85, 105, 0.55);
+}
+
+.quest-menu-group .tab-dropdown-item:last-child {
+  border-bottom-color: transparent;
+}
+
+.quest-menu-group .tab-dropdown-item:hover {
+  border-radius: 6px;
+}
+
+.quest-menu-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.quest-menu-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(71, 85, 105, 0.6);
+  overflow: hidden;
+}
+
+.quest-menu-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #60a5fa);
+  transition: width 0.3s ease;
+}
+
+.quest-menu-progress.fertig .quest-menu-progress-fill {
+  background: linear-gradient(90deg, #22c55e, #4ade80);
+}
+
+.quest-menu-progress-text {
+  min-width: 52px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.quest-menu-progress.fertig .quest-menu-progress-text {
+  color: #4ade80;
+}
+
+.quest-menu-legende {
+  grid-column: 1 / -1;
+  padding: 8px 11px 4px;
+  border-top: 1px solid rgba(71, 85, 105, 0.55);
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+/* ===== Header: Kardinalitäten getrennt vom Layout-Paar ===== */
+.header-divider {
+  width: 1px;
+  height: 22px;
+  background: #334155;
+}
+
+/* ===== Werkzeug „Attribut“ ===== */
+.tool-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.tool-sublabel {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #bfdbfe;
+  white-space: normal;
+}
+
+/* ===== Quest-Titel: „ohne Kardinalitäten“ ===== */
+.quest-title-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 191, 36, 0.6);
+  background: rgba(251, 191, 36, 0.15);
+  color: #fcd34d;
+  font-size: 0.72rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* ===== Textmarker im Szenario ===== */
+.tm-wort {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.15s;
+}
+
+.tm-wort:hover {
+  background: rgba(148, 163, 184, 0.25);
+}
+
+.tm-entitaet {
+  background: rgba(96, 165, 250, 0.14);
+  box-shadow: 0 -2px 0 #60a5fa inset;
+}
+
+.tm-attribut {
+  background: rgba(251, 191, 36, 0.12);
+  box-shadow: 0 -2px 0 #fbbf24 inset;
+}
+
+.tm-beziehung {
+  background: rgba(74, 222, 128, 0.14);
+  box-shadow: 0 -2px 0 #4ade80 inset;
+}
+
+.tm-wort.tm-entitaet:hover,
+.tm-wort.tm-attribut:hover,
+.tm-wort.tm-beziehung:hover {
+  filter: brightness(1.15);
+}
+
+/* Kein Teil des ER-Modells: kurz grau durchgestrichen */
+.tm-nein {
+  animation: tm-nein 0.7s ease;
+}
+
+@keyframes tm-nein {
+  0%,
+  60% {
+    color: #94a3b8;
+    text-decoration: line-through;
+  }
+  100% {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+.tm-tipp {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+.tm-tipp span {
+  padding: 0 5px;
+  border-radius: 3px;
+  color: #e2e8f0;
+}
+
+/* Klickzähler neben der Legende */
+.tm-zaehler {
+  margin-left: 6px;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.tm-zaehler.leer {
+  color: #fca5a5;
+}
+
+.tm-zaehler-aus {
+  animation: tm-zaehler-aus 0.6s ease;
+}
+
+@keyframes tm-zaehler-aus {
+  0%,
+  50% {
+    color: #f87171;
+    transform: scale(1.08);
+  }
+}
+
+/* Rückgängig/Wiederholen links oben im Header */
+#header-history {
+  display: flex;
+  gap: 4px;
+}
+
+.header-history-btn {
+  min-width: 34px;
+  padding: 4px 8px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.header-history-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Zoom: − 100% +, die Prozentzahl setzt auf 100 % zurück */
+.viewport-btn.zoom-level {
+  min-width: 64px;
+  cursor: pointer;
+}
+
+/* Symbol Relationenmodell (Tabelle) */
+.icon-rm {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.18em;
+}
+
+/* Quest-Menü: senkrechte Linie zwischen Einstieg und Fortgeschritten */
+.quest-menu-group + .quest-menu-group {
+  border-left: 1px solid rgba(71, 85, 105, 0.7);
+  padding-left: 8px;
+}
+
+@media (max-width: 860px) {
+  .quest-menu-group + .quest-menu-group {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid rgba(71, 85, 105, 0.7);
+  }
+}
+
+/* SQL-Übung: Relationenmodell vorgegeben – nicht bearbeiten, keine Musterlösung */
+#relmodel-drawer.rm-gesperrt #solution-area,
+#relmodel-drawer.rm-gesperrt #btn-add-relation,
+#relmodel-drawer.rm-gesperrt #btn-check,
+#relmodel-drawer.rm-gesperrt #btn-reset-relmodel,
+#relmodel-drawer.rm-gesperrt #btn-relmodel-import {
+  display: none;
+}
+
+/* SQL erzeugen: links die Einstellungen, rechts der Code */
+.sql-modal-card {
+  display: flex;
+  flex-direction: column;
+  max-width: min(1280px, 96vw);
+  height: 85vh;
+  overflow: hidden;
+}
+
+.sql-modal-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.sql-einstellungen,
+.sql-code {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sql-code {
+  display: flex;
+  flex-direction: column;
+}
+
+.sql-code h4 small {
+  font-weight: 400;
+  color: #64748b;
+}
+
+.sql-code .sql-ausgabe {
+  flex: 1;
+  min-height: 120px;
+  overflow: auto;
+}
+
+/* Geänderte Zeilen leuchten kurz auf */
+.sql-neu {
+  animation: sql-neu 1.6s ease;
+}
+
+@keyframes sql-neu {
+  0%,
+  40% {
+    background: rgba(250, 204, 21, 0.35);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (max-width: 900px) {
+  .sql-modal-card {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .sql-modal-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.viewport-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
