@@ -341,10 +341,11 @@ function loadPersistedState() {
   }
 }
 
-// „ (n)“ hinter einem Namen im Eigenschaften-Panel; „ (?)“ = noch offen, ohne Kardinalitäten nichts
+// „ (n)“ hinter einem Namen im Eigenschaften-Panel; noch offen: „ (?)“ während einer Quest, sonst nichts
 function cardinalitySuffix(raw) {
   if (state.kardinalitaeten === false) return '';
-  return ` (${String(raw || '?').toLowerCase()})`;
+  if (!raw) return window.Quest?.state?.questsPanelVisible ? ' (?)' : '';
+  return ` (${String(raw).toLowerCase()})`;
 }
 
 // Schalter „Kardinalitäten“ im Header: zeigt den Modus; während einer Quest legt die Reihe ihn fest

@@ -1759,7 +1759,14 @@
 
     edgesLayer.appendChild(line);
 
-    if (isRelationshipEdge(edge) && withCardinalities()) {
+    // Zahl an der Linie. Fehlt sie, steht während einer Quest „?“ (Aufforderung), sonst nichts.
+    const cardinalityText =
+      isRelationshipEdge(edge) && withCardinalities()
+        ? (toNode.type === 'entity' ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from')) ||
+          (window.Quest?.state?.questsPanelVisible ? '?' : '')
+        : '';
+
+    if (cardinalityText) {
       const OFFSET = 30;
       const LABEL_OFFSET = 16;
       const ENTITY_CLEARANCE = 24;
@@ -1772,8 +1779,7 @@
       const uy = dy / len;
       const entityIsTarget = toNode.type === 'entity';
       const entityNode = entityIsTarget ? toNode : fromNode;
-      // Fehlt die Zahl im Modus „mit Kardinalitäten“, steht „?“ an der Linie
-      const label = (entityIsTarget ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from')) || '?';
+      const label = cardinalityText;
       const anchorX = entityIsTarget ? tp.x : fp.x;
       const anchorY = entityIsTarget ? tp.y : fp.y;
       const direction = entityIsTarget ? -1 : 1;

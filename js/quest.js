@@ -2209,6 +2209,8 @@
       if (window.AppState?.state) window.AppState.state.diagramLocked = false;
       this.persist();
       this.renderPanel();
+      // „?“ an offenen Kardinalitäten gibt es nur während einer Quest
+      window.Diagram?.renderAll?.();
       const modal = document.querySelector('.quest-congratulations-modal');
       if (modal) {
         modal.classList.remove('visible');
