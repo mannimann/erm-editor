@@ -44,7 +44,7 @@ an den Anfang der SQL-Übung wandern.
 
 ### Tests
 
-`test/pruefen.js` referenziert `rm-auffrischung`; Quest-Nummern dort anpassen.
+`test/pruefen.js` ruft `bestehen('rm-auffrischung', 1, 99)` auf und sucht SQL-Übungs-Quests nach Titel — nach dem Umbau laufen lassen und Erwartungen prüfen.
 
 ## Lehrbuch
 

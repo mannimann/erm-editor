@@ -252,6 +252,19 @@
     nodesLayer.setAttribute('transform', transform);
   }
 
+  // Ändert sich die Canvas-Größe (Relationenmodell, Seitenleiste, Fenster), bleibt die Mitte der Ansicht gleich
+  let canvasSize = null;
+  new ResizeObserver(([entry]) => {
+    const { width, height } = entry.contentRect;
+    if (!width || !height) return; // ausgeblendet: alte Größe merken
+    if (canvasSize) {
+      viewState.x += (width - canvasSize.width) / 2;
+      viewState.y += (height - canvasSize.height) / 2;
+      applyViewTransform();
+    }
+    canvasSize = { width, height };
+  }).observe(svg);
+
   function updateZoomIndicator() {
     if (!zoomLevel) return;
     const zoomPercent = Math.round(viewState.scale * 100);
