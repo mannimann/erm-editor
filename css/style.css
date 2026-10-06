@@ -3486,14 +3486,26 @@ body.sql-zieht {
   }
 }
 
-@media (max-width: 900px) {
+/* Tablet: Einstellungen und Code untereinander, nur der Dialog scrollt */
+@media (max-width: 1100px) {
   .sql-modal-card {
     height: auto;
     overflow-y: auto;
   }
 
   .sql-modal-body {
+    flex: none;
     grid-template-columns: 1fr !important;
+  }
+
+  .sql-einstellungen,
+  .sql-code {
+    overflow-y: visible;
+  }
+
+  .sql-code .sql-ausgabe {
+    flex: none;
+    overflow-y: visible;
   }
 
   .sql-trenner {
