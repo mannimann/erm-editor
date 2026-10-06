@@ -670,6 +670,21 @@ pruefe('Eigene Szenarien: Daten von außen werden geprüft', () => {
   assert(/Kardinalitäten/.test(Szenario.pruefeSzenario(ohneZahlen).fehler), 'Überführen braucht Kardinalitäten');
 });
 
+pruefe('ERM-Quest: Beziehungen auch in anderer Verbform („teilnehmen“ für „nimmt teil an“)', () => {
+  const uni = ermSzenarien.get('Universität');
+  const mit = (aenderung) => {
+    const state = ermLaden('experten-3-universitaet.json');
+    for (const [alt, neu] of Object.entries(aenderung)) state.nodes.find((n) => n.name === alt).name = neu;
+    context.AppState = { state };
+    return uni.validator();
+  };
+  const r = mit({ 'nimmt teil an': 'teilnehmen', 'gehört zu': 'gehören', hält: 'halten' });
+  assert(r.passed, r.error);
+  // dieselbe Form zwischen falschen Entitätsklassen zählt nicht: „besucht“ heißt jetzt „teilnehmen“
+  assert(!mit({ 'nimmt teil an': 'X', besucht: 'teilnehmen' }).passed, 'falsche Entitätsklassen');
+  assert(!mit({ Student: 'Studenten' }).passed, 'Mehrzahl bei Entitätsklassen bleibt falsch');
+});
+
 pruefe('Eigene Szenarien: zwei Beziehungen „hat“ zwischen verschiedenen Entitätsklassen', () => {
   const k = (id, fromId, toId, chenTo) => ({ id, fromId, toId, edgeType: 'relationship', chenFrom: '1', chenTo });
   const a = (id, fromId, toId) => ({ id, fromId, toId, edgeType: 'attribute' });
@@ -692,6 +707,14 @@ pruefe('Eigene Szenarien: zwei Beziehungen „hat“ zwischen verschiedenen Enti
       k('k4', 'b2', 'e3', 'm'),
     ],
   };
+  // Überführen: zwei n:m-Beziehungen „hat“ wären zwei Tabellen „hat“ – das meldet der Bericht
+  const nm = JSON.parse(JSON.stringify(erm));
+  nm.edges.forEach((e) => e.edgeType === 'relationship' && (e.chenTo = 'n'));
+  const bericht = Szenario.bericht({ titel: 'Hat', text: 'x', aufgabe: 'rm', kardinalitaeten: true, erm: nm });
+  assert(
+    bericht.some((z) => z.art === 'fehler' && /n:m-Beziehungen verschiedene Namen/.test(z.text)),
+    'n:m doppelt',
+  );
   // Die zweite „hat“ steht im Modell zuerst: die Prüfung muss die passende nehmen
   erm.nodes.reverse();
   const { sz } = Szenario.pruefeSzenario({

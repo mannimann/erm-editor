@@ -1997,6 +1997,7 @@ window.App = {
     if (!loadPersistedState()) {
       applyErmPayload({ nodes: [], edges: [], nextId: 1, diagramTitle: '', snapToGrid: state.snapToGrid }, false);
     }
+    window.RelModel?.loesungAusblenden?.();
     window.RelModel?.setPersistKey?.(RELMODEL_PERSIST_KEY);
     if (!window.RelModel?.loadFromStorage?.()) window.RelModel?.reset?.();
   },
@@ -2004,6 +2005,8 @@ window.App = {
   async onQuestChanged(quest, questState) {
     const reihe = getQuestSeries(questState?.questMode);
     if (!reihe) return;
+    // Neue Quest: Musterlösung erst wieder auf Wunsch
+    window.RelModel?.loesungAusblenden?.();
     const questNumber = Number(quest?.number || questState?.currentQuestNumber || 1);
     const storageKey = getQuestWorkStorageKey(reihe.id, questNumber);
 

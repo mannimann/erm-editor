@@ -283,6 +283,12 @@
       ...m.entities.flatMap((n) => doppelt(m.attributes[n])),
     ];
     if (doppelte.length) fehler(`Doppelte Namen: ${liste([...new Set(doppelte)])}.`);
+    // Überführen: Zwei n:m-Beziehungen gleichen Namens ergäben zwei Beziehungstabellen gleichen Namens;
+    // der Editor müsste sie umbenennen („Schule-hat-Klasse“), und das errät niemand
+    const nm = m.relationships.filter((r) => r.cardinality && !r.cardinality.split(':').includes('1'));
+    const nmDoppelt = doppelt(nm.map((r) => r.name));
+    if (e.aufgabe === 'rm' && nmDoppelt.length)
+      fehler(`Zum Überführen brauchen n:m-Beziehungen verschiedene Namen: ${liste([...new Set(nmDoppelt)])}.`);
 
     const fehlt = window.Quest.nichtImText(m, e.text);
     if (fehlt.length && String(e.text).trim()) warnung(`Im Text nicht gefunden: ${liste(fehlt)}.`);

@@ -56,7 +56,9 @@ angefangen hat, beginnt die Reihe neu — am besten in der Klasse ankündigen.
 ### Weitere Änderungen, die die Kapitel betreffen
 
 - **Namen:** Groß- und Kleinschreibung, Leerzeichen, `-`, `_` und ä/ae, ö/oe, ü/ue, ß/ss spielen beim
-  Vergleich keine Rolle („Lehrerkürzel“ = „Lehrer-Kürzel“, „AnzahlNächte“ = „AnzahlNaechte“). Hinweise wie
+  Vergleich keine Rolle („Lehrerkürzel“ = „Lehrer-Kürzel“, „AnzahlNächte“ = „AnzahlNaechte“). Beziehungen
+  zählen auch in anderer Verbform, wenn sie die richtigen Entitätsklassen verbinden („teilnehmen“ für
+  „nimmt teil an“, „gehören“ für „gehört zu“). Mehrzahl bei Entitätsklassen gilt weiter als falsch. Hinweise wie
   „Übernimm alle Namen genau — nur dann erkennt der Editor sie“ können weicher werden.
 - **Fremdschlüssel-Namen im Relationenmodell:** Der Editor erkennt einen Fremdschlüssel, wenn er heißt wie
   der Primärschlüssel, auf den er zeigt (`Gastnummer`), mit Zusatz (`SchülerNr-Freund`, `Flughafencode-Start`)
@@ -91,7 +93,8 @@ angefangen hat, beginnt die Reihe neu — am besten in der Klasse ankündigen.
   Lehrbuch („Lies von links nach rechts“) ist das kein Widerspruch.
 - **Textmarker in den ERM-Szenarien:** Wörter im Text anklicken; gehört ein Wort zum ER-Modell, wird es farbig
   (blau Entitätsklasse, gelb Attribut, grün Beziehung), sonst kurz durchgestrichen. Mehrzahl und Umlaut werden
-  erkannt („Ärzte“ → Arzt). Die Klicks sind begrenzt, damit niemand einfach jedes Wort durchklickt: so viele,
+  erkannt („Ärzte“ → Arzt), bei Beziehungen auch Verbformen („gehören“ → gehört zu, „teilnehmen“ → nimmt
+  teil an, „durchführen“ → führt durch). Die Klicks sind begrenzt, damit niemand einfach jedes Wort durchklickt: so viele,
   wie das Modell Elemente hat, plus 5 für Fehlgriffe, mindestens 20 (Hotel 22, Universität 32). Neben der
   Legende steht „Klicks: 7 von 22“. Markierungen bleiben stehen (kein Wegklicken); Wortgruppen wie „gilt
   für“ werden samt Leerzeichen markiert. Im Unterricht als Lesestrategie

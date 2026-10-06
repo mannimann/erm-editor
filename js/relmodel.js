@@ -1726,17 +1726,7 @@
       confirmBtn.addEventListener('click', onConfirm);
     });
 
-    document.getElementById('btn-hide-solution').addEventListener('click', () => {
-      const solDisplay = document.getElementById('solution-display');
-      const showBtn = document.getElementById('btn-show-solution');
-      const hideBtn = document.getElementById('btn-hide-solution');
-      const previewBtn = document.getElementById('btn-preview-solution');
-      solDisplay.style.display = 'none';
-      if (showBtn) showBtn.style.display = '';
-      if (hideBtn) hideBtn.style.display = 'none';
-      if (previewBtn) previewBtn.style.display = 'none';
-      document.getElementById('btn-sql-solution').style.display = 'none';
-    });
+    document.getElementById('btn-hide-solution').addEventListener('click', loesungAusblenden);
 
     document.getElementById('btn-preview-student').addEventListener('click', () => {
       openTablePreviewModal('student');
@@ -1773,6 +1763,15 @@
       renderStudentForm();
       renderSolution();
     });
+  }
+
+  // Musterlösung zuklappen (Knopf „Lösung ausblenden“, Wechsel der Quest)
+  function loesungAusblenden() {
+    document.getElementById('solution-display').style.display = 'none';
+    document.getElementById('btn-show-solution').style.display = '';
+    ['btn-hide-solution', 'btn-preview-solution', 'btn-sql-solution'].forEach(
+      (id) => (document.getElementById(id).style.display = 'none'),
+    );
   }
 
   // ---- Import / Export ----
@@ -1915,6 +1914,7 @@
       })),
     syncFromDiagram,
     requestSyncFromDiagramDebounced,
+    loesungAusblenden,
     reset,
     generateSolution,
     hadPersistedData: () => _hadPersistedData,

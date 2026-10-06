@@ -49,13 +49,14 @@
     );
   }
 
-  // spec ({ from, to }): Heißen zwei Beziehungen gleich („hat“), zählt die zwischen den erwarteten Entitätsklassen
+  // spec ({ from, to }): Heißen zwei Beziehungen gleich („hat“), zählt die zwischen den erwarteten Entitätsklassen.
+  // Mit spec gilt auch eine andere Form desselben Verbs („teilnehmen“ für „nimmt teil an“, „gehören“ für
+  // „gehört zu“) – aber nur zwischen den richtigen Entitätsklassen.
   function getRelationshipByName(name, spec = null) {
     const normalized = normalizeName(name);
-    const kandidaten = (S().nodes || []).filter(
-      (n) => n.type === 'relationship' && normalizeName(n.name) === normalized,
-    );
-    if (kandidaten.length < 2 || !spec) return kandidaten[0] || null;
+    const rels = (S().nodes || []).filter((n) => n.type === 'relationship');
+    const kandidaten = rels.filter((n) => normalizeName(n.name) === normalized);
+    if (!spec) return kandidaten[0] || null;
     const verbunden = (rel, entityName) =>
       S().edges.some(
         (e) =>
@@ -63,7 +64,10 @@
           [e.fromId, e.toId].includes(rel.id) &&
           normalizeName(getNodeName(e.fromId === rel.id ? e.toId : e.fromId)) === normalizeName(entityName),
       );
-    return kandidaten.find((r) => verbunden(r, spec.from) && verbunden(r, spec.to)) || kandidaten[0];
+    const passend = (r) => verbunden(r, spec.from) && verbunden(r, spec.to);
+    if (kandidaten.length) return kandidaten.find(passend) || kandidaten[0];
+    const formen = new Set(verbformen(name));
+    return rels.find((r) => formen.has(normalizeName(r.name)) && passend(r)) || null;
   }
 
   function getNodeName(id) {
@@ -2042,12 +2046,11 @@
     const woerter = (String(text || '').match(/[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*/gu) || []).map(normalizeName);
     const kommtVor = (name) => {
       const teile = name.split(/\s+/).map(normalizeName);
-      if (teile.length === 1) {
-        const formen = wortformen(name);
-        return woerter.some((w) => formen.has(w));
-      }
-      return woerter.some((_, i) => teile.every((t, k) => woerter[i + k] === t));
+      const formen = new Set(teile.length === 1 ? wortformen(name) : []);
+      if (istBeziehung.has(name)) verbformen(name).forEach((f) => formen.add(f));
+      return woerter.some((w, i) => formen.has(w) || teile.every((t, k) => woerter[i + k] === t));
     };
+    const istBeziehung = new Set(spec.relationships.map((r) => r.name));
     const namen = [
       ...spec.entities,
       ...Object.values(spec.attributes).flat(),
@@ -2488,6 +2491,38 @@
     );
   }
 
+  // Beziehungen sind Verben: Grundform und – bei trennbaren Verben – das zusammengesetzte Wort zählen mit:
+  // „bestreitet“ → bestreiten, „gehört zu“ → gehört, gehören, „nimmt teil an“ → teilnehmen, teilnimmt,
+  // „führt durch“ → durchführen. Bei Hilfsverben („ist Exemplar von“, „hat Hilfskraft“) nur die Wortgruppe,
+  // sonst würde jedes „ist“ markiert. ponytail: Liste unregelmäßiger Verben statt Grammatik.
+  const UNREGELMAESSIG = {
+    nimmt: 'nehmen',
+    gibt: 'geben',
+    hält: 'halten',
+    fährt: 'fahren',
+    trägt: 'tragen',
+    läuft: 'laufen',
+    sieht: 'sehen',
+    liest: 'lesen',
+    spricht: 'sprechen',
+    hilft: 'helfen',
+    wirft: 'werfen',
+    gilt: 'gelten',
+    lässt: 'lassen',
+    tritt: 'treten',
+  };
+  const HILFSVERBEN = new Set(['ist', 'sind', 'hat', 'haben', 'wird', 'werden', 'kann', 'muss']);
+  const infinitiv = (verb) => UNREGELMAESSIG[verb.toLowerCase()] || verb.replace(/e?t$/, 'en');
+
+  // Einzelwörter, die für eine Beziehung stehen (ohne den Namen selbst)
+  function verbformen(name) {
+    const w = name.split(/\s+/);
+    if (HILFSVERBEN.has(w[0].toLowerCase())) return [];
+    const formen = [w[0], infinitiv(w[0])];
+    if (w.length > 1) formen.push(w[1] + infinitiv(w[0]), w[1] + w[0]);
+    return formen.map(normalizeName);
+  }
+
   // `${Reihe}:${Quest}` → { markiert: Set, klicks } – bleibt beim Neuzeichnen des Panels erhalten
   const textmarkerStand = new Map();
 
@@ -2508,10 +2543,9 @@
       ]),
     ].map((e) => {
       const norm = e.name.split(/\s+/).map(normalizeName);
-      // Einzelwörter auch gebeugt, Wortgruppen (Beziehungen wie „ist Exemplar von“) nur genau.
-      // Beziehung als Verb: auch der Infinitiv („bestreitet“ → „bestreiten“, „bucht“ → „buchen“).
-      const formen = norm.length === 1 ? wortformen(e.name) : null;
-      if (formen && e.art === 'beziehung') formen.add(normalizeName(e.name.replace(/e?t$/, 'en')));
+      // Einzelwörter auch gebeugt, Wortgruppen genau oder als Verbform (siehe verbformen)
+      const formen = new Set(norm.length === 1 ? wortformen(e.name) : []);
+      if (e.art === 'beziehung') verbformen(e.name).forEach((f) => formen.add(f));
       return { ...e, key: `${e.art}:${normalizeName(e.name)}`, norm, formen };
     });
 
@@ -2547,11 +2581,12 @@
       knoten.parentNode.replaceChild(frag, knoten);
     });
 
-    // Passt Element e ab Wort start?
-    const passt = (e, start) =>
-      start >= 0 &&
-      start + e.norm.length <= woerter.length &&
-      (e.formen ? e.formen.has(woerter[start].norm) : e.norm.every((n, k) => woerter[start + k].norm === n));
+    // Wie viele Wörter ab start passen zu Element e? Ganze Wortgruppe, sonst ein Wort (Form), sonst 0
+    function treffer(e, start) {
+      if (start < 0 || start >= woerter.length) return 0;
+      if (e.norm.length > 1 && e.norm.every((n, k) => woerter[start + k]?.norm === n)) return e.norm.length;
+      return e.formen.has(woerter[start].norm) ? 1 : 0;
+    }
 
     // Bestes Element für ein Wort: längste Wortgruppe zuerst („ist Exemplar von“ vor „Exemplar“),
     // dann der genaue Name („Spieler“ vor „Spiel“ + er)
@@ -2560,8 +2595,9 @@
       let rang = -1;
       elemente.forEach((e) => {
         for (let k = 0; k < e.norm.length; k++) {
-          if (!passt(e, i - k)) continue;
-          const r = e.norm.length * 2 + (woerter[i - k].norm === e.norm[0] ? 1 : 0);
+          const n = treffer(e, i - k);
+          if (n <= k) continue; // reicht nicht bis zum Wort i
+          const r = n * 2 + (n === 1 && woerter[i - k].norm === e.norm[0] ? 1 : 0);
           if (r > rang) [bestes, rang] = [e, r];
         }
       });
@@ -2593,10 +2629,11 @@
         .filter((e) => markiert.has(e.key))
         .forEach((e) => {
           for (let i = 0; i < woerter.length; i++) {
-            if (passt(e, i) && elementBei(i) === e)
-              for (let k = 0; k < e.norm.length; k++) {
+            const n = treffer(e, i);
+            if (n && elementBei(i) === e)
+              for (let k = 0; k < n; k++) {
                 woerter[i + k].span.classList.add('tm-' + e.art);
-                if (k < e.norm.length - 1) woerter[i + k].luecke?.classList.add('tm-' + e.art);
+                if (k < n - 1) woerter[i + k].luecke?.classList.add('tm-' + e.art);
               }
           }
         });
