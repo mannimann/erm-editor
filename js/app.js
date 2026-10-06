@@ -592,7 +592,6 @@ function setToolbarCollapsed(zu) {
   document.body.classList.toggle('toolbar-collapsed', zu);
   const btn = document.getElementById('btn-toolbar-toggle');
   const text = zu ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen';
-  btn.textContent = zu ? '»' : '«';
   btn.dataset.tooltip = text; // title wurde beim Laden zu data-tooltip
   btn.setAttribute('aria-label', text);
   btn.setAttribute('aria-expanded', String(!zu));
@@ -833,7 +832,6 @@ function initTabs() {
   questFoldBtn?.addEventListener('click', () => {
     const zu = questPanel.classList.toggle('eingeklappt');
     const text = zu ? 'Quest-Panel ausklappen' : 'Quest-Panel einklappen';
-    questFoldBtn.firstElementChild.textContent = zu ? '«' : '»'; // um 90° gedreht: hoch / runter
     questFoldBtn.dataset.tooltip = text;
     questFoldBtn.setAttribute('aria-label', text);
     questFoldBtn.setAttribute('aria-expanded', String(!zu));
