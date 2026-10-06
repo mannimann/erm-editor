@@ -252,8 +252,27 @@ pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
       assert(result.passed, `${reihe} ${q.number} ${q.title}: ${result.error || result.message}`);
     }
   };
+  // ERM-Grundlagen prüfen nur Verbindungen: mit und ohne Kardinalitäten
+  context.AppState = { state: ermLaden('schule-ohne-kardinalitaeten.json') };
+  bestehen('erm-grundlagen', 1, 99);
   context.AppState = { state: ermLaden('schule-grundlagen.json') };
   bestehen('erm-grundlagen', 1, 99);
+
+  // ERM-Kardinalitäten: Vorlage hat „?“, fertig mit Zahlen und „ist Klassenleiter von“ (Lehrer 1 : n Klasse)
+  context.AppState = { state: ermLaden('schule-ohne-kardinalitaeten.json') };
+  assert(
+    !Quest.getQuestsForMode('erm-kardinalitaeten')[0].validator().passed,
+    'Vorlage ohne Zahlen darf nicht bestehen',
+  );
+  const fertig = ermLaden('schule-grundlagen.json');
+  const id = (name) => fertig.nodes.find((n) => n.name === name).id;
+  fertig.nodes.push({ id: 's900', type: 'relationship', x: 0, y: 0, name: 'ist Klassenleiter von' });
+  fertig.edges.push(
+    { id: 's901', fromId: 's900', toId: id('Lehrer'), edgeType: 'relationship', chenFrom: '1', chenTo: '1' },
+    { id: 's902', fromId: 's900', toId: id('Klasse'), edgeType: 'relationship', chenFrom: '1', chenTo: 'n' },
+  );
+  context.AppState = { state: fertig };
+  bestehen('erm-kardinalitaeten', 1, 99);
 
   // ERM-Auffrischung: bis Quest 5 mit „Bezeichnung“, ab Quest 6 mit dem Verbundschlüssel
   const vorher = ermLaden('schule-auffrischung.json');
@@ -275,6 +294,18 @@ pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
   attr(rels, 'Klasse', 'SchülerNr').unique = true;
   RelModel.setStudentRelations(rels);
   bestehen('rm-auffrischung', 1, 99);
+});
+
+pruefe('Relationenmodell: fehlende Kardinalitäten ergeben keine falsche 1:1-Lösung', () => {
+  const ohne = loesung('schule-ohne-kardinalitaeten.json');
+  assert(
+    ohne.every((r) => r.attrs.every((a) => !a.isFk)),
+    'ohne Kardinalitäten keine Fremdschlüssel in der Lösung',
+  );
+  context.AppState = { state: ermLaden('schule-ohne-kardinalitaeten.json') };
+  RelModel.syncFromDiagram();
+  RelModel.setStudentRelations(ohne);
+  assert(!RelModel.checkAndGetResult().passed, 'Prüfung meldet fehlende Kardinalitäten');
 });
 
 // ---- 4. SQL ----

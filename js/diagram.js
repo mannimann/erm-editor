@@ -725,9 +725,15 @@
     return { x: c.x, y: c.y };
   }
 
+  // Kardinalität an einer Kante; leer = noch nicht festgelegt
   function edgeLabel(edge, side) {
-    const raw = side === 'from' ? edge.chenFrom || '1' : edge.chenTo || 'n';
-    return String(raw).toLowerCase();
+    const raw = side === 'from' ? edge.chenFrom : edge.chenTo;
+    return String(raw || '').toLowerCase();
+  }
+
+  // Modus „ohne Kardinalitäten“ (Schalter im Header, Quest-Reihe ERM-Grundlagen): keine Zahlen
+  function withCardinalities() {
+    return S().kardinalitaeten !== false;
   }
 
   function makeText(x, y, text) {
@@ -1462,14 +1468,17 @@
     return clampPosition(type, preferredX, preferredY);
   }
 
+  // '' = noch offen: neue Beziehung ohne Kardinalitäten oder eine Seite ohne Zahl
   function getCardinalityTypeFromEdges(existingEdges) {
-    const left = existingEdges[0] ? edgeLabel(existingEdges[0], 'to') : '1';
-    const right = existingEdges[1] ? edgeLabel(existingEdges[1], 'to') : '1';
-    return `${left}:${right}`;
+    if (!existingEdges.length) return withCardinalities() ? '1:1' : '';
+    const left = existingEdges[0] ? edgeLabel(existingEdges[0], 'to') : '';
+    const right = existingEdges[1] ? edgeLabel(existingEdges[1], 'to') : '';
+    return left && right ? `${left}:${right}` : '';
   }
 
   function getCardinalityParts(type) {
-    switch ((type || '1:1').toLowerCase()) {
+    if (!type) return ['', ''];
+    switch (type.toLowerCase()) {
       case '1:n':
         return ['1', 'n'];
       case 'n:1':
@@ -1750,7 +1759,7 @@
 
     edgesLayer.appendChild(line);
 
-    if (isRelationshipEdge(edge)) {
+    if (isRelationshipEdge(edge) && withCardinalities()) {
       const OFFSET = 30;
       const LABEL_OFFSET = 16;
       const ENTITY_CLEARANCE = 24;
@@ -1763,7 +1772,8 @@
       const uy = dy / len;
       const entityIsTarget = toNode.type === 'entity';
       const entityNode = entityIsTarget ? toNode : fromNode;
-      const label = entityIsTarget ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from');
+      // Fehlt die Zahl im Modus „mit Kardinalitäten“, steht „?“ an der Linie
+      const label = (entityIsTarget ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from')) || '?';
       const anchorX = entityIsTarget ? tp.x : fp.x;
       const anchorY = entityIsTarget ? tp.y : fp.y;
       const direction = entityIsTarget ? -1 : 1;
@@ -2166,7 +2176,7 @@
       toId: entityId,
       edgeType: 'relationship',
       chenFrom: '1',
-      chenTo: (cardinality || '1').toLowerCase(),
+      chenTo: String(cardinality || '').toLowerCase(),
     };
     S().edges.push(edge);
     return edge.id;
@@ -2199,6 +2209,7 @@
       existingEdges[1] ? getRelationshipEntityId(existingEdges[1], relationshipId) : '',
     );
     modalCardinality.value = getCardinalityTypeFromEdges(existingEdges);
+    modalCardinality.closest('.modal-row').style.display = withCardinalities() ? '' : 'none';
 
     modalBackdrop.style.display = '';
 

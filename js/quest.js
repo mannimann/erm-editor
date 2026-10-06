@@ -54,8 +54,9 @@
     return S().nodes?.find((n) => n.type === 'relationship' && normalizeName(n.name) === normalized) || null;
   }
 
+  // '' = Kardinalität noch nicht festgelegt
   function normalizeCardinality(value) {
-    const v = String(value || '1')
+    const v = String(value || '')
       .trim()
       .toLowerCase();
     return v === 'm' ? 'n' : v;
@@ -72,6 +73,7 @@
     );
   }
 
+  // null: nicht verbunden; '' : verbunden, Kardinalität noch offen
   function getCardinalityForEntityOnRelationship(relationshipId, entityId) {
     const edge = getRelationshipEdgeToEntity(relationshipId, entityId);
     if (!edge) return null;
@@ -165,7 +167,11 @@
         const sortedCards = [...cards].sort();
         const sortedExpected = [expectedFrom, expectedTo].sort();
 
-        if (sortedCards[0] !== sortedExpected[0] || sortedCards[1] !== sortedExpected[1]) {
+        // Ohne vorgegebene Kardinalität (ERM-Grundlagen) zählt nur die Verbindung
+        if (
+          relationshipSpec.cardinality &&
+          (sortedCards[0] !== sortedExpected[0] || sortedCards[1] !== sortedExpected[1])
+        ) {
           return {
             passed: false,
             error:
@@ -186,7 +192,7 @@
 
         const fromCardinality = getCardinalityForEntityOnRelationship(relationship.id, fromEntity.id);
         const toCardinality = getCardinalityForEntityOnRelationship(relationship.id, toEntity.id);
-        if (!fromCardinality || !toCardinality) {
+        if (fromCardinality === null || toCardinality === null) {
           return {
             passed: false,
             error: `Die Beziehung „${relationshipSpec.name}“ muss „${relationshipSpec.from}“ und „${relationshipSpec.to}“ verbinden.`,
@@ -197,7 +203,7 @@
           .split(':')
           .map((value) => normalizeCardinality(value));
 
-        if (fromCardinality !== expectedFrom || toCardinality !== expectedTo) {
+        if (relationshipSpec.cardinality && (fromCardinality !== expectedFrom || toCardinality !== expectedTo)) {
           return {
             passed: false,
             error:
@@ -285,15 +291,18 @@
           });
           const sortedCards = [...cards].sort();
           const sortedExpected = [expectedFrom, expectedTo].sort();
-          ok = sortedCards[0] === sortedExpected[0] && sortedCards[1] === sortedExpected[1];
+          ok = !rel.cardinality || (sortedCards[0] === sortedExpected[0] && sortedCards[1] === sortedExpected[1]);
         }
       } else {
         const fromCard = getCardinalityForEntityOnRelationship(relNode.id, fromEntity.id);
         const toCard = getCardinalityForEntityOnRelationship(relNode.id, toEntity.id);
-        ok = fromCard === expectedFrom && toCard === expectedTo;
+        ok =
+          fromCard !== null &&
+          toCard !== null &&
+          (!rel.cardinality || (fromCard === expectedFrom && toCard === expectedTo));
       }
       if (ok) relationships.done++;
-      relationships.items.push({ label: `${rel.name} (${rel.cardinality})`, ok });
+      relationships.items.push({ label: rel.cardinality ? `${rel.name} (${rel.cardinality})` : rel.name, ok });
     }
 
     const attributes = { total: 0, done: 0, items: [] };
@@ -380,7 +389,7 @@
           });
           const sortedCards = [...cards].sort();
           const sortedExpected = [expectedFrom, expectedTo].sort();
-          if (sortedCards[0] !== sortedExpected[0] || sortedCards[1] !== sortedExpected[1]) {
+          if (rel.cardinality && (sortedCards[0] !== sortedExpected[0] || sortedCards[1] !== sortedExpected[1])) {
             hints.push(
               `Die Kardinalität bei „${rel.name}“ muss ${rel.cardinality} sein (Selbstbeziehung auf „${rel.from}“).`,
             );
@@ -389,7 +398,9 @@
       } else {
         const fromCard = getCardinalityForEntityOnRelationship(relNode.id, fromEntity.id);
         const toCard = getCardinalityForEntityOnRelationship(relNode.id, toEntity.id);
-        if (fromCard !== expectedFrom || toCard !== expectedTo) {
+        if (fromCard === null || toCard === null) {
+          hints.push(`Die Beziehung „${rel.name}“ muss „${rel.from}“ und „${rel.to}“ verbinden.`);
+        } else if (rel.cardinality && (fromCard !== expectedFrom || toCard !== expectedTo)) {
           hints.push(
             `Die Kardinalität bei „${rel.name}“ muss ${rel.cardinality} sein (zwischen „${rel.from}“ und „${rel.to}“).`,
           );
@@ -665,41 +676,17 @@
     {
       title: 'Beziehung erstellen',
       theory: `<p class="quest-begriff">Neuer Begriff: Beziehung · Symbol: Raute</p>
-        <p><strong>Beziehung (Relationship):</strong> Eine Raute, die die Verbindung zwischen zwei Entitätsklassen darstellt.</p>
-        <p class="quest-begriff">Neuer Begriff: Kardinalität · Symbol: 1, n oder m an der Linie</p>
-        <p><strong>Kardinalität:</strong> Beschreibt, wie viele Entitäten an jeder Seite beteiligt sind:</p>
-        <ul>
-          <li><strong>1:1</strong> (eins zu eins): Ein Schüler hat einen Schülerausweis, ein Schülerausweis gehört einem Schüler.</li>
-          <li><strong>1:n</strong> (eins zu vielen): Eine Klasse hat viele Schüler, ein Schüler gehört zu einer Klasse.</li>
-          <li><strong>n:m</strong> (viele zu vielen): Ein Lehrer unterrichtet viele Schüler, ein Schüler hat Unterricht bei vielen Lehrern.</li>
-        </ul>
-        <p>Gelesen wird von links nach rechts: Schüler (links) n : 1 Klasse (rechts) — viele Schüler gehen in eine Klasse.</p>`,
+        <p><strong>Beziehung (Relationship):</strong> Eine Raute, die die Verbindung zwischen zwei Entitätsklassen darstellt. Ihr Name wird von links nach rechts gelesen: Schüler (links) „geht in“ Klasse (rechts).</p>`,
       objective: `<p>Erstelle eine Beziehung zwischen <strong>„Schüler“</strong> und <strong>„Klasse“</strong>:</p>
         <ol>
+          <li>Füge über die Werkzeugleiste eine <strong>Beziehung</strong> hinzu (Rechtsklick auf die Raute → Beziehung bearbeiten)</li>
           <li>Name der Beziehung: <strong>„geht in“</strong></li>
           <li><strong>„Schüler“</strong> auf der linken Seite, <strong>„Klasse“</strong> auf der rechten</li>
-          <li>Kardinalität: <strong>n:1</strong> (viele Schüler sind in einer Klasse)</li>
         </ol>`,
       validator: function () {
-        const schueler = getEntityByName('Schüler');
-        const klasse = getEntityByName('Klasse');
-        if (!schueler || !klasse)
-          return { passed: false, error: 'Die Entitätsklassen „Schüler“ und „Klasse“ müssen existieren.' };
-
-        const rel = getRelationshipByName('geht in');
-        if (!rel) return { passed: false, error: 'Die Beziehung „geht in“ fehlt.' };
-
-        const schuelerCard = getCardinalityForEntityOnRelationship(rel.id, schueler.id);
-        const klasseCard = getCardinalityForEntityOnRelationship(rel.id, klasse.id);
-        if (!schuelerCard || !klasseCard) {
-          return { passed: false, error: 'Die Beziehung muss „Schüler“ und „Klasse“ verbinden.' };
-        }
-
-        if (schuelerCard !== 'n' || klasseCard !== '1') {
-          return { passed: false, error: 'Die Kardinalität muss bei „Schüler“ n und bei „Klasse“ 1 sein.' };
-        }
-
-        return { passed: true };
+        return validateRelationshipRequirements({
+          relationships: [{ name: 'geht in', from: 'Schüler', to: 'Klasse' }],
+        });
       },
     },
     {
@@ -732,35 +719,16 @@
     },
     {
       title: 'Zweite Beziehung',
-      theory: `<p><strong>Mehrere Beziehungen:</strong> Entitätsklassen können mit mehreren anderen Entitätsklassen in Beziehung stehen.</p>
-        <p><strong>n:m-Beziehung:</strong> Auf beiden Seiten können viele Entitäten beteiligt sein. Prüfe dazu <strong>beide Richtungen</strong>: Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>
-        <p><strong>Hinweis:</strong> Eine n:m-Beziehung wird im Relationenmodell später eine eigene Tabelle (Relation), die Beziehungstabelle.</p>`,
+      theory: `<p><strong>Mehrere Beziehungen:</strong> Eine Entitätsklasse kann mit mehreren anderen Entitätsklassen in Beziehung stehen. „Klasse“ ist jetzt mit „Schüler“ und mit „Lehrer“ verbunden.</p>`,
       objective: `<p>Erstelle eine Beziehung zwischen <strong>„Lehrer“</strong> und <strong>„Klasse“</strong>:</p>
         <ol>
           <li>Name der Beziehung: <strong>„unterrichtet“</strong></li>
           <li><strong>„Lehrer“</strong> auf der linken Seite, <strong>„Klasse“</strong> auf der rechten</li>
-          <li>Kardinalität: <strong>n:m</strong> (ein Lehrer unterrichtet viele Klassen, eine Klasse hat Unterricht bei vielen Lehrern)</li>
         </ol>`,
       validator: function () {
-        const lehrer = getEntityByName('Lehrer');
-        const klasse = getEntityByName('Klasse');
-        if (!lehrer || !klasse)
-          return { passed: false, error: 'Die Entitätsklassen „Lehrer“ und „Klasse“ müssen existieren.' };
-
-        const rel = getRelationshipByName('unterrichtet');
-        if (!rel) return { passed: false, error: 'Die Beziehung „unterrichtet“ fehlt.' };
-
-        const lehrerCard = getCardinalityForEntityOnRelationship(rel.id, lehrer.id);
-        const klasseCard = getCardinalityForEntityOnRelationship(rel.id, klasse.id);
-        if (!lehrerCard || !klasseCard) {
-          return { passed: false, error: 'Die Beziehung muss „Lehrer“ und „Klasse“ verbinden.' };
-        }
-
-        if (lehrerCard !== 'n' || klasseCard !== 'n') {
-          return { passed: false, error: 'Die Kardinalität muss n:m sein (beide Seiten viele).' };
-        }
-
-        return { passed: true };
+        return validateRelationshipRequirements({
+          relationships: [{ name: 'unterrichtet', from: 'Lehrer', to: 'Klasse' }],
+        });
       },
     },
     {
@@ -785,30 +753,12 @@
       objective: `<ol>
           <li>Erstelle eine <strong>NEUE</strong> Beziehung zwischen <strong>„Schüler“</strong> und <strong>„Klasse“</strong></li>
           <li>Name: <strong>„ist Klassensprecher“</strong></li>
-          <li>Kardinalität: <strong>1:1</strong></li>
         </ol>
         <p><strong>Hinweis:</strong> Das ist eine NEUE Beziehung, zusätzlich zur bisherigen Beziehung.</p>`,
       validator: function () {
-        const rel = getRelationshipByName('ist Klassensprecher');
-        if (!rel) return { passed: false, error: 'Die Beziehung „ist Klassensprecher“ fehlt.' };
-
-        const schueler = getEntityByName('Schüler');
-        const klasse = getEntityByName('Klasse');
-        if (!schueler || !klasse) {
-          return { passed: false, error: 'Die Entitätsklassen „Schüler“ und „Klasse“ müssen existieren.' };
-        }
-
-        const schuelerCard = getCardinalityForEntityOnRelationship(rel.id, schueler.id);
-        const klasseCard = getCardinalityForEntityOnRelationship(rel.id, klasse.id);
-        if (!schuelerCard || !klasseCard) {
-          return { passed: false, error: 'Die Beziehung muss „Schüler“ und „Klasse“ verbinden.' };
-        }
-
-        if (schuelerCard !== '1' || klasseCard !== '1') {
-          return { passed: false, error: 'Die Kardinalität muss 1:1 sein.' };
-        }
-
-        return { passed: true };
+        return validateRelationshipRequirements({
+          relationships: [{ name: 'ist Klassensprecher', from: 'Schüler', to: 'Klasse' }],
+        });
       },
     },
     {
@@ -820,7 +770,6 @@
           <li>Attribute hinzufügen</li>
           <li>Primärschlüssel setzen</li>
           <li>Beziehungen erstellen</li>
-          <li>Kardinalitäten festlegen</li>
           <li>Beziehungsattribute ergänzen</li>
           <li>Verbundschlüssel (Ausblick)</li>
         </ul>`,
@@ -830,9 +779,128 @@
           <li>Klicke auf <strong>„JSON-Export“</strong> in der Titelleiste oben rechts und speichere die Datei</li>
           <li>Klicke auf <strong>„PNG-Export“</strong> und speichere das Bild</li>
         </ol>
-        <p>Danach geht es im Menü mit der Reihe „ERM-Übung“ weiter!</p>`,
+        <p>Danach geht es im Menü mit der Reihe „ERM-Kardinalitäten“ weiter: Dort bekommen deine Beziehungen Zahlen.</p>`,
       validator: function () {
         // Abschluss-Screen ist immer erfolgreich
+        return { passed: true };
+      },
+    },
+  ]);
+
+  // ---- Quest-Datenbank: ERM-KARDINALITÄTEN (Stufe Einstieg) ----
+  // Startet mit dem Schul-ERM aus den Grundlagen; an den Linien steht noch „?“.
+  const ermKardinalitaetenQuests = nummeriert([
+    {
+      title: 'Kardinalität und Leserichtung',
+      theory: `<p class="quest-begriff">Neuer Begriff: Kardinalität · Symbol: 1, n oder m an der Linie</p>
+        <p><strong>Kardinalität:</strong> Sie gibt an, wie viele Entitäten auf jeder Seite einer Beziehung beteiligt sein können:</p>
+        <ul>
+          <li><strong>1:1</strong> (eins zu eins): Ein Schüler hat einen Schülerausweis, ein Schülerausweis gehört einem Schüler.</li>
+          <li><strong>1:n</strong> (eins zu vielen): Eine Klasse hat viele Schüler, ein Schüler gehört zu einer Klasse.</li>
+          <li><strong>n:m</strong> (viele zu vielen): Ein Lehrer unterrichtet viele Schüler, ein Schüler hat Unterricht bei vielen Lehrern.</li>
+        </ul>
+        <p>Gelesen wird von links nach rechts: Schüler (links) n : 1 Klasse (rechts) — viele Schüler gehen in eine Klasse.</p>`,
+      objective: `<p>Das Schul-ERM aus den Grundlagen ist geladen – dein eigenes, wenn du die Grundlagen abgeschlossen hast. An den Linien steht noch <strong>„?“</strong>: Die Kardinalitäten fehlen.</p>
+        <ol>
+          <li>Rechtsklick auf die Raute <strong>„geht in“</strong> → Beziehung bearbeiten</li>
+          <li>„Schüler“ links, „Klasse“ rechts, Kardinalität <strong>n:1</strong> (viele Schüler gehen in eine Klasse)</li>
+        </ol>`,
+      validator: function () {
+        return validateRelationshipRequirements({
+          relationships: [
+            {
+              name: 'geht in',
+              from: 'Schüler',
+              to: 'Klasse',
+              cardinality: 'n:1',
+              hinweis: 'Wähle bei „geht in“ die Kardinalität n:1: viele Schüler (links) gehen in eine Klasse (rechts).',
+            },
+          ],
+        });
+      },
+    },
+    {
+      title: 'Beide Richtungen prüfen',
+      theory: `<p><strong>Beide Richtungen prüfen:</strong> Frage erst von links nach rechts, dann von rechts nach links. Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>
+        <p><strong>Hinweis:</strong> Eine n:m-Beziehung wird im Relationenmodell später eine eigene Tabelle (Relation), die Beziehungstabelle.</p>`,
+      objective: `<p>Bestimme die Kardinalität von <strong>„unterrichtet“</strong> (Lehrer links, Klasse rechts). Prüfe beide Richtungen:</p>
+        <ul>
+          <li>Wie viele Klassen kann ein Lehrer unterrichten?</li>
+          <li>Von wie vielen Lehrern wird eine Klasse unterrichtet?</li>
+        </ul>`,
+      validator: function () {
+        return validateRelationshipRequirements({
+          relationships: [
+            {
+              name: 'unterrichtet',
+              from: 'Lehrer',
+              to: 'Klasse',
+              cardinality: 'n:m',
+              hinweis:
+                'Ein Lehrer unterrichtet viele Klassen, und eine Klasse hat viele Lehrer: auf beiden Seiten „viele“.',
+            },
+          ],
+        });
+      },
+    },
+    {
+      title: 'Eins zu eins',
+      theory: `<p><strong>1:1-Beziehung:</strong> Auf beiden Seiten ist höchstens eine Entität beteiligt. Auch hier hilft der Blick in beide Richtungen.</p>`,
+      objective: `<p>Jede Klasse hat genau einen Klassensprecher. Ein Schüler kann höchstens in einer Klasse Klassensprecher sein.</p>
+        <p>Bestimme die Kardinalität von <strong>„ist Klassensprecher“</strong>.</p>`,
+      validator: function () {
+        return validateRelationshipRequirements({
+          relationships: [
+            {
+              name: 'ist Klassensprecher',
+              from: 'Schüler',
+              to: 'Klasse',
+              cardinality: '1:1',
+              hinweis:
+                'Prüfe beide Richtungen: Wie viele Klassensprecher hat eine Klasse? Für wie viele Klassen kann ein Schüler Sprecher sein?',
+            },
+          ],
+        });
+      },
+    },
+    {
+      title: 'Eine Beziehung selbst bestimmen',
+      theory: `<p>Zwischen „Lehrer“ und „Klasse“ gibt es jetzt zwei Beziehungen mit verschiedener Bedeutung – und verschiedenen Kardinalitäten.</p>`,
+      objective: `<p>Jede Klasse hat genau einen Klassenleiter. An unserer Schule leiten manche Lehrer auch zwei Klassen.</p>
+        <ol>
+          <li>Erstelle die Beziehung <strong>„ist Klassenleiter von“</strong> zwischen „Lehrer“ (links) und „Klasse“ (rechts).</li>
+          <li>Die Kardinalität bestimmst du selbst.</li>
+        </ol>`,
+      validator: function () {
+        return validateRelationshipRequirements({
+          relationships: [
+            {
+              name: 'ist Klassenleiter von',
+              from: 'Lehrer',
+              to: 'Klasse',
+              cardinality: '1:n',
+              hinweis:
+                'Ein Lehrer kann Klassenleiter mehrerer Klassen sein, jede Klasse hat genau einen: Lehrer 1, Klasse n.',
+            },
+          ],
+        });
+      },
+    },
+    {
+      title: '🎉 Abschluss',
+      theory: `<p><strong>Glückwunsch!</strong> Dein Schul-ERM ist jetzt vollständig.</p>
+        <p><strong>Du hast gelernt:</strong></p>
+        <ul>
+          <li>Kardinalitäten 1:1, 1:n und n:m festlegen</li>
+          <li>von links nach rechts lesen</li>
+          <li>beide Richtungen prüfen</li>
+        </ul>`,
+      objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
+        <ol>
+          <li>Speichere dein ER-Modell mit <strong>„JSON-Export“</strong> und <strong>„PNG-Export“</strong></li>
+        </ol>
+        <p>Danach geht es im Menü mit der Reihe „ERM-Übung“ weiter: Dort bestimmst du die Kardinalitäten selbst aus dem Text.</p>`,
+      validator: function () {
         return { passed: true };
       },
     },
@@ -996,10 +1064,13 @@
     hotel: {
       title: 'Hotel-Verwaltung',
       jsonFile: 'uebung-1-hotel.json',
+      // Im ERM ohne Kardinalitäten: wird im Kapitel ER-Modell vor den Kardinalitäten gelöst
+      ohneKardinalitaeten: true,
       szenario: `<p>Ein kleines Hotel möchte seine Reservierungen sauber modellieren. Dafür werden Gäste, Zimmer und einzelne Buchungen getrennt verwaltet, damit nachvollziehbar bleibt, wer wann welches Zimmer reserviert hat.</p>
         <p>Lege die Entitätsklasse <strong>„Gast“</strong> mit den Attributen <strong>„Gastnummer“</strong>, <strong>„Vorname“</strong>, <strong>„Nachname“</strong>, <strong>„E-Mail“</strong> und <strong>„Telefon“</strong> an. Verwende <strong>„Gastnummer“</strong> als Primärschlüssel.</p>
         <p>Lege außerdem die Entitätsklasse <strong>„Zimmer“</strong> mit den Attributen <strong>„Zimmernummer“</strong>, <strong>„Kategorie“</strong> und <strong>„PreisProNacht“</strong> an. <strong>„Zimmernummer“</strong> ist der Primärschlüssel. Jede Reservierung wird als Entitätsklasse <strong>„Buchung“</strong> mit den Attributen <strong>„Buchungsnummer“</strong>, <strong>„Anreisedatum“</strong>, <strong>„Abreisedatum“</strong> und <strong>„AnzahlNächte“</strong> modelliert; Primärschlüssel ist <strong>„Buchungsnummer“</strong>.</p>
-        <p>Verbinde das Modell über die Beziehungen <strong>„bucht“</strong> zwischen <strong>„Gast“</strong> und <strong>„Buchung“</strong> mit Kardinalität <strong>1:n</strong> sowie <strong>„gilt für“</strong> zwischen <strong>„Zimmer“</strong> und <strong>„Buchung“</strong> ebenfalls mit <strong>1:n</strong>.</p>`,
+        <p>Verbinde das Modell über die Beziehungen <strong>„bucht“</strong> zwischen <strong>„Gast“</strong> und <strong>„Buchung“</strong> sowie <strong>„gilt für“</strong> zwischen <strong>„Zimmer“</strong> und <strong>„Buchung“</strong>.</p>
+        <p><em>Kardinalitäten brauchst du hier noch nicht.</em></p>`,
       masterlösung: {
         entities: ['Gast', 'Zimmer', 'Buchung'],
         attributes: {
@@ -1009,8 +1080,8 @@
         },
         primaryKeys: { Gast: 'Gastnummer', Zimmer: 'Zimmernummer', Buchung: 'Buchungsnummer' },
         relationships: [
-          { name: 'bucht', from: 'Gast', to: 'Buchung', cardinality: '1:n' },
-          { name: 'gilt für', from: 'Zimmer', to: 'Buchung', cardinality: '1:n' },
+          { name: 'bucht', from: 'Gast', to: 'Buchung' },
+          { name: 'gilt für', from: 'Zimmer', to: 'Buchung' },
         ],
       },
     },
@@ -1361,6 +1432,7 @@
       title: s.title,
       szenario: s.szenario,
       masterlösung: s.masterlösung,
+      kardinalitaeten: s.ohneKardinalitaeten ? false : undefined,
       validator: function () {
         return validateExpertQuest(this.masterlösung);
       },
@@ -1752,8 +1824,21 @@
       schritt: true,
       icon: '📚',
       titel: 'ERM-Grundlagen',
-      untertitel: 'Schritt für Schritt zum ersten ER-Modell',
+      untertitel: 'Erstes ER-Modell, noch ohne Kardinalitäten',
+      kardinalitaeten: false,
       quests: ermGrundlagenQuests,
+    },
+    {
+      id: 'erm-kardinalitaeten',
+      stufe: 'Einstieg',
+      art: 'erm',
+      schritt: true,
+      icon: '🔢',
+      titel: 'ERM-Kardinalitäten',
+      untertitel: 'Den Beziehungen Zahlen geben',
+      // Eigenes Schul-ERM aus den abgeschlossenen Grundlagen, sonst die Vorlage
+      startModell: { reihe: 'erm-grundlagen', datei: 'schule-ohne-kardinalitaeten.json' },
+      quests: ermKardinalitaetenQuests,
     },
     {
       id: 'erm-uebung',
@@ -1851,6 +1936,17 @@
 
     getStorageKey: function (mode = this.state.questMode) {
       return 'erm-editor-quests-' + (mode || 'none') + '-v1';
+    },
+
+    // Alle Aufgaben einer Reihe gelöst (die Abschlussquest zählt nicht)?
+    isSeriesDone: function (mode) {
+      try {
+        const done = JSON.parse(localStorage.getItem(this.getStorageKey(mode)) || '{}').completedQuests || [];
+        const total = this.getMaxQuests(mode);
+        return total > 1 && Array.from({ length: total - 1 }, (_, i) => i + 1).every((n) => done.includes(n));
+      } catch (_e) {
+        return false;
+      }
     },
 
     // Arbeitsstand: Schritt-Reihen bauen ein Modell auf (ein Speicherplatz), Szenario-Reihen speichern je Quest.

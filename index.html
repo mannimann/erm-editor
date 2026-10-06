@@ -17,6 +17,15 @@
             <span class="header-switch-track" aria-hidden="true"></span>
             <span class="header-switch-label">Am Raster ausrichten</span>
           </label>
+          <label
+            class="header-switch"
+            for="toggle-cardinalities"
+            title="Kardinalitäten (1, n, m) an Beziehungen anzeigen und bearbeiten"
+          >
+            <input id="toggle-cardinalities" type="checkbox" checked />
+            <span class="header-switch-track" aria-hidden="true"></span>
+            <span class="header-switch-label">Kardinalitäten</span>
+          </label>
           <button
             id="btn-auto-layout"
             class="header-btn header-layout-btn"
@@ -348,6 +357,7 @@
           <div class="modal-field modal-summary-field">
             <label for="modal-cardinality">Kardinalität</label>
             <select id="modal-cardinality" class="prop-select">
+              <option value="">– noch offen –</option>
               <option value="1:1">1:1</option>
               <option value="1:n">1:n</option>
               <option value="n:1">n:1</option>

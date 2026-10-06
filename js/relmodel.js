@@ -174,6 +174,7 @@
    */
   function generateSolution(state) {
     _oneToOneInfos = [];
+    _fehlendeKardinalitaeten = [];
     const { nodes, edges } = state;
 
     // Hilfsfunktionen
@@ -208,8 +209,13 @@
 
       const sides = entityEdges.map((e) => {
         const isFrom = e.fromId === relNode.id;
-        return String(isFrom ? e.chenTo || '1' : e.chenFrom || '1').toLowerCase();
+        return String((isFrom ? e.chenTo : e.chenFrom) || '').toLowerCase();
       });
+      // Ohne Kardinalität lässt sich die Beziehung nicht überführen
+      if (sides.some((side) => !side)) {
+        _fehlendeKardinalitaeten.push(relNode.name || 'Beziehung');
+        return null;
+      }
 
       const s0 = sides[0] === '1' ? '1' : 'N';
       const s1 = sides[1] === '1' ? '1' : 'N';
@@ -580,6 +586,7 @@
   let _studentRelations = []; // [{ id, name, attrs:[{ id, name, isPk, isFk }], isEditing }]
   let _solution = [];
   let _oneToOneInfos = []; // Metadata über 1:1-Beziehungen für bidirektionale Prüfung
+  let _fehlendeKardinalitaeten = []; // Beziehungen ohne Kardinalität (nicht überführbar)
   let _nextId = 1;
   let _syncDebounceTimer = null;
   const SYNC_DEBOUNCE_MS = 180;
@@ -1106,6 +1113,13 @@
       return;
     }
 
+    if (_fehlendeKardinalitaeten.length) {
+      const hinweis = document.createElement('p');
+      hinweis.className = 'solution-hinweis';
+      hinweis.textContent = `${kardinalitaetenHinweis()} Diese Beziehungen fehlen in der Lösung.`;
+      container.appendChild(hinweis);
+    }
+
     _solution.forEach((rel) => {
       const div = document.createElement('div');
       div.className = 'solution-relation';
@@ -1248,9 +1262,19 @@
     return { solution, bothDirectionErrors, altDirectionAttrs };
   }
 
+  function kardinalitaetenHinweis() {
+    const namen = _fehlendeKardinalitaeten.map((n) => `„${n}“`).join(', ');
+    return `Im ER-Modell fehlt die Kardinalität bei ${namen}. Ohne Kardinalitäten lässt sich eine Beziehung nicht überführen.`;
+  }
+
   function checkInput() {
     // Lösung immer aktuell aus dem ERM berechnen
     // _solution = generateSolution(window.AppState.state);
+
+    if (_fehlendeKardinalitaeten.length) {
+      showFeedback('error', kardinalitaetenHinweis());
+      return { passed: false };
+    }
 
     if (_solution.length === 0) {
       showFeedback(

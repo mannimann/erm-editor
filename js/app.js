@@ -6,6 +6,7 @@
 // ---- Globaler App-Zustand ----
 const state = {
   snapToGrid: true,
+  kardinalitaeten: true, // false: ER-Modell ohne Kardinalitäten (Schalter im Header)
   diagramTitle: 'er-diagramm',
   nodes: [], // { id, type, x, y, name, isPrimaryKey }
   edges: [], // { id, fromId, toId, edgeType, (relationship: chenFrom, chenTo) }
@@ -136,6 +137,7 @@ function getExportBaseName() {
 function buildPersistPayload() {
   return {
     snapToGrid: !!state.snapToGrid,
+    kardinalitaeten: state.kardinalitaeten !== false,
     diagramTitle: state.diagramTitle,
     nodes: state.nodes,
     edges: state.edges.map((edge) => {
@@ -146,8 +148,9 @@ function buildPersistPayload() {
         edgeType: edge.edgeType,
       };
       if (edge.edgeType === 'relationship') {
-        base.chenFrom = edge.chenFrom || '1';
-        base.chenTo = edge.chenTo || '1';
+        // leer = Kardinalität noch nicht festgelegt
+        base.chenFrom = edge.chenFrom || '';
+        base.chenTo = edge.chenTo || '';
       }
       return base;
     }),
@@ -175,6 +178,20 @@ function applySzenarioTitle(reihe, quest) {
   if (titleInput) titleInput.value = state.diagramTitle;
 }
 
+// Startmodell einer Reihe (ERM-Kardinalitäten): das eigene Modell der abgeschlossenen Vorgänger-Reihe,
+// sonst die Vorlage aus files/
+async function loadStartModel(reihe) {
+  const start = reihe?.startModell;
+  if (!start) return false;
+  if (window.Quest.isSeriesDone(start.reihe) && loadErmSnapshot(getQuestWorkStorageKey(start.reihe, 1))) return true;
+  try {
+    await loadErmFromFile(start.datei);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 function hasStorageEntry(storageKey) {
   if (!storageKey) return false;
   try {
@@ -197,6 +214,8 @@ function applyErmPayload(data, shouldPersist = true) {
       ...data.edges.map((ed) => parseInt(String(ed.id || '').slice(1), 10) || 0),
     ) + 1;
   state.snapToGrid = !!data.snapToGrid;
+  state.kardinalitaeten = data.kardinalitaeten !== false;
+  syncCardinalitySwitch();
   state.diagramTitle = typeof data.diagramTitle === 'string' ? data.diagramTitle : state.diagramTitle;
   state.edges.forEach((edge) => {
     edge.edgeType = inferEdgeType(edge);
@@ -322,6 +341,20 @@ function loadPersistedState() {
   }
 }
 
+// „ (n)“ hinter einem Namen im Eigenschaften-Panel; „ (?)“ = noch offen, ohne Kardinalitäten nichts
+function cardinalitySuffix(raw) {
+  if (state.kardinalitaeten === false) return '';
+  return ` (${String(raw || '?').toLowerCase()})`;
+}
+
+// Schalter „Kardinalitäten“ im Header: zeigt den Modus; während einer Quest legt die Reihe ihn fest
+function syncCardinalitySwitch() {
+  const toggle = document.getElementById('toggle-cardinalities');
+  if (!toggle) return;
+  toggle.checked = state.kardinalitaeten !== false;
+  toggle.disabled = !!window.Quest?.state?.questsPanelVisible;
+}
+
 function renderRelatedItems(listElement, items, listNodeType = '') {
   listElement.innerHTML = '';
   if (listNodeType) {
@@ -394,11 +427,11 @@ function renderRelatedInfo(node) {
 
     const relationshipItems = getConnectedNodes(node.id, 'relationship')
       .map(({ edge, node: relatedNode }) => {
-        const cardinality = edge.toId === node.id ? edge.chenTo || '1' : edge.chenFrom || '1';
+        const cardinality = edge.toId === node.id ? edge.chenTo : edge.chenFrom;
         return {
           nodeId: relatedNode.id,
           nodeType: relatedNode.type,
-          label: `${relatedNode.name || 'Beziehung'} (${String(cardinality).toLowerCase()})`,
+          label: `${relatedNode.name || 'Beziehung'}${cardinalitySuffix(cardinality)}`,
         };
       })
       .sort(compareRelatedItemsByLabel);
@@ -411,11 +444,11 @@ function renderRelatedInfo(node) {
     mainListType = 'entity';
     items = getConnectedNodes(node.id, 'relationship')
       .map(({ edge, node: relatedNode }) => {
-        const cardinality = edge.fromId === node.id ? edge.chenTo || '1' : edge.chenFrom || '1';
+        const cardinality = edge.fromId === node.id ? edge.chenTo : edge.chenFrom;
         return {
           nodeId: relatedNode.id,
           nodeType: relatedNode.type,
-          label: `${relatedNode.name || 'Entitätsklasse'} (${String(cardinality).toLowerCase()})`,
+          label: `${relatedNode.name || 'Entitätsklasse'}${cardinalitySuffix(cardinality)}`,
         };
       })
       .sort(compareRelatedItemsByLabel);
@@ -1250,6 +1283,17 @@ document.addEventListener('DOMContentLoaded', () => {
     clearAll();
   });
 
+  const cardinalityToggle = document.getElementById('toggle-cardinalities');
+  if (cardinalityToggle) {
+    syncCardinalitySwitch();
+    cardinalityToggle.addEventListener('change', () => {
+      state.kardinalitaeten = cardinalityToggle.checked;
+      if (window.Diagram) window.Diagram.renderAll();
+      if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
+      if (_selectedNodeId) selectNode(_selectedNodeId);
+    });
+  }
+
   const titleInput = document.getElementById('erm-title-input');
   if (titleInput) {
     let titleValueBeforeEdit = state.diagramTitle || '';
@@ -1413,8 +1457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Leere/reload Modelle je nach Quest-Reihe
         if (reihe?.art === 'erm') {
-          clearDiagramSilent();
-          if (!reihe.schritt) applySzenarioTitle(reihe, window.Quest.getCurrentQuest?.());
+          await window.App.onQuestChanged(window.Quest.getCurrentQuest?.(), window.Quest.state);
         } else if (reihe?.schritt) {
           // Relationenmodell-Schritt-Reihe: ERM bleibt, Relationen leeren
           if (window.RelModel) window.RelModel.reset();
@@ -1792,8 +1835,13 @@ window.App = {
     const storageKey = getQuestWorkStorageKey(reihe.id, questNumber);
 
     if (reihe.art === 'erm') {
-      if (!loadErmSnapshot(storageKey)) {
-        clearDiagramSilent();
+      const geladen = loadErmSnapshot(storageKey);
+      if (!geladen && !(await loadStartModel(reihe))) clearDiagramSilent();
+      // Den Kardinalitäten-Modus legt die Quest bzw. Reihe fest (ERM-Grundlagen: ohne)
+      state.kardinalitaeten = quest?.kardinalitaeten ?? reihe.kardinalitaeten ?? true;
+      syncCardinalitySwitch();
+      if (window.Diagram) window.Diagram.renderAll();
+      if (!geladen) {
         if (!reihe.schritt) applySzenarioTitle(reihe, quest);
         saveErmSnapshot(storageKey);
       }
@@ -1822,6 +1870,7 @@ window.App = {
   },
 
   updateQuestPanel(quest, questState) {
+    syncCardinalitySwitch();
     if (!quest) return;
 
     const panel = document.getElementById('quest-panel');

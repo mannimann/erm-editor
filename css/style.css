@@ -3180,3 +3180,19 @@ body.is-resizing-drawer {
   justify-content: flex-end;
   gap: 8px;
 }
+
+/* Schalter während einer Quest gesperrt (die Reihe legt den Modus fest) */
+.header-switch:has(input:disabled) {
+  opacity: 0.5;
+}
+
+.header-switch:has(input:disabled),
+.header-switch:has(input:disabled) * {
+  cursor: not-allowed !important;
+}
+
+.solution-hinweis {
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: #b45309;
+}
