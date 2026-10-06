@@ -1707,8 +1707,10 @@
   const rmAuffrischungQuests = nummeriert([
     {
       title: 'Relationen mit Schlüsseln',
+      // Die Aufgabe sagt „Öffne die Seitenleiste“ – also beim Start zu lassen.
+      seitenleisteSelbstOeffnen: true,
       theory: `<p><strong>Regel 1 – Entitätsklasse:</strong> Jede Entitätsklasse wird eine Relation mit allen ihren Attributen. Der Primärschlüssel bleibt Primärschlüssel – auch ein Verbundschlüssel aus mehreren Attributen.</p>`,
-      objective: `<p>Das Schul-ERM aus der ERM-Auffrischung ist geladen. Öffne oben rechts die <strong>rechte Seitenleiste „Relationenmodell“</strong> und lege für <strong>„Schüler“</strong>, <strong>„Klasse“</strong> und <strong>„Lehrer“</strong> je eine Relation mit allen Attributen an. Markiere die Primärschlüssel.</p>`,
+      objective: `<p>Das Schul-ERM aus der ERM-Auffrischung ist geladen. Öffne oben rechts die <strong>Seitenleiste „Relationenmodell“</strong> und lege für <strong>„Schüler“</strong>, <strong>„Klasse“</strong> und <strong>„Lehrer“</strong> je eine Relation mit allen Attributen an. Markiere die Primärschlüssel.</p>`,
       validator: function () {
         const error =
           checkStudentRelation('Schüler', ['SchülerNr', 'Vorname', 'Nachname'], ['SchülerNr']) ||

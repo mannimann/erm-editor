@@ -784,6 +784,9 @@ function initTabs() {
       questPanelResizer.style.bottom = `${h}px`;
       questPanelResizer.style.right = questPanel.style.right || '0';
     }
+    // Schmal liegt das Relationenmodell über dem Canvas: unten Platz fürs Quest-Panel lassen
+    relmodelDrawer.style.height =
+      isVisible && mobileMedia.matches ? `calc(100% - ${questPanel.getBoundingClientRect().height}px)` : '';
   };
 
   if (questPanelResizer && questPanel) {
@@ -1368,6 +1371,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initPropertiesPanel();
   document.getElementById('btn-handy-hinweis')?.addEventListener('click', () => {
     document.getElementById('handy-hinweis').hidden = true;
+  });
+
+  const toolbarToggle = document.getElementById('btn-toolbar-toggle');
+  toolbarToggle.addEventListener('click', () => {
+    const zu = document.body.classList.toggle('toolbar-collapsed');
+    toolbarToggle.textContent = zu ? '»' : '«';
+    const text = zu ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen';
+    toolbarToggle.dataset.tooltip = text; // title wurde beim Laden zu data-tooltip
+    toolbarToggle.setAttribute('aria-label', text);
+    toolbarToggle.setAttribute('aria-expanded', String(!zu));
   });
 
   // ☰-Menü (schmale Bildschirme): Knöpfe schließen es, Schalter nicht
