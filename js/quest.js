@@ -1780,9 +1780,9 @@
     },
     {
       title: '1:1-Beziehung „ist Klassensprecher“',
-      theory: `<p><strong>Regel 3 – 1:1:</strong> Der Fremdschlüssel kommt auf eine Seite – am besten dorthin, wo jede Entität sicher einen Partner hat – und bekommt UNIQUE.</p>`,
-      objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. Jede Klasse hat einen Klassensprecher, aber nicht jeder Schüler ist einer – der Fremdschlüssel <strong>„SchülerNr“</strong> kommt deshalb in <strong>„Klasse“</strong>. In „Schüler“ bräuchtest du außerdem ein zweites, umbenanntes Paar aus Klassenstufe und Parallelklasse.</p>
+      theory: `<p><strong>Regel 3 – 1:1:</strong> Der Fremdschlüssel kommt auf eine Seite – am besten dorthin, wo jede Entität sicher einen Partner hat – und bekommt UNIQUE.</p>
         <p><em>UNIQUE sorgt dafür, dass jede SchülerNr in „Klasse“ nur einmal vorkommt – das setzt du später in der SQL-Übung.</em></p>`,
+      objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. Jede Klasse hat einen Klassensprecher, aber nicht jeder Schüler ist einer – der Fremdschlüssel <strong>„SchülerNr“</strong> kommt deshalb in <strong>„Klasse“</strong>. In „Schüler“ bräuchtest du außerdem ein zweites, umbenanntes Paar aus Klassenstufe und Parallelklasse.</p>`,
       validator: function () {
         if (getStudentFks('Klasse', 'SchülerNr').length) return { passed: true };
         return { passed: false, error: 'Füge „SchülerNr“ als Fremdschlüssel zur Relation „Klasse“ hinzu.' };

@@ -669,7 +669,6 @@ function initTabs() {
 
   // Schmale Bildschirme: höchstens die halbe Breite, damit das ERM daneben sichtbar bleibt
   let lastOpenWidth = Math.min(relmodelDrawer.getBoundingClientRect().width || 460, window.innerWidth / 2);
-  let isDrawerOpen = false;
 
   const clampDrawerWidth = (value) => {
     const maxWidth = Math.max(320, Math.min(window.innerWidth * 0.72, mainLayout.getBoundingClientRect().width - 180));
@@ -694,18 +693,13 @@ function initTabs() {
       syncQuestPanelResizer();
       return;
     }
-    if (isDrawerOpen) {
-      const drawerWidth = relmodelDrawer.getBoundingClientRect().width || lastOpenWidth;
-      const resizerWidth = relmodelResizer.offsetWidth || 10;
-      questPanel.style.right = `${drawerWidth + resizerWidth}px`;
-    } else {
-      questPanel.style.right = '0';
-    }
+    // Gemessen statt berechnet: folgt so auch der Animation beim Ein- und Ausblenden
+    const breite = relmodelDrawer.getBoundingClientRect().width + relmodelResizer.getBoundingClientRect().width;
+    questPanel.style.right = `${breite}px`;
     syncQuestPanelResizer();
   };
 
   const setDrawerState = (open) => {
-    isDrawerOpen = !!open;
     relmodelDrawer.classList.toggle('collapsed', !open);
     relmodelResizer.classList.toggle('collapsed', !open);
     relmodelBtn.classList.toggle('active', open);
@@ -827,9 +821,30 @@ function initTabs() {
     });
   }
 
+  // Während Relationenmodell oder Quest-Panel animiert werden: Quest-Panel (Breite) und Ziehgriff jedes Bild nachführen
+  let laufendeAnimationen = 0;
+  const nachfuehren = () => {
+    syncQuestPanelRight();
+    if (laufendeAnimationen) requestAnimationFrame(nachfuehren);
+  };
+  [relmodelDrawer, questPanel].forEach((el) => {
+    el?.addEventListener('transitionrun', (e) => {
+      if (e.target === el && !laufendeAnimationen++) requestAnimationFrame(nachfuehren);
+    });
+    const ende = (e) => {
+      if (e.target !== el) return;
+      laufendeAnimationen = Math.max(0, laufendeAnimationen - 1);
+      if (!laufendeAnimationen) syncQuestPanelRight();
+    };
+    el?.addEventListener('transitionend', ende);
+    el?.addEventListener('transitioncancel', ende);
+  });
+
   // Tablet: Quest-Panel auf die Kopfzeile einklappen
   const questFoldBtn = document.getElementById('btn-quest-fold');
   questFoldBtn?.addEventListener('click', () => {
+    const kopf = questPanel.querySelector('.quest-header');
+    questPanel.style.setProperty('--quest-kopf', `${kopf.offsetHeight + questPanel.clientTop}px`);
     const zu = questPanel.classList.toggle('eingeklappt');
     const text = zu ? 'Quest-Panel ausklappen' : 'Quest-Panel einklappen';
     questFoldBtn.dataset.tooltip = text;
@@ -869,8 +884,11 @@ function initTabs() {
         questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
       );
 
-      // Item-Dots verwalten
+      // Item-Dots verwalten; die laufende Reihe ist hervorgehoben
+      const laufend = window.Quest.state.questsPanelVisible ? window.Quest.state.questMode : null;
       itemButtons.forEach((btn) => {
+        if (btn.dataset.questSeries === laufend) btn.setAttribute('aria-current', 'true');
+        else btn.removeAttribute('aria-current');
         const dot = btn.querySelector('.quest-item-dot');
         if (isNotStarted(btn)) {
           if (!dot) {
