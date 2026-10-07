@@ -1,3 +1,9 @@
+/* Responsive Grenzen – überall dieselben Werte (js/app.js: tabletMedia):
+   Bildschirm  ≤ 600 px  Handy: Hinweis „für Tablet und PC“, Tooltips umbrechen
+               ≤ 1000 px schmal: Titelfeld in der Tab-Leiste, Lernpfad-Menü und Link-Übersicht einspaltig
+               ≤ 1200 px Tablet: Kopfzeile im Menü ☰, Seitenleiste und Aufgabenleiste einklappbar
+   Bauteil     ≤ 760 px  Breite der Aufgabenleiste bzw. des SQL-Panels (@container): umbrechen, untereinander */
+
 [data-tooltip] {
   position: relative;
   cursor: help;
@@ -93,9 +99,8 @@ a[data-tooltip],
   cursor: pointer;
 }
 
-/* Sicherstellen, dass der Diagramm-Titel zentriert bleibt, auch wenn
-   title->data-tooltip migriert wurde (verhindert ein Verrutschen). */
-#tabs .erm-title-wrap[data-tooltip],
+/* Diagramm-Titel mittig in der Tab-Leiste; #tabs schlägt [data-tooltip] { position: relative }
+   (title wird zu data-tooltip). Schmal: siehe @media (max-width: 1000px) */
 #tabs .erm-title-wrap {
   position: absolute;
   left: 50%;
@@ -108,7 +113,7 @@ a[data-tooltip],
   padding: 0 12px;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   #global-tooltip .tooltip-content {
     font-size: 0.95rem;
     max-width: calc(100vw - 40px);
@@ -1996,7 +2001,7 @@ body.is-resizing-drawer #relmodel-drawer {
 }
 
 /* ===== Responsive minimal ===== */
-@media (max-width: 860px) {
+@media (max-width: 1000px) {
   #tabs {
     gap: 0;
   }
@@ -2007,14 +2012,24 @@ body.is-resizing-drawer #relmodel-drawer {
     min-width: min(280px, calc(100vw - 24px));
   }
 
-  .erm-title-input {
-    width: 160px;
+  /* Tabs behalten ihre Breite, nur das Titelfeld schrumpft */
+  #tabs .tab-btn,
+  #tabs .tab-dropdown {
+    flex-shrink: 0;
   }
 
-  .erm-title-wrap {
+  /* Selektor wie oben (#tabs …), sonst setzt sich die Zentrierung durch */
+  #tabs .erm-title-wrap {
     position: static;
     transform: none;
     margin-left: 6px;
+    flex: 0 1 200px;
+    min-width: 0;
+  }
+
+  .erm-title-input {
+    width: 100%;
+    min-width: 0;
   }
 
   .erm-title-label {
@@ -2879,17 +2894,10 @@ body.is-resizing-drawer #aufgabe-panel {
     flex: none;
     position: static;
   }
-}
 
-@media (max-width: 768px) {
-  #aufgabe-content {
+  .aufgabe-task p,
+  .aufgabe-task li {
     font-size: 0.85rem;
-  }
-
-  .aufgabe-circle {
-    width: 18px;
-    height: 18px;
-    font-size: 0.6rem;
   }
 }
 
@@ -3074,7 +3082,7 @@ body.is-resizing-drawer #aufgabe-panel {
 }
 
 /* Small screens: allow multi-line tooltips */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   [data-tooltip]::after {
     white-space: normal;
     left: 50%;
@@ -3111,7 +3119,7 @@ body.is-resizing-drawer #aufgabe-panel {
   color: #94a3b8;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1000px) {
   #lernpfade-menu {
     grid-template-columns: 1fr;
     max-height: calc(100vh - 120px);
@@ -3453,7 +3461,7 @@ body.is-resizing-drawer #aufgabe-panel {
   padding-left: 8px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1000px) {
   /* Untereinander: Fortgeschritten deutlich abgesetzt */
   .lernpfad-menu-group + .lernpfad-menu-group {
     border-left: none;
@@ -3756,7 +3764,7 @@ body.sql-zieht {
   background: #f8fafc;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 1000px) {
   .link-zeile {
     grid-template-columns: 1fr auto;
   }
@@ -3914,7 +3922,7 @@ fieldset.szenario-feld label {
   display: none;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   #btn-toolbar-toggle,
   #btn-aufgabe-fold {
     display: flex;
@@ -3979,7 +3987,7 @@ fieldset.szenario-feld label {
 }
 
 /* ===== Aufgabenleiste einklappen (Tablet) ===== */
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   #btn-aufgabe-fold {
     margin-right: 10px;
   }
@@ -3996,11 +4004,44 @@ fieldset.szenario-feld label {
 }
 
 /* ===== Header-Menü (☰): Optionen auf schmalen Bildschirmen ===== */
+/* Drei Linien als SVG (exakt mittig, wie der Knopf der Seitenleiste); offen werden sie zum ✕ */
 #btn-header-menu {
   display: none;
-  font-size: 1.1rem;
-  line-height: 1;
-  padding: 6px 12px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  padding: 0;
+}
+
+#btn-header-menu svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  overflow: visible;
+}
+
+#btn-header-menu path {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+#btn-header-menu[aria-expanded='true'] .hm-oben {
+  transform: translateY(4px) rotate(45deg);
+}
+
+#btn-header-menu[aria-expanded='true'] .hm-mitte {
+  opacity: 0;
+}
+
+#btn-header-menu[aria-expanded='true'] .hm-unten {
+  transform: translateY(-4px) rotate(-45deg);
 }
 
 #header-menu {
@@ -4011,9 +4052,9 @@ fieldset.szenario-feld label {
   margin-right: auto;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   #btn-header-menu {
-    display: block;
+    display: flex;
     margin-left: auto;
   }
 

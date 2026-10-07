@@ -610,8 +610,8 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 }
 
-// Seitenleiste einklappen (nur unter 1100px wirksam, siehe style.css)
-const tabletMedia = window.matchMedia('(max-width: 1100px)');
+// Tablet (Grenzen siehe Anfang von style.css): Seitenleiste einklappbar, Kopfzeile im Menü ☰
+const tabletMedia = window.matchMedia('(max-width: 1200px)');
 function setToolbarCollapsed(zu) {
   document.body.classList.toggle('toolbar-collapsed', zu);
   const btn = document.getElementById('btn-toolbar-toggle');
