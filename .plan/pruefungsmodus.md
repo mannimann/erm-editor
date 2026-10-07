@@ -31,6 +31,12 @@ Ein Tab-Wechsel-Zähler entfällt: In ONYX müssen die Schüler ohnehin zwischen
 - Transformationsregeln, SQL und Tabellenvorschau (beide) sind ausgeblendet.
 - Info bleibt, aber gekürzt (siehe Schritt 3).
 - `.json` ist als Upload-Dateityp in ONYX möglich.
+- Arbeitsstände laufen nach 2 Stunden ohne Änderung ab und lassen sich nach dem Abgeben löschen.
+- Nach dem Abgeben darf weitergearbeitet werden.
+- Kardinalitäten stehen in der Korrekturliste als eigene Zeile.
+- Textmarker-Markierungen kommen in die Abgabe, nur zum Nachvollziehen, ohne Prüfung.
+- Die Notation (Form ↔ Begriff) prüft der Editor nicht. Dafür sorgt der ONYX-Test: Symbolfrage in
+  einem linearen ersten Abschnitt vor dem Link, dazu Fragen zum Lesen von Diagrammen.
 
 ## Schritte
 
@@ -53,9 +59,16 @@ Ein Tab-Wechsel-Zähler entfällt: In ONYX müssen die Schüler ohnehin zwischen
 - Der `#szenario=…`-Teil bleibt bei Prüfungen in der Adresszeile. Bisher entfernt ihn `replaceState`.
   Neu laden öffnet so einfach die Prüfung wieder.
 - Der Arbeitsstand wird je `pruefungsId` im localStorage gesichert (ERM bzw. Relationen und
-  Textmarker-Markierungen).
-- Beim Öffnen mit vorhandenem Stand fragt der Editor: „Weiterarbeiten oder neu beginnen?“ Das ist
-  wegen geteilter Schul-PCs nötig, damit kein Schüler den Stand seines Vorgängers übernimmt.
+  Textmarker-Markierungen), zusammen mit dem Zeitpunkt der letzten Änderung.
+- **Geteilte Schul-PCs:** Kein Schüler soll den Stand seines Vorgängers sehen. Drei Schutzstufen:
+  1. **Ablauf nach 2 Stunden:** Beim Laden der Seite werden alle Prüfungs-Arbeitsstände gelöscht,
+     deren letzte Änderung älter als 2 Stunden ist, auch die anderer Prüfungen. Maßgeblich ist die
+     letzte Änderung, nicht der Beginn: Wer arbeitet, hält seinen Stand frisch. Die 2 Stunden sind
+     eine Konstante im Code.
+  2. **Löschen nach dem Abgeben:** siehe Schritt 5.
+  3. **Nachfrage beim Öffnen:** Gibt es einen jüngeren Stand, fragt der Editor: „Auf diesem Gerät gibt
+     es schon eine Bearbeitung (zuletzt geändert 10:42). Ist das deine?“ → Weiterarbeiten / Neu
+     beginnen.
 - `body.pruefung` sorgt für eine deutliche Kopfzeile „PRÜFUNG · Titel“ in eigener Farbe. So ist auf
   einen Blick zu sehen, ob ein Schüler im Prüfungsmodus oder auf der normalen Seite arbeitet.
 
@@ -87,8 +100,11 @@ Abschnitt „SQL erzeugen“ und die Erwähnungen der Musterlösung in der Zeich
 
 - Button „Abgeben“ im Aufgabenpanel, er lädt `<Titel>.erm-abgabe.json` herunter.
 - Inhalt: `format: "erm-editor-abgabe"`, `version`, `pruefungsId`, Titel, ERM bzw. Relationen,
-  Zeitstempel. Kein Name, ONYX kennt die Person, die hochlädt.
-- Mehrfach abgeben ist möglich, in ONYX zählt die zuletzt hochgeladene Datei.
+  Textmarker-Markierungen, Zeitstempel. Kein Name, ONYX kennt die Person, die hochlädt.
+- Nach dem Download fragt ein Dialog: „Datei in ONYX hochgeladen? Dann Arbeitsstand auf diesem Gerät
+  löschen.“ → Löschen / Weiterarbeiten.
+- Nach dem Abgeben darf weitergearbeitet und erneut abgegeben werden, in ONYX zählt die zuletzt
+  hochgeladene Datei.
 - Der normale Import lehnt das Format ab, weil das `format`-Feld nicht passt. Eine Abgabe lässt sich
   also nicht in die normale Seite laden.
 
@@ -101,11 +117,15 @@ Abschnitt „SQL erzeugen“ und die Erwähnungen der Musterlösung in der Zeich
   (bekannte Felder, Namen ohne `<` und `>`, Größenlimits), damit eine präparierte Datei im Browser der
   Lehrkraft nichts ausführt.
 - Links steht die Arbeit des Schülers, nur zum Ansehen. Rechts steht die Korrekturliste.
+- Der Aufgabentext erscheint mit den Textmarker-Markierungen des Schülers. Sie werden nicht geprüft
+  und kommen nicht in die Liste, sie helfen nur beim Nachvollziehen der Lösung.
 
 **Liste, automatisch vorausgefüllt und von Hand änderbar:**
 
 - **ERM-Aufgabe:** Entitätsklassen, Attribute, Primärschlüssel, Beziehungen und, falls gefordert,
-  Kardinalitäten, jeder Punkt ✓ oder ✗. Die Grundlage gibt es schon: `getExpertChecklistStatus`
+  Kardinalitäten, jeder Punkt ✓ oder ✗. Die Kardinalität steht als eigene Zeile unter der
+  Beziehung, z. B. „✓ Beziehung „bucht“ zwischen Gast und Zimmer“ und darunter „✗ Kardinalität
+  „bucht“: 1:n erwartet, n:m gezeichnet“. Die Grundlage gibt es schon: `getExpertChecklistStatus`
   (`js/lernpfad.js`) liefert die Punkte einzeln mit `ok`.
 - **RM-Aufgabe:** Relationen, Attribute, Primärschlüssel und Fremdschlüssel einzeln. Dafür muss die
   Prüfung in `js/relmodel.js` (`checkAndGetResult`) ihre Einzelbefunde als Liste zurückgeben. Bisher
@@ -118,7 +138,7 @@ Abschnitt „SQL erzeugen“ und die Erwähnungen der Musterlösung in der Zeich
 **Kopieren:** Der Button „📋 Feedback kopieren“ erzeugt reinen Text mit Zeilenumbrüchen, den jedes
 ONYX-Kommentarfeld annimmt:
 
-```
+```text
 Feedback: Hotel-Verwaltung
 
 Entitätsklassen (2/3)
@@ -150,6 +170,8 @@ Stapel-Korrektur mehrerer Dateien auf einmal kommt bei Bedarf später.
 - Eine präparierte Abgabe (`<script>` in Namen, zu groß, unbekannte Felder) wird bereinigt bzw. abgelehnt.
 - Korrekturliste: Die Musterlösung als Abgabe ergibt nur ✓, eine leere Abgabe nur ✗, jeweils für ERM
   und RM.
+- Ablauf: Ein Arbeitsstand mit letzter Änderung vor über 2 Stunden wird beim Laden gelöscht, ein
+  jüngerer bleibt.
 
 ## Grenzen
 
