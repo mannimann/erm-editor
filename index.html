@@ -98,16 +98,16 @@
       <div class="tab-btn active tab-btn-static" aria-current="page">🔷 ER-Diagramm</div>
       <div class="tab-dropdown">
         <button
-          id="btn-quests-toggle"
+          id="btn-lernpfade-toggle"
           class="tab-btn tab-btn-dropdown"
           type="button"
           aria-haspopup="true"
           aria-expanded="false"
         >
-          ⚔️ Quests <span class="tab-dropdown-chevron">&#x276F;</span>
+          🗺️ Lernpfade <span class="tab-dropdown-chevron">&#x276F;</span>
         </button>
-        <!-- Einträge baut app.js aus den Quest-Reihen (quest.js) -->
-        <div id="quests-menu" class="tab-dropdown-menu" aria-label="Quests" hidden></div>
+        <!-- Einträge baut app.js aus den Lernpfaden (lernpfad.js) -->
+        <div id="lernpfade-menu" class="tab-dropdown-menu" aria-label="Lernpfade" hidden></div>
       </div>
       <div class="erm-title-wrap" title="Bezeichnung des Diagramma">
         <label class="erm-title-label" for="erm-title-input">Titel:</label>
@@ -614,6 +614,31 @@
       </div>
     </div>
 
+    <!-- ===== MODAL: Links zu den Lernpfaden (für Lehrkräfte, baut js/app.js) ===== -->
+    <div
+      id="modal-links-backdrop"
+      class="info-modal-backdrop"
+      style="display: none"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-links-title"
+    >
+      <div class="info-modal-card links-modal-card">
+        <div class="info-modal-header">
+          <h3 id="modal-links-title">🔗 Links zu den Lernpfaden</h3>
+          <button class="info-modal-close" id="btn-links-modal-close" aria-label="Schließen">&times;</button>
+        </div>
+        <div class="info-modal-body">
+          <p>
+            Ein Link öffnet den ERM-Editor und startet gleich den Lernpfad – z.&nbsp;B. für das Kursbuch, eine
+            Lernplattform oder ein Arbeitsblatt. Ab einer späteren Aufgabe startet der Link nur, wenn die Aufgabe schon
+            freigeschaltet ist (Übungen sind immer frei wählbar). Den Fortschritt speichert jeder Browser für sich.
+          </p>
+          <div id="links-liste"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== MODAL: Impressum ===== -->
     <div
       id="modal-impressum-backdrop"
@@ -700,53 +725,57 @@
       </div>
     </div>
 
-    <!-- ===== QUEST-PANEL (bottom, initially hidden) ===== -->
-    <div id="quest-panel-resizer" class="quest-panel-resizer"></div>
-    <div id="quest-panel" class="quest-panel">
-      <div class="quest-header">
-        <div class="quest-title-row">
+    <!-- ===== AUFGABE-PANEL (bottom, initially hidden) ===== -->
+    <div id="aufgabe-panel-resizer" class="aufgabe-panel-resizer"></div>
+    <div id="aufgabe-panel" class="aufgabe-panel">
+      <div class="aufgabe-header">
+        <div class="aufgabe-title-row">
           <button
-            id="btn-quest-fold"
+            id="btn-aufgabe-fold"
             class="header-btn"
             type="button"
             aria-expanded="true"
-            aria-controls="quest-content"
-            title="Quest-Panel einklappen"
+            aria-controls="aufgabe-content"
+            title="Aufgabenleiste einklappen"
           >
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3 3 8l5 5M13 3 8 8l5 5" /></svg>
           </button>
-          <h3 id="quest-title" class="quest-title">Quest 1 von 12</h3>
-          <span id="quest-progress" class="quest-progress">1 / 12</span>
-          <button id="btn-quest-reset" class="quest-reset-btn" type="button" title="Quest-Reihe zurücksetzen">
-            Zurücksetzen
+          <h3 id="aufgabe-title" class="aufgabe-title">Aufgabe 1</h3>
+          <!-- Fortschritt: Kreise je Aufgabe, verbunden durch Balkenstücke (grün nach gelösten Aufgaben) -->
+          <div id="aufgabe-circles" class="aufgabe-circles"></div>
+          <!-- Zurücksetzen: als Knopf; ist die Leiste schmal, nur im Menü „⋯“ (style.css) -->
+          <button class="aufgabe-reset-btn" type="button" data-aufgabe-reset title="Lernpfad zurücksetzen">
+            ↺ Zurücksetzen
           </button>
-          <button id="btn-quest-close" class="quest-close-btn" type="button" title="Quest-Panel schließen">✕</button>
+          <details id="aufgabe-mehr" class="aufgabe-mehr">
+            <summary class="aufgabe-mehr-btn" title="Weitere Aktionen" aria-label="Weitere Aktionen">⋯</summary>
+            <div class="aufgabe-mehr-menu">
+              <button type="button" data-aufgabe-reset>↺ Lernpfad zurücksetzen</button>
+            </div>
+          </details>
+          <button id="btn-aufgabe-close" class="aufgabe-close-btn" type="button" title="Lernpfad schließen">✕</button>
         </div>
-        <div class="quest-progress-bar">
-          <div id="quest-progress-fill" class="quest-progress-fill"></div>
-        </div>
-        <div id="quest-circles" class="quest-circles"></div>
       </div>
 
-      <div id="quest-content" class="quest-content"></div>
+      <div id="aufgabe-content" class="aufgabe-content"></div>
 
-      <div id="quest-feedback" class="quest-feedback"></div>
+      <div id="aufgabe-feedback" class="aufgabe-feedback"></div>
     </div>
 
-    <!-- ===== ERFOLGS-MODAL (einzelne Quest) ===== -->
-    <div id="quest-success-modal" style="display: none">
-      <div class="quest-success-card">
-        <div class="quest-success-icon">✓</div>
-        <h2 class="quest-success-title">Aufgabe geschafft!</h2>
-        <div class="quest-success-bar-track">
-          <div class="quest-success-bar-fill"></div>
+    <!-- ===== ERFOLGS-MODAL (einzelne Aufgabe) ===== -->
+    <div id="aufgabe-success-modal" style="display: none">
+      <div class="aufgabe-success-card">
+        <div class="aufgabe-success-icon">✓</div>
+        <h2 class="aufgabe-success-title">Aufgabe geschafft!</h2>
+        <div class="aufgabe-success-bar-track">
+          <div class="aufgabe-success-bar-fill"></div>
         </div>
-        <button class="quest-success-ok-btn" type="button">OK</button>
+        <button class="aufgabe-success-ok-btn" type="button">OK</button>
       </div>
     </div>
 
     <!-- ===== GLÜCKWUNSCH-POPUP ===== -->
-    <div id="quest-congratulations-modal" class="quest-congratulations-modal" style="display: none"></div>
+    <div id="lernpfad-congratulations-modal" class="lernpfad-congratulations-modal" style="display: none"></div>
 
     <!-- ===== APP-DIALOG (ersetzt alert/confirm) ===== -->
     <div id="app-modal-backdrop" class="app-modal-backdrop" style="display: none" role="dialog" aria-modal="true">
@@ -778,7 +807,7 @@
     <script src="js/diagram.js"></script>
     <script src="js/relmodel.js"></script>
     <script src="js/sql.js"></script>
-    <script src="js/quest.js"></script>
+    <script src="js/lernpfad.js"></script>
     <script src="js/szenario.js"></script>
   </body>
 </html>

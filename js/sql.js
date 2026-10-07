@@ -204,16 +204,16 @@
   // DIALOG
   // ======================================================================
 
-  let erweitertFrei = false; // Wahl ohne laufende Quest
+  let erweitertFrei = false; // Wahl ohne laufende Aufgabe
   // Quelle: Relationen des Schülers oder (Button an der Musterlösung) eine Kopie der Musterlösung.
   // Die Kopie übernimmt Datentyp, NOT NULL und UNIQUE gleichnamiger Spalten des Schülers.
   let loesung = null;
   let letzteZeilen = null; // Code der letzten Anzeige: geänderte Zeilen leuchten kurz auf
 
-  // Stufe der laufenden Quest-Reihe: 'Einstieg', 'Fortgeschritten' oder null (keine Quest)
+  // Stufe des laufenden Lernpfads: 'Einstieg', 'Fortgeschritten' oder null (keine Aufgabe)
   function stufe() {
-    const q = window.Quest;
-    return q?.state?.questsPanelVisible ? q.getSeries?.()?.stufe || null : null;
+    const q = window.Lernpfad;
+    return q?.state?.lernpfadAktiv ? q.getLernpfad?.()?.stufe || null : null;
   }
 
   // Einstieg: ohne NOT NULL/UNIQUE, Fortgeschritten: mit; sonst (frei, eigene Szenarien) per Häkchen

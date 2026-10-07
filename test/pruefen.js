@@ -1,9 +1,9 @@
 /* Prüfskript: node test/pruefen.js  (braucht Node und das Programm sqlite3)
    1. Toleranter Namensvergleich: Beispiele aus dem Umbauplan
    2. Keine zwei Namen derselben Entitätsklasse fallen nach der Normalisierung zusammen
-      (Musterlösungen und ER-Modelle in files/); jedes ER-Modell erfüllt seine ERM-Quest
+      (Musterlösungen und ER-Modelle in files/); jedes ER-Modell erfüllt seine ERM-Aufgabe
    3. Relationenmodell-Prüfung: Musterlösung, umbenannte Fremdschlüssel, zweite 1:1-Richtung, SQL-Regeln
-   4. SQL aus allen Musterlösungen der Relationenmodell-Quests läuft in SQLite, die Verweise stimmen
+   4. SQL aus allen Musterlösungen der Relationenmodell-Aufgaben läuft in SQLite, die Verweise stimmen
    5. Eigene Szenarien: Musterlösung aus dem ER-Modell, Prüfen von außen, Link hin und zurück */
 'use strict';
 const fs = require('fs');
@@ -60,10 +60,10 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
-for (const file of ['js/relmodel.js', 'js/sql.js', 'js/quest.js', 'js/szenario.js']) {
+for (const file of ['js/relmodel.js', 'js/sql.js', 'js/lernpfad.js', 'js/szenario.js']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
 }
-const { RelModel, SQLExport, Quest, Szenario } = context;
+const { RelModel, SQLExport, Lernpfad, Szenario } = context;
 const N = RelModel.normalizeName;
 const kopie = (x) => JSON.parse(JSON.stringify(x));
 const ermLaden = (datei) => JSON.parse(fs.readFileSync(path.join(FILES, datei), 'utf8'));
@@ -103,13 +103,13 @@ function eindeutig(namen, wo) {
   }
 }
 
-const reihen = Quest.getSeriesList();
+const lernpfade = Lernpfad.getLernpfade();
 pruefe('Musterlösungen: keine zusammenfallenden Namen', () => {
-  for (const reihe of reihen)
-    for (const q of reihe.quests) {
+  for (const lernpfad of lernpfade)
+    for (const q of lernpfad.aufgaben) {
       const m = q.masterlösung;
       if (!m) continue;
-      const wo = `${reihe.id} ${q.number} ${q.title}`;
+      const wo = `${lernpfad.id} ${q.number} ${q.title}`;
       eindeutig(m.entities, wo + ', Entitätsklassen');
       eindeutig(
         m.relationships.map((r) => r.name),
@@ -137,15 +137,17 @@ pruefe('ER-Modelle in files/: keine zusammenfallenden Namen', () => {
   }
 });
 
-// Szenarien: ERM-Quest und Relationenmodell-Quest gehören über den Titel zusammen
+// Szenarien: ERM-Aufgabe und Relationenmodell-Aufgabe gehören über den Titel zusammen
 const ermSzenarien = new Map();
 for (const id of ['erm-uebung', 'erm-experten'])
-  Quest.getQuestsForMode(id)
+  Lernpfad.getAlleAufgaben(id)
     .filter((q) => q.masterlösung)
     .forEach((q) => ermSzenarien.set(q.title, q));
-const rmSzenarien = ['rm-uebung', 'rm-experten'].flatMap((id) => Quest.getQuestsForMode(id).filter((q) => q.jsonFile));
+const rmSzenarien = ['rm-uebung', 'rm-experten'].flatMap((id) =>
+  Lernpfad.getAlleAufgaben(id).filter((q) => q.jsonFile),
+);
 
-pruefe('Jedes ER-Modell erfüllt die Musterlösung seiner ERM-Quest', () => {
+pruefe('Jedes ER-Modell erfüllt die Musterlösung seiner ERM-Aufgabe', () => {
   for (const q of rmSzenarien) {
     context.AppState = { state: ermLaden(q.jsonFile) };
     const result = ermSzenarien.get(q.title).validator();
@@ -153,7 +155,7 @@ pruefe('Jedes ER-Modell erfüllt die Musterlösung seiner ERM-Quest', () => {
   }
 });
 
-pruefe('ERM-Quest: „AnzahlNaechte“ und „EMail“ werden erkannt', () => {
+pruefe('ERM-Aufgabe: „AnzahlNaechte“ und „EMail“ werden erkannt', () => {
   const state = ermLaden('uebung-1-hotel.json');
   state.nodes.find((n) => n.name === 'AnzahlNächte').name = 'AnzahlNaechte';
   state.nodes.find((n) => n.name === 'E-Mail').name = 'EMail';
@@ -231,7 +233,7 @@ pruefe('Relationenmodell: Fremdschlüssel nach der Zieltabelle benannt (z. B. �
   assert(check(rels), 'Flugbetrieb mit Pilot↑, Flughafen-Start↑, Flughafen-Ziel↑, Pilot-Ausbilder↑');
 
   // NOT NULL-Regeln finden auch so benannte Fremdschlüssel
-  const fahrschule = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Fahrschule');
+  const fahrschule = Lernpfad.getAlleAufgaben('sql-uebung').find((q) => q.title === 'Fahrschule');
   rels = loesung(fahrschule.jsonFile);
   attr(rels, 'Fahrstunde', 'Kundennummer').name = 'Fahrschüler';
   attr(rels, 'Fahrstunde', 'Personalnummer').name = 'Fahrlehrer';
@@ -259,22 +261,22 @@ pruefe('Relationenmodell: 1:1-Fremdschlüssel auch in der anderen Richtung', () 
 
 pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Experten ohne', () => {
   assert(
-    Quest.getQuestsForMode('rm-experten').every((q) => !q.sqlRegeln),
+    Lernpfad.getAlleAufgaben('rm-experten').every((q) => !q.sqlRegeln),
     'Relationenmodell-Experten prüfen nur die Überführung',
   );
-  const fahrschule = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Fahrschule');
+  const fahrschule = Lernpfad.getAlleAufgaben('sql-uebung').find((q) => q.title === 'Fahrschule');
   const rels = loesung(fahrschule.jsonFile);
   RelModel.setStudentRelations(rels);
   const ohne = fahrschule.validator();
-  assert(!ohne.passed && /NOT NULL/.test(ohne.message), 'ohne NOT NULL darf die Quest nicht bestehen');
+  assert(!ohne.passed && /NOT NULL/.test(ohne.message), 'ohne NOT NULL darf die Aufgabe nicht bestehen');
   rel(rels, 'Fahrstunde')
     .attrs.filter((a) => a.isFk)
     .forEach((a) => (a.notNull = true));
   RelModel.setStudentRelations(rels);
-  assert(fahrschule.validator().passed, 'mit NOT NULL muss die Quest bestehen');
+  assert(fahrschule.validator().passed, 'mit NOT NULL muss die Aufgabe bestehen');
 
-  // Quest 1: Schul-Relationenmodell der Auffrischung
-  const schule = Quest.getQuestsForMode('sql-uebung')[0];
+  // Aufgabe 1: Schul-Relationenmodell der Auffrischung
+  const schule = Lernpfad.getAlleAufgaben('sql-uebung')[0];
   const s = loesung(schule.jsonFile);
   RelModel.setStudentRelations(s);
   assert(!schule.validator().passed, 'Schule ohne NOT NULL und UNIQUE');
@@ -285,7 +287,7 @@ pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Expert
   const mitRegeln = schule.validator();
   assert(mitRegeln.passed, mitRegeln.message);
 
-  const uni = Quest.getQuestsForMode('sql-uebung').find((q) => q.title === 'Universität');
+  const uni = Lernpfad.getAlleAufgaben('sql-uebung').find((q) => q.title === 'Universität');
   const u = loesung(uni.jsonFile);
   for (const r of u) for (const a of r.attrs) if (a.isFk && !a.isPk) a.notNull = true;
   RelModel.setStudentRelations(u);
@@ -296,12 +298,12 @@ pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Expert
   assert(mitUnique.passed, mitUnique.message);
 });
 
-pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
-  const bestehen = (reihe, von, bis) => {
-    for (const q of Quest.getQuestsForMode(reihe).slice(von - 1, bis)) {
+pruefe('Schritt-Lernpfade: das fertige Modell erfüllt jede Aufgabe', () => {
+  const bestehen = (lernpfad, von, bis) => {
+    for (const q of Lernpfad.getAlleAufgaben(lernpfad).slice(von - 1, bis)) {
       if (q.seitenleisteSelbstOeffnen) continue; // prüft die geöffnete Seitenleiste im Browser
       const result = q.validator();
-      assert(result.passed, `${reihe} ${q.number} ${q.title}: ${result.error || result.message}`);
+      assert(result.passed, `${lernpfad} ${q.number} ${q.title}: ${result.error || result.message}`);
     }
   };
   // ERM-Grundlagen prüfen nur Verbindungen: mit und ohne Kardinalitäten
@@ -313,7 +315,7 @@ pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
   // ERM-Kardinalitäten: Vorlage hat „?“, fertig mit Zahlen und „ist Klassenleiter von“ (Lehrer 1 : n Klasse)
   context.AppState = { state: ermLaden('schule-ohne-kardinalitaeten.json') };
   assert(
-    !Quest.getQuestsForMode('erm-kardinalitaeten')[0].validator().passed,
+    !Lernpfad.getAlleAufgaben('erm-kardinalitaeten')[0].validator().passed,
     'Vorlage ohne Zahlen darf nicht bestehen',
   );
   const fertig = ermLaden('schule-grundlagen.json');
@@ -326,7 +328,7 @@ pruefe('Schritt-Reihen: das fertige Modell erfüllt jede Quest', () => {
   context.AppState = { state: fertig };
   bestehen('erm-kardinalitaeten', 1, 99);
 
-  // ERM-Auffrischung: bis Quest 5 mit „Bezeichnung“, ab Quest 6 mit dem Verbundschlüssel
+  // ERM-Auffrischung: bis Aufgabe 5 mit „Bezeichnung“, ab Aufgabe 6 mit dem Verbundschlüssel
   const vorher = ermLaden('schule-auffrischung.json');
   const parallel = vorher.nodes.find((n) => n.name === 'Parallelklasse');
   vorher.nodes = vorher.nodes.filter((n) => n !== parallel);
@@ -388,29 +390,29 @@ pruefe('Relationenmodell: 1:1 mit Verbundschlüssel – Fremdschlüssel auf der 
   assert.strictEqual(f.length, 0, f.join('; '));
 });
 
-pruefe('Quest-Reihen: Schritt-Reihen enden mit Abschluss, Übungsreihen ohne', () => {
-  for (const reihe of reihen) {
-    const letzte = reihe.quests[reihe.quests.length - 1];
-    if (reihe.schritt) assert(letzte.abschluss, `${reihe.id}: letzte Quest ist der Abschluss`);
+pruefe('Lernpfade: Schritt-Lernpfade enden mit Abschluss, Übungs-Lernpfade ohne', () => {
+  for (const lernpfad of lernpfade) {
+    const letzte = lernpfad.aufgaben[lernpfad.aufgaben.length - 1];
+    if (lernpfad.schritt) assert(letzte.abschluss, `${lernpfad.id}: letzte Aufgabe ist der Abschluss`);
     else {
       assert(
-        reihe.quests.every((q) => !q.abschluss),
-        `${reihe.id}: keine gesperrte Abschlussquest`,
+        lernpfad.aufgaben.every((q) => !q.abschluss),
+        `${lernpfad.id}: keine gesperrte Abschlussaufgabe`,
       );
-      assert(reihe.abschlussText, `${reihe.id}: Glückwunschtext`);
+      assert(lernpfad.abschlussText, `${lernpfad.id}: Glückwunschtext`);
     }
     // 🔷 ER-Modell lernen, Tabellen-Symbol Relationenmodell lernen, ✏️ üben
-    const erwartet = !reihe.schritt ? '✏️' : reihe.art === 'erm' ? '🔷' : 'icon-tabelle';
-    assert(reihe.icon.includes(erwartet), `${reihe.id}: Symbol ${reihe.icon}`);
+    const erwartet = !lernpfad.schritt ? '✏️' : lernpfad.art === 'erm' ? '🔷' : 'icon-tabelle';
+    assert(lernpfad.icon.includes(erwartet), `${lernpfad.id}: Symbol ${lernpfad.icon}`);
   }
-  storage.set(Quest.getStorageKey('erm-uebung'), JSON.stringify({ completedQuests: [1, 2, 3, 4, 5] }));
-  assert(Quest.isSeriesDone('erm-uebung'), 'ERM-Übung mit fünf gelösten Szenarien ist fertig');
+  storage.set(Lernpfad.getStorageKey('erm-uebung'), JSON.stringify({ geloesteAufgaben: [1, 2, 3, 4, 5] }));
+  assert(Lernpfad.isLernpfadDone('erm-uebung'), 'ERM-Übung mit fünf gelösten Szenarien ist fertig');
   storage.set(
-    Quest.getStorageKey('erm-grundlagen'),
-    JSON.stringify({ completedQuests: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }),
+    Lernpfad.getStorageKey('erm-grundlagen'),
+    JSON.stringify({ geloesteAufgaben: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }),
   );
-  assert(Quest.isSeriesDone('erm-grundlagen'), 'ERM-Grundlagen ohne die Abschlussquest fertig');
-  assert.deepStrictEqual({ ...Quest.getFortschritt('erm-grundlagen') }, { erledigt: 10, gesamt: 10 });
+  assert(Lernpfad.isLernpfadDone('erm-grundlagen'), 'ERM-Grundlagen ohne die Abschlussaufgabe fertig');
+  assert.deepStrictEqual({ ...Lernpfad.getFortschritt('erm-grundlagen') }, { erledigt: 10, gesamt: 10 });
   storage.clear();
 });
 
@@ -609,7 +611,7 @@ pruefe('Eigene Szenarien: Musterlösung aus dem ER-Modell = handgeschriebene Mus
   const menge = (namen) => [...new Set(namen.map(N))].sort().join('|');
   for (const q of rmSzenarien) {
     const hand = ermSzenarien.get(q.title).masterlösung;
-    const auto = Quest.masterAusErm(ermLaden(q.jsonFile));
+    const auto = Lernpfad.masterAusErm(ermLaden(q.jsonFile));
     const wo = q.jsonFile;
     assert.strictEqual(menge(auto.entities), menge(hand.entities), `${wo}: Entitätsklassen`);
     for (const e of hand.entities) {
@@ -634,34 +636,34 @@ pruefe('Eigene Szenarien: Musterlösung aus dem ER-Modell = handgeschriebene Mus
   }
 });
 
-pruefe('Eigene Szenarien: als Reihe lösbar – ER-Modell zeichnen und ins Relationenmodell überführen', () => {
+pruefe('Eigene Szenarien: als Lernpfad lösbar – ER-Modell zeichnen und ins Relationenmodell überführen', () => {
   for (const q of rmSzenarien) {
     const zeichnen = Szenario.pruefeSzenario(alsSzenario(q.jsonFile)).sz;
     const ueberfuehren = Szenario.pruefeSzenario(alsSzenario(q.jsonFile, 'rm')).sz;
-    Quest.setEigeneSzenarien([zeichnen, ueberfuehren]);
-    const erm = Quest.getSeries(`eigen-${zeichnen.id}`);
-    const rm = Quest.getSeries(`eigen-${ueberfuehren.id}`);
-    assert(erm.art === 'erm' && rm.art === 'rm' && erm.quests.length === 1, q.jsonFile);
+    Lernpfad.setEigeneSzenarien([zeichnen, ueberfuehren]);
+    const erm = Lernpfad.getLernpfad(`eigen-${zeichnen.id}`);
+    const rm = Lernpfad.getLernpfad(`eigen-${ueberfuehren.id}`);
+    assert(erm.art === 'erm' && rm.art === 'rm' && erm.aufgaben.length === 1, q.jsonFile);
     context.AppState = { state: ermLaden(q.jsonFile) };
-    const r1 = erm.quests[0].validator();
+    const r1 = erm.aufgaben[0].validator();
     assert(r1.passed, `${q.jsonFile} zeichnen: ${r1.error}`);
     RelModel.setStudentRelations(loesung(q.jsonFile));
-    const r2 = rm.quests[0].validator();
+    const r2 = rm.aufgaben[0].validator();
     assert(r2.passed, `${q.jsonFile} überführen: ${r2.error || r2.message}`);
   }
   // Ohne Kardinalitäten zählt nur die Verbindung
   const ohne = Szenario.pruefeSzenario({ ...alsSzenario('uebung-2-krankenhaus.json'), kardinalitaeten: false }).sz;
-  Quest.setEigeneSzenarien([ohne]);
+  Lernpfad.setEigeneSzenarien([ohne]);
   const state = ermLaden('uebung-2-krankenhaus.json');
   state.edges.forEach((e) => e.edgeType === 'relationship' && (e.chenFrom = e.chenTo = ''));
   context.AppState = { state };
-  assert(Quest.getSeries(`eigen-${ohne.id}`).quests[0].validator().passed, 'Krankenhaus ohne Kardinalitäten');
-  Quest.setEigeneSzenarien([]);
-  assert(!Quest.getSeriesList().some((r) => r.eigen), 'eigene Reihen wieder entfernt');
+  assert(Lernpfad.getLernpfad(`eigen-${ohne.id}`).aufgaben[0].validator().passed, 'Krankenhaus ohne Kardinalitäten');
+  Lernpfad.setEigeneSzenarien([]);
+  assert(!Lernpfad.getLernpfade().some((r) => r.eigen), 'eigene Lernpfade wieder entfernt');
 });
 
 pruefe('Eigene Szenarien: Daten von außen werden geprüft', () => {
-  const html = Quest.textAlsHtml('Ein **Kino** <script>alert(1)</script>\n\n- Film\n- Saal');
+  const html = Lernpfad.textAlsHtml('Ein **Kino** <script>alert(1)</script>\n\n- Film\n- Saal');
   assert(!html.includes('<script>') && html.includes('&lt;script&gt;'), html);
   assert(html.includes('<strong>Kino</strong>') && html.includes('<ul><li>Film</li><li>Saal</li></ul>'), html);
   const boese = alsSzenario('uebung-1-hotel.json');
@@ -678,7 +680,7 @@ pruefe('Eigene Szenarien: Daten von außen werden geprüft', () => {
   assert(/Kardinalitäten/.test(Szenario.pruefeSzenario(ohneZahlen).fehler), 'Überführen braucht Kardinalitäten');
 });
 
-pruefe('ERM-Quest: Beziehungen auch in anderer Verbform („teilnehmen“ für „nimmt teil an“)', () => {
+pruefe('ERM-Aufgabe: Beziehungen auch in anderer Verbform („teilnehmen“ für „nimmt teil an“)', () => {
   const uni = ermSzenarien.get('Universität');
   const mit = (aenderung) => {
     const state = ermLaden('experten-3-universitaet.json');
@@ -735,14 +737,14 @@ pruefe('Eigene Szenarien: zwei Beziehungen „hat“ zwischen verschiedenen Enti
     erm,
   });
   assert(!Szenario.bericht({ ...sz, erm }).some((z) => z.art === 'fehler'), 'kein Fehler „doppelte Namen“');
-  Quest.setEigeneSzenarien([sz]);
+  Lernpfad.setEigeneSzenarien([sz]);
   context.AppState = { state: JSON.parse(JSON.stringify(erm)) };
-  const r = Quest.getSeries(`eigen-${sz.id}`).quests[0].validator();
+  const r = Lernpfad.getLernpfad(`eigen-${sz.id}`).aufgaben[0].validator();
   assert(r.passed, r.error);
   // falsche Kardinalität an der zweiten „hat“ wird bemerkt
   context.AppState.state.edges.find((e) => e.id === 'k4').chenTo = '1';
-  assert(!Quest.getSeries(`eigen-${sz.id}`).quests[0].validator().passed, 'Fehler an der zweiten „hat“');
-  Quest.setEigeneSzenarien([]);
+  assert(!Lernpfad.getLernpfad(`eigen-${sz.id}`).aufgaben[0].validator().passed, 'Fehler an der zweiten „hat“');
+  Lernpfad.setEigeneSzenarien([]);
 });
 
 async function pruefeAsync(name, fn) {

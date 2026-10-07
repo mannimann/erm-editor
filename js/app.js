@@ -159,32 +159,33 @@ function buildPersistPayload() {
 }
 
 const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
-const RELMODEL_ERM_QUEST_KEY = 'erm-relmodel-erm-quest-v1'; // Relationenmodell während einer ERM-Quest
-let aktiverArbeitsstand = null; // Speicherschlüssel des ER-Modells, das gerade aus einer ERM-Quest geladen ist
+const RELMODEL_ERM_LERNPFAD_KEY = 'erm-relmodel-erm-lernpfad-v1'; // Relationenmodell während einer ERM-Aufgabe
+let aktiverArbeitsstand = null; // Speicherschlüssel des ER-Modells, das gerade aus einer ERM-Aufgabe geladen ist
 
-function getQuestWorkStorageKey(mode, questNumber) {
-  return window.Quest?.getWorkKey?.(mode, questNumber) || null;
+function getArbeitsstandKey(mode, aufgabeNumber) {
+  return window.Lernpfad?.getWorkKey?.(mode, aufgabeNumber) || null;
 }
 
-// Quest-Reihe ({ id, stufe, art: 'erm' | 'rm', schritt, … }) oder null
-function getQuestSeries(mode = window.Quest?.state?.questMode) {
-  return window.Quest?.getSeries?.(mode) || null;
+// Lernpfad ({ id, stufe, art: 'erm' | 'rm', schritt, … }) oder null
+function lernpfadVon(mode = window.Lernpfad?.state?.lernpfadId) {
+  return window.Lernpfad?.getLernpfad?.(mode) || null;
 }
 
-// Titel eines neuen ERM in einer Szenario-Reihe, z. B. „ERM-Übung 2 – Krankenhaus-System“
-function applySzenarioTitle(reihe, quest) {
-  if (!quest?.title) return;
-  state.diagramTitle = reihe.eigen ? quest.title : `${reihe.titel} ${quest.number} – ${quest.title}`;
+// Titel eines neuen ERM in eines Szenario-Lernpfads, z. B. „ERM-Übung 2 – Krankenhaus-System“
+function applySzenarioTitle(lernpfad, aufgabe) {
+  if (!aufgabe?.title) return;
+  state.diagramTitle = lernpfad.eigen ? aufgabe.title : `${lernpfad.titel} ${aufgabe.number} – ${aufgabe.title}`;
   const titleInput = document.getElementById('erm-title-input');
   if (titleInput) titleInput.value = state.diagramTitle;
 }
 
-// Startmodell einer Reihe (ERM-Kardinalitäten): das eigene Modell der abgeschlossenen Vorgänger-Reihe,
+// Startmodell eines Lernpfads (ERM-Kardinalitäten): das eigene Modell der abgeschlossenen Vorgänger-Lernpfads,
 // sonst die Vorlage aus files/. nurKardinalitaeten: Seine Formen sind vorgegeben (gesperrt).
-async function loadStartModel(reihe) {
-  const start = reihe?.startModell;
+async function loadStartModel(lernpfad) {
+  const start = lernpfad?.startModell;
   if (!start) return false;
-  let geladen = window.Quest.isSeriesDone(start.reihe) && loadErmSnapshot(getQuestWorkStorageKey(start.reihe, 1));
+  let geladen =
+    window.Lernpfad.isLernpfadDone(start.lernpfad) && loadErmSnapshot(getArbeitsstandKey(start.lernpfad, 1));
   if (!geladen) {
     try {
       await loadErmFromFile(start.datei);
@@ -193,14 +194,14 @@ async function loadStartModel(reihe) {
       return false;
     }
   }
-  if (reihe.nurKardinalitaeten) state.nodes.forEach((n) => (n.vorgegeben = true));
+  if (lernpfad.nurKardinalitaeten) state.nodes.forEach((n) => (n.vorgegeben = true));
   return true;
 }
 
-// Leeres Relationenmodell für eine Szenario-Quest; SQL-Übung: die Musterlösung ist vorgegeben
-function relationenmodellNeu(reihe) {
+// Leeres Relationenmodell für eine Szenario-Aufgabe; SQL-Übung: die Musterlösung ist vorgegeben
+function relationenmodellNeu(lernpfad) {
   window.RelModel?.reset?.();
-  if (reihe?.rmVorgabe) window.RelModel?.setStudentRelations?.(window.RelModel.loesungAlsRelationen());
+  if (lernpfad?.rmVorgabe) window.RelModel?.setStudentRelations?.(window.RelModel.loesungAlsRelationen());
 }
 
 function hasStorageEntry(storageKey) {
@@ -274,17 +275,17 @@ function persistStateNow() {
   }
 }
 
-// Gespeichert wird getrennt: Das freie Modell (PERSIST_KEY) nur außerhalb von Quests, in einer
-// ERM-Quest ihr Arbeitsstand. So bleibt das eigene Modell beim Start einer Quest erhalten.
+// Gespeichert wird getrennt: Das freie Modell (PERSIST_KEY) nur außerhalb von Aufgaben, in einer
+// ERM-Aufgabe ihr Arbeitsstand. So bleibt das eigene Modell beim Start einer Aufgabe erhalten.
 function persistTick() {
   verlaufMerken();
-  const reihe = getQuestSeries();
-  if (!window.Quest?.state?.questsPanelVisible) {
+  const lernpfad = lernpfadVon();
+  if (!window.Lernpfad?.state?.lernpfadAktiv) {
     persistStateNow();
-  } else if (reihe?.art === 'erm') {
-    saveErmSnapshot(getQuestWorkStorageKey(reihe.id, window.Quest.state.currentQuestNumber || 1));
-    // Live-Checkliste aktualisieren, wenn eine Szenario-Quest aktiv ist
-    if (!reihe.schritt) updateExpertChecklist();
+  } else if (lernpfad?.art === 'erm') {
+    saveErmSnapshot(getArbeitsstandKey(lernpfad.id, window.Lernpfad.state.aktuelleAufgabe || 1));
+    // Live-Checkliste aktualisieren, wenn eine Szenario-Aufgabe aktiv ist
+    if (!lernpfad.schritt) updateExpertChecklist();
   }
 }
 
@@ -297,7 +298,7 @@ function persistStateDebounced(delay = 260) {
   }, delay);
 }
 
-// Offene Änderung sofort speichern (vor einem Wechsel zwischen freiem Modus und Quest)
+// Offene Änderung sofort speichern (vor einem Wechsel zwischen freiem Modus und Aufgabe)
 function flushPersist() {
   if (!_persistTimer) return;
   clearTimeout(_persistTimer);
@@ -362,14 +363,14 @@ const wiederholen = () => verlaufSchritt(verlauf.vor, verlauf.zurueck);
 
 /** Aktualisiert nur die Checklisten-Einträge in-place (ohne volles Panel-Rerender). */
 function updateExpertChecklist() {
-  const checklistEl = document.getElementById('quest-checklist');
-  if (!checklistEl || !window.Quest?.getChecklistStatus) return;
+  const checklistEl = document.getElementById('aufgabe-checklist');
+  if (!checklistEl || !window.Lernpfad?.getChecklistStatus) return;
 
-  const checklist = window.Quest.getChecklistStatus();
+  const checklist = window.Lernpfad.getChecklistStatus();
   if (!checklist) return;
 
   const mapping =
-    getQuestSeries()?.art === 'rm'
+    lernpfadVon()?.art === 'rm'
       ? {
           relations: checklist.relations,
           attributes: checklist.attributes,
@@ -396,19 +397,19 @@ function updateExpertChecklist() {
     const row = checklistEl.querySelector(`[data-checklist-key="${key}"]`);
     if (!row) continue;
     const allDone = data.done === data.total;
-    const wasDone = row.classList.contains('quest-checklist-item--done');
+    const wasDone = row.classList.contains('aufgabe-checklist-item--done');
 
     if (allDone && !wasDone) {
-      row.classList.add('quest-checklist-item--done');
-      row.classList.add('quest-checklist-item--just-checked');
-      setTimeout(() => row.classList.remove('quest-checklist-item--just-checked'), 500);
+      row.classList.add('aufgabe-checklist-item--done');
+      row.classList.add('aufgabe-checklist-item--just-checked');
+      setTimeout(() => row.classList.remove('aufgabe-checklist-item--just-checked'), 500);
     } else if (!allDone && wasDone) {
-      row.classList.remove('quest-checklist-item--done');
+      row.classList.remove('aufgabe-checklist-item--done');
     }
 
-    const icon = row.querySelector('.quest-checklist-icon');
+    const icon = row.querySelector('.aufgabe-checklist-icon');
     if (icon) icon.textContent = allDone ? '✓' : '✗';
-    const label = row.querySelector('.quest-checklist-label');
+    const label = row.querySelector('.aufgabe-checklist-label');
     if (label) label.textContent = `${labels[key] || key} (${data.done}/${data.total})`;
   }
 }
@@ -424,19 +425,19 @@ function loadPersistedState() {
   }
 }
 
-// „ (n)“ hinter einem Namen im Eigenschaften-Panel; noch offen: „ (?)“ während einer Quest, sonst nichts
+// „ (n)“ hinter einem Namen im Eigenschaften-Panel; noch offen: „ (?)“ während einer Aufgabe, sonst nichts
 function cardinalitySuffix(raw) {
   if (state.kardinalitaeten === false) return '';
-  if (!raw) return window.Quest?.state?.questsPanelVisible ? ' (?)' : '';
+  if (!raw) return window.Lernpfad?.state?.lernpfadAktiv ? ' (?)' : '';
   return ` (${String(raw).toLowerCase()})`;
 }
 
-// Schalter „Kardinalitäten“ im Header: zeigt den Modus; während einer Quest legt die Reihe ihn fest
+// Schalter „Kardinalitäten“ im Header: zeigt den Modus; während einer Aufgabe legt der Lernpfad ihn fest
 function syncCardinalitySwitch() {
   const toggle = document.getElementById('toggle-cardinalities');
   if (!toggle) return;
   toggle.checked = state.kardinalitaeten !== false;
-  toggle.disabled = !!window.Quest?.state?.questsPanelVisible;
+  toggle.disabled = !!window.Lernpfad?.state?.lernpfadAktiv;
 }
 
 function renderRelatedItems(listElement, items, listNodeType = '') {
@@ -583,9 +584,6 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 }
 
-// Quest-Menü aus den Reihen: Einstieg und Fortgeschritten nebeneinander, darunter die eigenen Szenarien
-// der Lehrkräfte mit „öffnen“ und „erstellen“; unter jeder Reihe ein Fortschrittsbalken.
-// Klicks behandelt ein Listener am Menü (DOMContentLoaded), deshalb lässt es sich neu aufbauen.
 // Seitenleiste einklappen (nur unter 1100px wirksam, siehe style.css)
 const tabletMedia = window.matchMedia('(max-width: 1100px)');
 function setToolbarCollapsed(zu) {
@@ -597,27 +595,28 @@ function setToolbarCollapsed(zu) {
   btn.setAttribute('aria-expanded', String(!zu));
 }
 
-function baueQuestMenu() {
-  const menu = document.getElementById('quests-menu');
+// Lernpfad-Menü: je Stufe ein nummerierter Pfad (empfohlene Reihenfolge), darunter die eigenen Szenarien
+// und der Bereich für Lehrkräfte (Links, Szenario öffnen und erstellen). Fortschritt und „neu“ setzt
+// updateLernpfadDots. Klicks behandelt ein Listener am Menü (DOMContentLoaded), deshalb lässt es sich neu aufbauen.
+function baueLernpfadMenu() {
+  const menu = document.getElementById('lernpfade-menu');
   if (!menu) return;
-  const reihen = window.Quest?.getSeriesList?.() || [];
-  const eintrag = (r) => `<button class="tab-dropdown-item" type="button" data-quest-series="${r.id}">
-      <div class="tab-dropdown-item-text">
-        <span class="tab-dropdown-item-title">${r.icon} ${escapeHtml(r.titel)}</span>
+  const lernpfade = window.Lernpfad?.getLernpfade?.() || [];
+  const eintrag = (r, nr) => `<button class="tab-dropdown-item lernpfad-eintrag" type="button" data-lernpfad="${r.id}">
+      <span class="lernpfad-nr" aria-hidden="true">${nr || r.icon}</span>
+      <span class="tab-dropdown-item-text">
+        <span class="tab-dropdown-item-title">${nr ? `${r.icon} ` : ''}${escapeHtml(r.titel)}</span>
         <span class="tab-dropdown-item-subtitle">${r.untertitel}</span>
-        <span class="quest-menu-progress" data-mode="${r.id}">
-          <span class="quest-menu-progress-track"><span class="quest-menu-progress-fill"></span></span>
-          <span class="quest-menu-progress-text"></span>
-        </span>
-      </div>
+      </span>
+      <span class="lernpfad-status"></span>
     </button>`;
   const gruppe = (titel, inhalt, klasse = '') =>
-    `<div class="quest-menu-group ${klasse}"><div class="quest-menu-group-title">${titel}</div>${inhalt}</div>`;
-  const stufen = [...new Set(reihen.filter((r) => !r.eigen).map((r) => r.stufe))];
-  const eigene = reihen
+    `<div class="lernpfad-menu-group ${klasse}"><div class="lernpfad-menu-group-title">${titel}</div>${inhalt}</div>`;
+  const stufen = [...new Set(lernpfade.filter((r) => !r.eigen).map((r) => r.stufe))];
+  const eigene = lernpfade
     .filter((r) => r.eigen)
     .map(
-      (r) => `<div class="quest-menu-eigen-zeile">${eintrag(r)}<button class="quest-menu-entfernen" type="button"
+      (r) => `<div class="lernpfad-menu-eigen-zeile">${eintrag(r)}<button class="lernpfad-menu-entfernen" type="button"
         data-szenario-entfernen="${r.id}" title="Szenario entfernen" aria-label="Szenario entfernen">✕</button></div>`,
     )
     .join('');
@@ -626,38 +625,80 @@ function baueQuestMenu() {
       .map((stufe) =>
         gruppe(
           stufe,
-          reihen
+          lernpfade
             .filter((r) => r.stufe === stufe && !r.eigen)
-            .map(eintrag)
+            .map((r, i) => eintrag(r, i + 1))
             .join(''),
         ),
       )
       .join('') +
-    gruppe(
-      'Eigene Szenarien',
-      `${eigene}<div class="quest-menu-aktionen">
-        <button type="button" class="quest-menu-aktion" data-szenario-aktion="oeffnen">📂 Szenario öffnen</button>
-        <button type="button" class="quest-menu-aktion" data-szenario-aktion="erstellen">🛠 Szenario erstellen (für Lehrkräfte)</button>
-      </div>`,
-      'quest-menu-eigene',
-    ) +
-    '<div class="quest-menu-legende">🔷 ER-Modell lernen · <svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg> Relationenmodell lernen · ✏️ üben</div>';
-  window.App?.updateQuestDots?.();
+    (eigene ? gruppe('Eigene Szenarien', eigene, 'lernpfad-menu-eigene') : '') +
+    `<div class="lernpfad-menu-lehrkraft">
+      <span class="lernpfad-menu-lehrkraft-titel">Für Lehrkräfte</span>
+      <button type="button" class="lernpfad-menu-aktion" data-menu-aktion="links">🔗 Links zu den Lernpfaden</button>
+      <button type="button" class="lernpfad-menu-aktion" data-szenario-aktion="oeffnen">📂 Szenario öffnen</button>
+      <button type="button" class="lernpfad-menu-aktion" data-szenario-aktion="erstellen">🛠 Szenario erstellen</button>
+    </div>`;
+  window.App?.updateLernpfadDots?.();
+}
+
+// Übersicht „Links zu den Lernpfaden“: je Lernpfad ein Link zum Kopieren, wahlweise ab einer Aufgabe
+function baueLinkListe() {
+  const liste = document.getElementById('links-liste');
+  const basis = window.location.origin + window.location.pathname;
+  const lernpfade = (window.Lernpfad?.getLernpfade?.() || []).filter((r) => !r.eigen);
+  const link = (id, nr) => `${basis}?lernpfad=${id}${nr > 1 ? `&aufgabe=${nr}` : ''}`;
+  liste.innerHTML = [...new Set(lernpfade.map((r) => r.stufe))]
+    .map(
+      (stufe) =>
+        `<h4>${stufe}</h4>` +
+        lernpfade
+          .filter((r) => r.stufe === stufe)
+          .map(
+            (r) => `<div class="link-zeile" data-id="${r.id}">
+          <span class="link-titel">${r.icon} ${escapeHtml(r.titel)}</span>
+          <label class="link-ab">ab Aufgabe
+            <select>${r.aufgaben.map((q) => `<option value="${q.number}">${q.number}</option>`).join('')}</select>
+          </label>
+          <input class="link-url" type="text" readonly value="${link(r.id, 1)}" aria-label="Link zu ${escapeHtml(r.titel)}" />
+          <button class="rel-btn link-kopieren" type="button">📋 Kopieren</button>
+        </div>`,
+          )
+          .join(''),
+    )
+    .join('');
+  liste.querySelectorAll('.link-zeile').forEach((zeile) => {
+    const url = zeile.querySelector('.link-url');
+    zeile
+      .querySelector('select')
+      .addEventListener('change', (e) => (url.value = link(zeile.dataset.id, +e.target.value)));
+    const btn = zeile.querySelector('.link-kopieren');
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(url.value);
+        btn.textContent = '✓ Kopiert';
+      } catch (_e) {
+        url.select(); // ohne Zugriff auf die Zwischenablage: markieren, Strg+C
+        btn.textContent = 'Strg+C drücken';
+      }
+      setTimeout(() => (btn.textContent = '📋 Kopieren'), 2000);
+    });
+  });
 }
 
 // ---- Tabs ----
 function initTabs() {
-  const questsToggleBtn = document.getElementById('btn-quests-toggle');
-  const questsMenu = document.getElementById('quests-menu');
-  const questsDropdown = questsToggleBtn?.closest('.tab-dropdown');
+  const lernpfadeToggleBtn = document.getElementById('btn-lernpfade-toggle');
+  const lernpfadeMenu = document.getElementById('lernpfade-menu');
+  const lernpfadeDropdown = lernpfadeToggleBtn?.closest('.tab-dropdown');
   const relmodelBtn = document.getElementById('btn-relmodel-toggle');
   const relmodelDrawer = document.getElementById('relmodel-drawer');
   const relmodelResizer = document.getElementById('relmodel-resizer');
   const mainLayout = document.getElementById('main-layout');
   if (
-    !questsToggleBtn ||
-    !questsMenu ||
-    !questsDropdown ||
+    !lernpfadeToggleBtn ||
+    !lernpfadeMenu ||
+    !lernpfadeDropdown ||
     !relmodelBtn ||
     !relmodelDrawer ||
     !relmodelResizer ||
@@ -665,7 +706,7 @@ function initTabs() {
   )
     return;
 
-  baueQuestMenu();
+  baueLernpfadMenu();
 
   // Schmale Bildschirme: höchstens die halbe Breite, damit das ERM daneben sichtbar bleibt
   let lastOpenWidth = Math.min(relmodelDrawer.getBoundingClientRect().width || 460, window.innerWidth / 2);
@@ -675,28 +716,28 @@ function initTabs() {
     return Math.max(320, Math.min(maxWidth, value));
   };
 
-  const setQuestsMenuOpen = (open) => {
-    questsDropdown.classList.toggle('open', open);
-    questsMenu.hidden = !open;
-    questsToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open && window.App?.updateQuestDots) window.App.updateQuestDots();
+  const setLernpfadeMenuOpen = (open) => {
+    lernpfadeDropdown.classList.toggle('open', open);
+    lernpfadeMenu.hidden = !open;
+    lernpfadeToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
   };
 
-  let syncQuestPanelResizer = () => {}; // wird unten überschrieben
+  let syncAufgabePanelResizer = () => {}; // wird unten überschrieben
 
-  const syncQuestPanelRight = () => {
-    const questPanel = document.getElementById('quest-panel');
-    if (!questPanel) return;
-    // Tablet: Quest-Panel volle Breite, das Relationenmodell endet darüber (syncQuestPanelResizer)
+  const syncAufgabePanelRight = () => {
+    const aufgabePanel = document.getElementById('aufgabe-panel');
+    if (!aufgabePanel) return;
+    // Tablet: Aufgabenleiste volle Breite, das Relationenmodell endet darüber (syncAufgabePanelResizer)
     if (tabletMedia.matches) {
-      questPanel.style.right = '';
-      syncQuestPanelResizer();
+      aufgabePanel.style.right = '';
+      syncAufgabePanelResizer();
       return;
     }
     // Gemessen statt berechnet: folgt so auch der Animation beim Ein- und Ausblenden
     const breite = relmodelDrawer.getBoundingClientRect().width + relmodelResizer.getBoundingClientRect().width;
-    questPanel.style.right = `${breite}px`;
-    syncQuestPanelResizer();
+    aufgabePanel.style.right = `${breite}px`;
+    syncAufgabePanelResizer();
   };
 
   const setDrawerState = (open) => {
@@ -710,14 +751,14 @@ function initTabs() {
     if (open) {
       relmodelDrawer.style.width = `${clampDrawerWidth(lastOpenWidth)}px`;
       if (window.RelModel) window.RelModel.syncFromDiagram();
-      // Trigger Quest-Validierung wenn Drawer während einer Relationenmodell-Schritt-Reihe geöffnet wird
-      const reihe = getQuestSeries();
-      if (reihe?.art === 'rm' && reihe.schritt && window.Quest.state.questsPanelVisible) {
-        setTimeout(() => window.Quest.validateCurrentQuest(), 100);
+      // Trigger Aufgaben-Validierung wenn Drawer während einer Relationenmodell-Schritt-Lernpfad geöffnet wird
+      const lernpfad = lernpfadVon();
+      if (lernpfad?.art === 'rm' && lernpfad.schritt && window.Lernpfad.state.lernpfadAktiv) {
+        setTimeout(() => window.Lernpfad.validateCurrentAufgabe(), 100);
       }
     }
 
-    syncQuestPanelRight();
+    syncAufgabePanelRight();
   };
 
   const stopResize = () => {
@@ -732,23 +773,23 @@ function initTabs() {
     const nextWidth = clampDrawerWidth(layoutRect.right - event.clientX);
     lastOpenWidth = nextWidth;
     relmodelDrawer.style.width = `${nextWidth}px`;
-    syncQuestPanelRight();
+    syncAufgabePanelRight();
   };
 
   setDrawerState(false);
-  setQuestsMenuOpen(false);
+  setLernpfadeMenuOpen(false);
 
-  questsToggleBtn.addEventListener('click', (event) => {
+  lernpfadeToggleBtn.addEventListener('click', (event) => {
     event.stopPropagation();
-    setQuestsMenuOpen(questsMenu.hidden);
+    setLernpfadeMenuOpen(lernpfadeMenu.hidden);
   });
 
-  questsMenu.addEventListener('click', (event) => {
+  lernpfadeMenu.addEventListener('click', (event) => {
     event.stopPropagation();
   });
 
   relmodelBtn.addEventListener('click', () => {
-    setQuestsMenuOpen(false);
+    setLernpfadeMenuOpen(false);
     setDrawerState(relmodelDrawer.classList.contains('collapsed'));
   });
 
@@ -766,176 +807,162 @@ function initTabs() {
       lastOpenWidth = clampDrawerWidth(relmodelDrawer.getBoundingClientRect().width || lastOpenWidth);
       relmodelDrawer.style.width = `${lastOpenWidth}px`;
     }
-    syncQuestPanelRight();
-    syncQuestPanelResizer();
+    syncAufgabePanelRight();
+    syncAufgabePanelResizer();
   });
 
-  // ---- Quest-Panel Resizer (vertikal, obere Kante) ----
-  const questPanelResizer = document.getElementById('quest-panel-resizer');
-  const questPanel = document.getElementById('quest-panel');
+  // ---- Ziehgriff der Aufgabenleiste (vertikal, obere Kante) ----
+  const aufgabePanelResizer = document.getElementById('aufgabe-panel-resizer');
+  const aufgabePanel = document.getElementById('aufgabe-panel');
 
-  syncQuestPanelResizer = () => {
-    if (!questPanelResizer || !questPanel) return;
-    const isVisible = questPanel.classList.contains('visible');
-    const eingeklappt = questPanel.classList.contains('eingeklappt') && tabletMedia.matches;
-    questPanelResizer.classList.toggle('visible', isVisible && !eingeklappt);
-    const h = isVisible ? questPanel.getBoundingClientRect().height : 0;
-    // SQL-Panel (js/sql.js) endet über dem Quest-Panel
-    document.documentElement.style.setProperty('--quest-hoehe', `${h}px`);
+  syncAufgabePanelResizer = () => {
+    if (!aufgabePanelResizer || !aufgabePanel) return;
+    const isVisible = aufgabePanel.classList.contains('visible');
+    const eingeklappt = aufgabePanel.classList.contains('eingeklappt') && tabletMedia.matches;
+    aufgabePanelResizer.classList.toggle('visible', isVisible && !eingeklappt);
+    const h = isVisible ? aufgabePanel.getBoundingClientRect().height : 0;
+    // SQL-Panel (js/sql.js) endet über der Aufgabenleiste
+    document.documentElement.style.setProperty('--aufgabe-hoehe', `${h}px`);
     if (isVisible) {
-      questPanelResizer.style.bottom = `${h}px`;
-      questPanelResizer.style.right = questPanel.style.right || '0';
+      aufgabePanelResizer.style.bottom = `${h}px`;
+      aufgabePanelResizer.style.right = aufgabePanel.style.right || '0';
     }
-    // Tablet: Relationenmodell endet über dem Quest-Panel
+    // Tablet: Relationenmodell endet über der Aufgabenleiste
     relmodelDrawer.style.height =
-      isVisible && tabletMedia.matches ? `calc(100% - ${questPanel.getBoundingClientRect().height}px)` : '';
+      isVisible && tabletMedia.matches ? `calc(100% - ${aufgabePanel.getBoundingClientRect().height}px)` : '';
   };
 
-  if (questPanelResizer && questPanel) {
-    let questPanelStartY = 0;
-    let questPanelStartH = 0;
+  if (aufgabePanelResizer && aufgabePanel) {
+    // Die Höhe folgt dem Inhalt: Ziehgriff und SQL-Panel mitführen, wenn sich die Aufgabe ändert
+    new ResizeObserver(() => syncAufgabePanelResizer()).observe(aufgabePanel);
+    let aufgabePanelStartY = 0;
+    let aufgabePanelStartH = 0;
 
-    const stopQuestResize = () => {
-      questPanelResizer.classList.remove('is-dragging');
+    const stopAufgabeResize = () => {
+      aufgabePanelResizer.classList.remove('is-dragging');
       document.body.classList.remove('is-resizing-drawer');
-      window.removeEventListener('pointermove', onQuestPointerMove);
-      window.removeEventListener('pointerup', stopQuestResize);
+      window.removeEventListener('pointermove', onAufgabePointerMove);
+      window.removeEventListener('pointerup', stopAufgabeResize);
     };
 
-    const onQuestPointerMove = (event) => {
-      const delta = questPanelStartY - event.clientY;
-      const minH = 180;
+    const onAufgabePointerMove = (event) => {
+      const delta = aufgabePanelStartY - event.clientY;
+      const minH = 120;
       const maxH = window.innerHeight * 0.6;
-      const newH = Math.max(minH, Math.min(maxH, questPanelStartH + delta));
-      questPanel.style.height = `${newH}px`;
-      syncQuestPanelResizer();
+      const newH = Math.max(minH, Math.min(maxH, aufgabePanelStartH + delta));
+      aufgabePanel.style.height = `${newH}px`;
+      aufgabePanel.style.maxHeight = 'none'; // gezogen: bis 60 % statt der 45 % beim Anpassen an den Inhalt
+      syncAufgabePanelResizer();
     };
 
-    questPanelResizer.addEventListener('pointerdown', (event) => {
-      if (!questPanel.classList.contains('visible')) return;
+    aufgabePanelResizer.addEventListener('pointerdown', (event) => {
+      if (!aufgabePanel.classList.contains('visible')) return;
       event.preventDefault();
-      questPanelStartY = event.clientY;
-      questPanelStartH = questPanel.getBoundingClientRect().height;
-      questPanelResizer.classList.add('is-dragging');
+      aufgabePanelStartY = event.clientY;
+      aufgabePanelStartH = aufgabePanel.getBoundingClientRect().height;
+      aufgabePanelResizer.classList.add('is-dragging');
       document.body.classList.add('is-resizing-drawer');
-      window.addEventListener('pointermove', onQuestPointerMove);
-      window.addEventListener('pointerup', stopQuestResize);
+      window.addEventListener('pointermove', onAufgabePointerMove);
+      window.addEventListener('pointerup', stopAufgabeResize);
     });
   }
 
-  // Während Relationenmodell oder Quest-Panel animiert werden: Quest-Panel (Breite) und Ziehgriff jedes Bild nachführen
+  // Während Relationenmodell oder Aufgabenleiste animiert werden: Aufgabenleiste (Breite) und Ziehgriff jedes Bild nachführen
   let laufendeAnimationen = 0;
   const nachfuehren = () => {
-    syncQuestPanelRight();
+    syncAufgabePanelRight();
     if (laufendeAnimationen) requestAnimationFrame(nachfuehren);
   };
-  [relmodelDrawer, questPanel].forEach((el) => {
+  [relmodelDrawer, aufgabePanel].forEach((el) => {
     el?.addEventListener('transitionrun', (e) => {
       if (e.target === el && !laufendeAnimationen++) requestAnimationFrame(nachfuehren);
     });
     const ende = (e) => {
       if (e.target !== el) return;
       laufendeAnimationen = Math.max(0, laufendeAnimationen - 1);
-      if (!laufendeAnimationen) syncQuestPanelRight();
+      if (!laufendeAnimationen) syncAufgabePanelRight();
     };
     el?.addEventListener('transitionend', ende);
     el?.addEventListener('transitioncancel', ende);
   });
 
-  // Tablet: Quest-Panel auf die Kopfzeile einklappen
-  const questFoldBtn = document.getElementById('btn-quest-fold');
-  questFoldBtn?.addEventListener('click', () => {
-    const kopf = questPanel.querySelector('.quest-header');
-    questPanel.style.setProperty('--quest-kopf', `${kopf.offsetHeight + questPanel.clientTop}px`);
-    const zu = questPanel.classList.toggle('eingeklappt');
-    const text = zu ? 'Quest-Panel ausklappen' : 'Quest-Panel einklappen';
-    questFoldBtn.dataset.tooltip = text;
-    questFoldBtn.setAttribute('aria-label', text);
-    questFoldBtn.setAttribute('aria-expanded', String(!zu));
-    syncQuestPanelResizer();
+  // Tablet: Aufgabenleiste auf die Kopfzeile einklappen
+  const aufgabeFoldBtn = document.getElementById('btn-aufgabe-fold');
+  aufgabeFoldBtn?.addEventListener('click', () => {
+    const kopf = aufgabePanel.querySelector('.aufgabe-header');
+    aufgabePanel.style.setProperty('--aufgabe-kopf', `${kopf.offsetHeight + aufgabePanel.clientTop}px`);
+    const zu = aufgabePanel.classList.toggle('eingeklappt');
+    const text = zu ? 'Aufgabenleiste ausklappen' : 'Aufgabenleiste einklappen';
+    aufgabeFoldBtn.dataset.tooltip = text;
+    aufgabeFoldBtn.setAttribute('aria-label', text);
+    aufgabeFoldBtn.setAttribute('aria-expanded', String(!zu));
+    syncAufgabePanelResizer();
   });
 
   // Lade den Resizer-Zustand nach Panel-Rendering
-  const _origRenderPanel = window.Quest?.renderPanel?.bind(window.Quest);
-  if (_origRenderPanel && window.Quest) {
-    window.Quest.renderPanel = function () {
+  const _origRenderPanel = window.Lernpfad?.renderPanel?.bind(window.Lernpfad);
+  if (_origRenderPanel && window.Lernpfad) {
+    window.Lernpfad.renderPanel = function () {
       _origRenderPanel();
-      syncQuestPanelResizer();
+      syncAufgabePanelResizer();
     };
   }
 
   document.addEventListener('click', (event) => {
-    if (!questsDropdown.contains(event.target)) {
-      setQuestsMenuOpen(false);
+    if (!lernpfadeDropdown.contains(event.target)) {
+      setLernpfadeMenuOpen(false);
     }
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') setQuestsMenuOpen(false);
+    if (event.key === 'Escape') setLernpfadeMenuOpen(false);
   });
 
-  // ---- Quest-Button & Item Hinweis-Punkte ----
-  (function initQuestDots() {
+  // ---- Aufgaben-Button & Item Hinweis-Punkte ----
+  (function initLernpfadDots() {
     function isNotStarted(btn) {
-      const mode = btn.dataset.questSeries;
+      const mode = btn.dataset.lernpfad;
       if (!mode) return false;
-      return !localStorage.getItem(window.Quest.getStorageKey(mode));
+      return !localStorage.getItem(window.Lernpfad.getStorageKey(mode));
     }
 
-    function updateQuestDots() {
-      const itemButtons = Array.from(
-        questsMenu.querySelectorAll('.tab-dropdown-item:not([disabled]):not(.tab-dropdown-item-disabled)'),
-      );
+    function updateLernpfadDots() {
+      const itemButtons = Array.from(lernpfadeMenu.querySelectorAll('.lernpfad-eintrag'));
 
-      // Item-Dots verwalten; die laufende Reihe ist hervorgehoben
-      const laufend = window.Quest.state.questsPanelVisible ? window.Quest.state.questMode : null;
+      // Laufender Lernpfad hervorgehoben; Fortschritt als Ring um die Nummer, rechts „neu“, „3 / 10“ oder „✓“
+      const laufend = window.Lernpfad.state.lernpfadAktiv ? window.Lernpfad.state.lernpfadId : null;
       itemButtons.forEach((btn) => {
-        if (btn.dataset.questSeries === laufend) btn.setAttribute('aria-current', 'true');
+        if (btn.dataset.lernpfad === laufend) btn.setAttribute('aria-current', 'true');
         else btn.removeAttribute('aria-current');
-        const dot = btn.querySelector('.quest-item-dot');
-        if (isNotStarted(btn)) {
-          if (!dot) {
-            const d = document.createElement('span');
-            d.className = 'quest-item-dot';
-            d.setAttribute('aria-hidden', 'true');
-            btn.appendChild(d);
-          }
-        } else {
-          if (dot) dot.remove();
-        }
-
-        // Fortschrittsbalken aktualisieren
-        const fortschritt = btn.querySelector('.quest-menu-progress');
-        if (fortschritt && window.Quest) {
-          const { erledigt, gesamt } = window.Quest.getFortschritt(fortschritt.dataset.mode);
-          const fertig = gesamt > 0 && erledigt === gesamt;
-          fortschritt.classList.toggle('fertig', fertig);
-          fortschritt.querySelector('.quest-menu-progress-fill').style.width = `${(erledigt / (gesamt || 1)) * 100}%`;
-          fortschritt.querySelector('.quest-menu-progress-text').textContent = fertig
-            ? `✓ ${gesamt} von ${gesamt}`
-            : `${erledigt} von ${gesamt}`;
-        }
+        const { erledigt, gesamt } = window.Lernpfad.getFortschritt(btn.dataset.lernpfad);
+        const fertig = gesamt > 0 && erledigt === gesamt;
+        const neu = isNotStarted(btn);
+        btn.classList.toggle('fertig', fertig);
+        btn.style.setProperty('--fortschritt', `${(erledigt / (gesamt || 1)) * 100}%`);
+        const status = btn.querySelector('.lernpfad-status');
+        status.className = `lernpfad-status${neu ? ' neu' : ''}`;
+        status.textContent = fertig ? '✓' : neu ? 'neu' : `${erledigt} / ${gesamt}`;
       });
 
       // Haupt-Button-Dot verwalten
       const anyUnstarted = itemButtons.some(isNotStarted);
-      let btnDot = questsToggleBtn.querySelector('.quest-dot');
+      let btnDot = lernpfadeToggleBtn.querySelector('.lernpfad-dot');
       if (anyUnstarted) {
         if (!btnDot) {
           btnDot = document.createElement('span');
-          btnDot.className = 'quest-dot quest-dot--pulse';
+          btnDot.className = 'lernpfad-dot lernpfad-dot--pulse';
           btnDot.setAttribute('aria-hidden', 'true');
-          questsToggleBtn.appendChild(btnDot);
+          lernpfadeToggleBtn.appendChild(btnDot);
 
           // Nach 25 Sek. Pulse stoppen, Punkt bleibt statisch
           const pulseTimer = setTimeout(() => {
-            if (btnDot) btnDot.classList.remove('quest-dot--pulse');
+            if (btnDot) btnDot.classList.remove('lernpfad-dot--pulse');
           }, 25000);
 
-          questsToggleBtn.addEventListener(
+          lernpfadeToggleBtn.addEventListener(
             'click',
             () => {
               clearTimeout(pulseTimer);
-              if (btnDot) btnDot.classList.remove('quest-dot--pulse');
+              if (btnDot) btnDot.classList.remove('lernpfad-dot--pulse');
             },
             { once: true },
           );
@@ -945,12 +972,12 @@ function initTabs() {
       }
     }
 
-    // Erster Stand; danach beim Öffnen des Menüs und beim Start einer Reihe
-    updateQuestDots();
+    // Erster Stand; danach beim Öffnen des Menüs und beim Start eines Lernpfads
+    updateLernpfadDots();
 
-    // Expose for external updates (e.g. when quest progress is reset)
+    // Expose for external updates (e.g. when aufgabe progress is reset)
     if (!window.App) window.App = {};
-    window.App.updateQuestDots = updateQuestDots;
+    window.App.updateLernpfadDots = updateLernpfadDots;
   })();
 
   window.AppTabs = { setDrawerState };
@@ -1375,10 +1402,10 @@ function clearDiagramSilent() {
   aktiverArbeitsstand = null;
 }
 
-// ER-Modell einer Relationenmodell-Quest: aus files/ oder (eigenes Szenario) aus der Quest selbst
-async function loadQuestErm(quest) {
-  if (quest?.erm) applyErmPayload(JSON.parse(JSON.stringify(quest.erm)), true);
-  else if (quest?.jsonFile) await loadErmFromFile(quest.jsonFile).catch(() => {});
+// ER-Modell einer Relationenmodell-Aufgabe: aus files/ oder (eigenes Szenario) aus der Aufgabe selbst
+async function loadAufgabeErm(aufgabe) {
+  if (aufgabe?.erm) applyErmPayload(JSON.parse(JSON.stringify(aufgabe.erm)), true);
+  else if (aufgabe?.jsonFile) await loadErmFromFile(aufgabe.jsonFile).catch(() => {});
 }
 
 function loadErmFromFile(filename) {
@@ -1434,7 +1461,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = document.getElementById(backdropId);
     if (el) el.style.display = 'none';
   }
-  ['info', 'rules', 'impressum', 'datenschutz'].forEach((name) => {
+  ['info', 'rules', 'impressum', 'datenschutz', 'links'].forEach((name) => {
     const btn = document.getElementById(`btn-${name}-modal`);
     const closeBtn = document.getElementById(`btn-${name}-modal-close`);
     const backdrop = document.getElementById(`modal-${name}-backdrop`);
@@ -1451,6 +1478,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeModal('modal-rules-backdrop');
       closeModal('modal-impressum-backdrop');
       closeModal('modal-datenschutz-backdrop');
+      closeModal('modal-links-backdrop');
     }
   });
 
@@ -1576,10 +1604,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ---- Quest-Menu Event Listeners ----
-  const closeQuestDropdownMenu = () => {
-    const btn = document.getElementById('btn-quests-toggle');
-    const menu = document.getElementById('quests-menu');
+  // ---- Aufgaben-Menu Event Listeners ----
+  const closeLernpfadMenu = () => {
+    const btn = document.getElementById('btn-lernpfade-toggle');
+    const menu = document.getElementById('lernpfade-menu');
     const dropdown = btn?.closest('.tab-dropdown');
     if (!btn || !menu || !dropdown) return;
     dropdown.classList.remove('open');
@@ -1587,133 +1615,145 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.setAttribute('aria-expanded', 'false');
   };
 
-  // Startet eine Quest-Reihe. Das freie Modell bleibt gespeichert und kommt beim Schließen der Quest zurück.
-  async function startQuestSeriesFlow(mode) {
-    const reihe = getQuestSeries(mode);
-    if (!window.Quest || !reihe) return false;
-    closeQuestDropdownMenu();
+  // Startet eine Lernpfad. Das freie Modell bleibt gespeichert und kommt beim Schließen der Aufgabe zurück.
+  async function startLernpfadFlow(mode) {
+    const lernpfad = lernpfadVon(mode);
+    if (!window.Lernpfad || !lernpfad) return false;
+    closeLernpfadMenu();
 
-    // Offene Änderungen sichern: im freien Modus das eigene Modell, sonst den Stand der laufenden Quest
+    // Offene Änderungen sichern: im freien Modus das eigene Modell, sonst den Stand der laufenden Aufgabe
     flushPersist();
-    const ausFreiemModus = !window.Quest.state.questsPanelVisible;
+    const ausFreiemModus = !window.Lernpfad.state.lernpfadAktiv;
     if (ausFreiemModus && (state.nodes.length || window.RelModel?.getStudentRelations?.().length)) {
       window.App?.showTopToast?.(
-        'Dein eigenes Modell ist gespeichert – es kommt zurück, wenn du die Quest schließt.',
+        'Dein eigenes Modell ist gespeichert – es kommt zurück, wenn du den Lernpfad schließt.',
         7000,
       );
     }
-    window.App?.onBeforeQuestChange?.(window.Quest.state);
+    window.App?.onBeforeAufgabeChange?.(window.Lernpfad.state);
 
-    if (reihe.art === 'erm') {
-      // ERM-Reihen: Relationenmodell auf einem eigenen Übungsplatz, leer zum Start
-      window.RelModel?.setPersistKey?.(RELMODEL_ERM_QUEST_KEY);
+    if (lernpfad.art === 'erm') {
+      // ERM-Lernpfade: Relationenmodell auf einem eigenen Übungsplatz, leer zum Start
+      window.RelModel?.setPersistKey?.(RELMODEL_ERM_LERNPFAD_KEY);
       window.RelModel?.reset?.();
       window.AppTabs?.setDrawerState?.(false);
     }
 
-    window.Quest.startQuestSeries(mode);
+    window.Lernpfad.startLernpfad(mode);
 
-    if (reihe.art === 'rm' && reihe.schritt) {
-      // Schritt-Reihe: ein ER-Modell und ein Arbeitsstand für die ganze Reihe
-      const workKey = getQuestWorkStorageKey(mode, 1);
+    if (lernpfad.art === 'rm' && lernpfad.schritt) {
+      // Schritt-Lernpfad: ein ER-Modell und ein Arbeitsstand für den ganzen Lernpfad
+      const workKey = getArbeitsstandKey(mode, 1);
       window.RelModel?.setPersistKey?.(workKey);
       try {
-        await loadErmFromFile(reihe.ermDatei);
+        await loadErmFromFile(lernpfad.ermDatei);
       } catch (err) {
         window.App?.showAlertModal?.('Das ER-Modell konnte nicht geladen werden.', 'Fehler');
         return false;
       }
       if (!window.RelModel?.loadFromStorage?.(workKey)) window.RelModel?.reset?.();
-      window.AppTabs?.setDrawerState?.(!window.Quest.getCurrentQuest()?.seitenleisteSelbstOeffnen);
+      window.AppTabs?.setDrawerState?.(!window.Lernpfad.getCurrentAufgabe()?.seitenleisteSelbstOeffnen);
       state.diagramLocked = true;
-      window.Quest.renderPanel();
+      window.Lernpfad.renderPanel();
     } else {
-      await window.App?.onQuestChanged?.(window.Quest.getCurrentQuest?.(), window.Quest.state);
+      await window.App?.onAufgabeChanged?.(window.Lernpfad.getCurrentAufgabe?.(), window.Lernpfad.state);
     }
     return true;
   }
 
-  window.App.startQuestSeries = startQuestSeriesFlow;
-  window.App.baueQuestMenu = baueQuestMenu;
+  window.App.startLernpfad = startLernpfadFlow;
+  window.App.baueLernpfadMenu = baueLernpfadMenu;
 
-  // Ein Listener für das ganze Menü: Reihe starten, eigenes Szenario entfernen, öffnen oder erstellen
-  document.getElementById('quests-menu').addEventListener('click', (e) => {
+  // Ein Listener für das ganze Menü: Lernpfad starten, eigenes Szenario entfernen, öffnen oder erstellen
+  document.getElementById('lernpfade-menu').addEventListener('click', (e) => {
     const entfernen = e.target.closest('[data-szenario-entfernen]');
     const aktion = e.target.closest('[data-szenario-aktion]');
-    const reihe = e.target.closest('[data-quest-series]');
-    if (entfernen) {
+    const lernpfad = e.target.closest('[data-lernpfad]');
+    if (e.target.closest('[data-menu-aktion="links"]')) {
+      closeLernpfadMenu();
+      baueLinkListe();
+      openModal('modal-links-backdrop');
+    } else if (entfernen) {
       window.Szenario?.entfernen?.(entfernen.dataset.szenarioEntfernen);
     } else if (aktion) {
-      closeQuestDropdownMenu();
+      closeLernpfadMenu();
       if (aktion.dataset.szenarioAktion === 'oeffnen') window.Szenario?.dateiWaehlen?.();
       else window.Szenario?.dialogOeffnen?.();
-    } else if (reihe) {
+    } else if (lernpfad) {
       e.preventDefault();
-      startQuestSeriesFlow(reihe.dataset.questSeries);
+      startLernpfadFlow(lernpfad.dataset.lernpfad);
     }
   });
 
-  // Quest-Close Button
-  const questCloseBtn = document.getElementById('btn-quest-close');
-  if (questCloseBtn) {
-    questCloseBtn.addEventListener('click', () => {
-      if (window.Quest && window.Quest.hidePanel) {
-        window.Quest.hidePanel();
+  // Aufgaben-Close Button
+  const aufgabeCloseBtn = document.getElementById('btn-aufgabe-close');
+  if (aufgabeCloseBtn) {
+    aufgabeCloseBtn.addEventListener('click', () => {
+      if (window.Lernpfad && window.Lernpfad.hidePanel) {
+        window.Lernpfad.hidePanel();
         state.diagramLocked = false;
       }
     });
   }
 
-  // Quest-Reset Button
-  const questResetBtn = document.getElementById('btn-quest-reset');
-  if (questResetBtn) {
-    questResetBtn.addEventListener('click', async () => {
-      if (!window.Quest || !window.Quest.resetCurrentSeriesProgress) return;
+  // Aufgaben-Reset Button
+  const aufgabeMehr = document.getElementById('aufgabe-mehr');
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (aufgabeMehr && !aufgabeMehr.contains(e.target)) aufgabeMehr.open = false;
+    },
+    true,
+  );
+  document.querySelectorAll('[data-aufgabe-reset]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      aufgabeMehr.open = false;
+      if (!window.Lernpfad || !window.Lernpfad.resetLernpfadProgress) return;
       const confirmed = await window.App?.showConfirmModal?.(
-        'Soll der Fortschritt der aktuellen Quest-Reihe zurückgesetzt werden? Alle bisherigen Arbeitsst\u00e4nde werden gel\u00f6scht.',
-        'Quest-Reihe zurücksetzen',
+        'Soll der Fortschritt des aktuellen Lernpfads zurückgesetzt werden? Alle bisherigen Arbeitsst\u00e4nde werden gel\u00f6scht.',
+        'Lernpfad zurücksetzen',
       );
       if (confirmed) {
-        const reihe = getQuestSeries();
+        const lernpfad = lernpfadVon();
 
-        window.Quest.resetCurrentSeriesProgress();
+        window.Lernpfad.resetLernpfadProgress();
         aktiverArbeitsstand = null;
 
-        // Leere/reload Modelle je nach Quest-Reihe
-        if (reihe?.art === 'erm') {
-          await window.App.onQuestChanged(window.Quest.getCurrentQuest?.(), window.Quest.state);
-        } else if (reihe?.schritt) {
-          // Relationenmodell-Schritt-Reihe: ERM bleibt, Relationen leeren
+        // Leere/reload Modelle je nach Lernpfad
+        if (lernpfad?.art === 'erm') {
+          await window.App.onAufgabeChanged(window.Lernpfad.getCurrentAufgabe?.(), window.Lernpfad.state);
+        } else if (lernpfad?.schritt) {
+          // Relationenmodell-Schritt-Lernpfad: ERM bleibt, Relationen leeren
           if (window.RelModel) window.RelModel.reset();
-        } else if (reihe) {
+        } else if (lernpfad) {
           // Relationenmodell-Szenario: ERM neu laden und Relationen leeren (SQL-Übung: vorgeben)
-          const quest = window.Quest.getCurrentQuest?.();
-          if (quest?.jsonFile || quest?.erm) {
-            await loadQuestErm(quest);
-            relationenmodellNeu(reihe);
+          const aufgabe = window.Lernpfad.getCurrentAufgabe?.();
+          if (aufgabe?.jsonFile || aufgabe?.erm) {
+            await loadAufgabeErm(aufgabe);
+            relationenmodellNeu(lernpfad);
             if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
             state.diagramLocked = true;
           }
         }
       }
     });
-  }
+  });
 
-  // Quest Circle Click Handlers – Bestätigung nur bei noch nicht abgeschlossenen Aufgaben
-  const questPanel = document.getElementById('quest-panel');
-  if (questPanel) {
-    const switchQuestWithGuards = async (questNum) => {
-      if (!window.Quest) return false;
-      const currentQuestNum = Number(window.Quest.state.currentQuestNumber);
-      if (isNaN(questNum) || isNaN(currentQuestNum) || questNum === currentQuestNum) return false;
+  // Aufgabe Circle Click Handlers – Bestätigung nur bei noch nicht abgeschlossenen Aufgaben
+  const aufgabePanel = document.getElementById('aufgabe-panel');
+  if (aufgabePanel) {
+    const switchAufgabeWithGuards = async (aufgabeNum) => {
+      if (!window.Lernpfad) return false;
+      const currentAufgabeNum = Number(window.Lernpfad.state.aktuelleAufgabe);
+      if (isNaN(aufgabeNum) || isNaN(currentAufgabeNum) || aufgabeNum === currentAufgabeNum) return false;
 
-      const qMode = window.Quest.state?.questMode || '';
-      const isCompleted = window.Quest.state.completedQuests.includes(questNum);
+      const qMode = window.Lernpfad.state?.lernpfadId || '';
+      const isCompleted = window.Lernpfad.state.geloesteAufgaben.includes(aufgabeNum);
 
-      // Abschlussquest einer Schritt-Reihe: erst, wenn alle Aufgaben gelöst sind
-      if (window.Quest.getQuestByNumber(qMode, questNum)?.abschluss && !isCompleted) {
-        const allPreviousCompleted = window.Quest.getAufgaben(qMode).every((q) =>
-          window.Quest.state.completedQuests.includes(q.number),
+      // Abschlussaufgabe eines Schritt-Lernpfads: erst, wenn alle Aufgaben gelöst sind
+      if (window.Lernpfad.getAufgabeByNumber(qMode, aufgabeNum)?.abschluss && !isCompleted) {
+        const allPreviousCompleted = window.Lernpfad.getAufgaben(qMode).every((q) =>
+          window.Lernpfad.state.geloesteAufgaben.includes(q.number),
         );
         if (!allPreviousCompleted) {
           await window.App?.showAppModal?.({
@@ -1727,8 +1767,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Schritt-Reihen bauen aufeinander auf: nur freigeschaltete Aufgaben; Szenarien sind frei wählbar.
-      if (!isCompleted && getQuestSeries(qMode)?.schritt && !window.Quest.state.unlockedQuests.includes(questNum)) {
+      // Schritt-Lernpfade bauen aufeinander auf: nur freigeschaltete Aufgaben; Szenarien sind frei wählbar.
+      if (!isCompleted && lernpfadVon(qMode)?.schritt && !window.Lernpfad.state.freieAufgaben.includes(aufgabeNum)) {
         await window.App?.showAppModal?.({
           title: 'Aufgabe gesperrt',
           message: 'Schließe zuerst die vorherigen Aufgaben ab, bevor du zu dieser Aufgabe springst.',
@@ -1738,49 +1778,50 @@ document.addEventListener('DOMContentLoaded', () => {
         return false;
       }
 
-      window.Quest.jumpToQuest(questNum);
+      window.Lernpfad.jumpToAufgabe(aufgabeNum);
 
-      if (window.App?.onQuestChanged) {
-        const nextQuest = window.Quest.getQuestByNumber?.(qMode, questNum) || window.Quest.getCurrentQuest?.();
-        await window.App.onQuestChanged(nextQuest, window.Quest.state);
+      if (window.App?.onAufgabeChanged) {
+        const nextAufgabe =
+          window.Lernpfad.getAufgabeByNumber?.(qMode, aufgabeNum) || window.Lernpfad.getCurrentAufgabe?.();
+        await window.App.onAufgabeChanged(nextAufgabe, window.Lernpfad.state);
       }
 
-      window.Quest.renderPanel();
+      window.Lernpfad.renderPanel();
       return true;
     };
 
-    questPanel.addEventListener('click', async (e) => {
-      const manualCheckBtn = e.target.closest('#btn-quest-check-manual');
-      if (manualCheckBtn && window.Quest?.validateCurrentQuest) {
+    aufgabePanel.addEventListener('click', async (e) => {
+      const manualCheckBtn = e.target.closest('#btn-aufgabe-check-manual');
+      if (manualCheckBtn && window.Lernpfad?.validateCurrentAufgabe) {
         e.preventDefault();
-        if (window.App?.isQuestCheckSuppressed?.()) return;
-        if (getQuestSeries()?.art === 'rm' && !window.Quest.getCurrentQuest?.()?.seitenleisteSelbstOeffnen) {
+        if (window.App?.isAufgabeCheckSuppressed?.()) return;
+        if (lernpfadVon()?.art === 'rm' && !window.Lernpfad.getCurrentAufgabe?.()?.seitenleisteSelbstOeffnen) {
           window.RelModel?.openDrawer?.();
           window.RelModel?.triggerCheck?.();
         }
-        window.Quest.validateCurrentQuest(true);
+        window.Lernpfad.validateCurrentAufgabe(true);
         return;
       }
 
-      const manualNextBtn = e.target.closest('#btn-quest-next-manual');
-      if (manualNextBtn && window.Quest) {
+      const manualNextBtn = e.target.closest('#btn-aufgabe-next-manual');
+      if (manualNextBtn && window.Lernpfad) {
         e.preventDefault();
-        const currentQuestNum = Number(window.Quest.state.currentQuestNumber);
-        const qMode = window.Quest.state?.questMode || '';
-        const total = window.Quest.getMaxQuests?.(qMode) || 0;
-        if (!isNaN(currentQuestNum) && currentQuestNum < total) {
-          await switchQuestWithGuards(currentQuestNum + 1);
+        const currentAufgabeNum = Number(window.Lernpfad.state.aktuelleAufgabe);
+        const qMode = window.Lernpfad.state?.lernpfadId || '';
+        const total = window.Lernpfad.getMaxAufgaben?.(qMode) || 0;
+        if (!isNaN(currentAufgabeNum) && currentAufgabeNum < total) {
+          await switchAufgabeWithGuards(currentAufgabeNum + 1);
         }
         return;
       }
 
-      const circle = e.target.closest('.quest-circle');
-      if (!circle || !window.Quest) return;
-      const questNum = parseInt(circle.getAttribute('data-quest-number'), 10);
-      await switchQuestWithGuards(questNum);
+      const circle = e.target.closest('.aufgabe-circle');
+      if (!circle || !window.Lernpfad) return;
+      const aufgabeNum = parseInt(circle.getAttribute('data-aufgabe-number'), 10);
+      await switchAufgabeWithGuards(aufgabeNum);
     });
 
-    // Direktstart über einen Link: ?reihe=erm-grundlagen&quest=3 (Quest nur, wenn freigeschaltet).
+    // Direktstart über einen Link: ?lernpfad=erm-grundlagen&aufgabe=3 (Aufgabe nur, wenn freigeschaltet).
     // setTimeout: erst nach den übrigen DOMContentLoaded-Handlern (z. B. relmodel.js) starten.
     const szenarioAusLink = async () => {
       const hash = window.location.hash;
@@ -1793,31 +1834,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function startFromLink(params) {
       if (await szenarioAusLink()) return;
-      const reihe = params.get('reihe');
-      if (!reihe) return;
+      const lernpfad = params.get('lernpfad');
+      if (!lernpfad) return;
       // Parameter entfernen, damit ein Neuladen nicht erneut startet
       window.history.replaceState(null, '', window.location.pathname + window.location.hash);
-      if (!getQuestSeries(reihe)) {
+      if (!lernpfadVon(lernpfad)) {
         window.App?.showAlertModal?.(
-          `Die Quest-Reihe „${reihe}“ gibt es nicht. Wähle eine Reihe unter ⚔️ Quests.`,
-          'Unbekannte Quest-Reihe',
+          `Den Lernpfad „${lernpfad}“ gibt es nicht. Wähle einen Lernpfad unter 🗺️ Lernpfade.`,
+          'Unbekannter Lernpfad',
         );
         return;
       }
-      if (!(await startQuestSeriesFlow(reihe))) return;
-      const questNum = parseInt(params.get('quest'), 10);
-      if (questNum >= 1 && questNum <= window.Quest.getMaxQuests()) await switchQuestWithGuards(questNum);
+      if (!(await startLernpfadFlow(lernpfad))) return;
+      const aufgabeNum = parseInt(params.get('aufgabe'), 10);
+      if (aufgabeNum >= 1 && aufgabeNum <= window.Lernpfad.getMaxAufgaben()) await switchAufgabeWithGuards(aufgabeNum);
     }
 
     setTimeout(async () => {
       const params = new URLSearchParams(window.location.search);
-      if (!params.get('reihe') && !window.location.hash.startsWith('#szenario=')) return;
-      // Quest-Panel erst nach dem Laden hereingleiten lassen, damit man es bemerkt
-      document.body.classList.add('quest-spaeter');
+      if (!params.get('lernpfad') && !window.location.hash.startsWith('#szenario=')) return;
+      // Aufgabenleiste erst nach dem Laden hereingleiten lassen, damit man sie bemerkt
+      document.body.classList.add('aufgabe-spaeter');
       try {
         await startFromLink(params);
       } finally {
-        setTimeout(() => document.body.classList.remove('quest-spaeter'), 500);
+        setTimeout(() => document.body.classList.remove('aufgabe-spaeter'), 500);
       }
     }, 0);
   }
@@ -2014,40 +2055,40 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 });
 
-// ---- Quest Panel Rendering ----
+// ---- Aufgabe Panel Rendering ----
 window.App = {
-  _suppressQuestCheckUntil: 0,
+  _suppressAufgabeCheckUntil: 0,
   _lockWarningCooldownUntil: 0,
 
-  isQuestCheckSuppressed() {
-    return Date.now() < this._suppressQuestCheckUntil;
+  isAufgabeCheckSuppressed() {
+    return Date.now() < this._suppressAufgabeCheckUntil;
   },
 
-  suppressQuestCheck(ms = 350) {
-    this._suppressQuestCheckUntil = Date.now() + ms;
+  suppressAufgabeCheck(ms = 350) {
+    this._suppressAufgabeCheckUntil = Date.now() + ms;
   },
 
   showLockedWarning() {
     if (Date.now() < this._lockWarningCooldownUntil) return;
     this._lockWarningCooldownUntil = Date.now() + 5000;
-    this.showTopToast?.('Das ER-Modell ist während der Quest gesperrt.');
+    this.showTopToast?.('Das ER-Modell ist während der Aufgabe gesperrt.');
   },
 
   onRelmodelStudentChanged() {
     window.SQLExport?.aktualisieren();
-    const reihe = getQuestSeries();
-    if (reihe?.art === 'rm' && !reihe.schritt && window.Quest.state.questsPanelVisible) {
+    const lernpfad = lernpfadVon();
+    if (lernpfad?.art === 'rm' && !lernpfad.schritt && window.Lernpfad.state.lernpfadAktiv) {
       updateExpertChecklist();
     }
   },
 
-  onBeforeQuestChange(questState) {
+  onBeforeAufgabeChange(lernpfadState) {
     window.SQLExport?.schliessen();
-    const reihe = getQuestSeries(questState?.questMode);
-    if (!reihe || !questState?.questsPanelVisible) return;
-    const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);
+    const lernpfad = lernpfadVon(lernpfadState?.lernpfadId);
+    if (!lernpfad || !lernpfadState?.lernpfadAktiv) return;
+    const storageKey = getArbeitsstandKey(lernpfad.id, lernpfadState.aktuelleAufgabe || 1);
 
-    if (reihe.art === 'erm') {
+    if (lernpfad.art === 'erm') {
       saveErmSnapshot(storageKey);
       return;
     }
@@ -2056,13 +2097,13 @@ window.App = {
     if (window.RelModel?.saveToStorage) window.RelModel.saveToStorage(storageKey);
   },
 
-  // Quest schließen: ihren Stand sichern und das freie Modell (ER- und Relationenmodell) zurückholen
-  onQuestPanelClosing(questState) {
+  // Aufgabe schließen: ihren Stand sichern und das freie Modell (ER- und Relationenmodell) zurückholen
+  onLernpfadClosing(lernpfadState) {
     window.SQLExport?.schliessen();
-    const reihe = getQuestSeries(questState?.questMode);
-    if (!reihe) return;
-    const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);
-    if (reihe.art === 'erm') saveErmSnapshot(storageKey);
+    const lernpfad = lernpfadVon(lernpfadState?.lernpfadId);
+    if (!lernpfad) return;
+    const storageKey = getArbeitsstandKey(lernpfad.id, lernpfadState.aktuelleAufgabe || 1);
+    if (lernpfad.art === 'erm') saveErmSnapshot(storageKey);
     else window.RelModel?.saveToStorage?.(storageKey);
 
     if (!loadPersistedState()) {
@@ -2073,25 +2114,25 @@ window.App = {
     if (!window.RelModel?.loadFromStorage?.()) window.RelModel?.reset?.();
   },
 
-  async onQuestChanged(quest, questState) {
-    const reihe = getQuestSeries(questState?.questMode);
-    if (!reihe) return;
-    // Neue Quest: Musterlösung erst wieder auf Wunsch
+  async onAufgabeChanged(aufgabe, lernpfadState) {
+    const lernpfad = lernpfadVon(lernpfadState?.lernpfadId);
+    if (!lernpfad) return;
+    // Neue Aufgabe: Musterlösung erst wieder auf Wunsch
     window.RelModel?.loesungAusblenden?.();
-    const questNumber = Number(quest?.number || questState?.currentQuestNumber || 1);
-    const storageKey = getQuestWorkStorageKey(reihe.id, questNumber);
+    const aufgabeNumber = Number(aufgabe?.number || lernpfadState?.aktuelleAufgabe || 1);
+    const storageKey = getArbeitsstandKey(lernpfad.id, aufgabeNumber);
 
-    if (reihe.art === 'erm') {
-      // Schritt-Reihen teilen ein Modell: Beim Weiterschalten bleibt es stehen (Auswahl und Ansicht auch)
+    if (lernpfad.art === 'erm') {
+      // Schritt-Lernpfade teilen ein Modell: Beim Weiterschalten bleibt es stehen (Auswahl und Ansicht auch)
       const geladen = storageKey === aktiverArbeitsstand || loadErmSnapshot(storageKey);
-      if (!geladen && !(await loadStartModel(reihe))) clearDiagramSilent();
+      if (!geladen && !(await loadStartModel(lernpfad))) clearDiagramSilent();
       aktiverArbeitsstand = storageKey;
-      // Den Kardinalitäten-Modus legt die Quest bzw. Reihe fest (ERM-Grundlagen: ohne)
-      state.kardinalitaeten = quest?.kardinalitaeten ?? reihe.kardinalitaeten ?? true;
+      // Den Kardinalitäten-Modus legt die Aufgabe bzw. der Lernpfad fest (ERM-Grundlagen: ohne)
+      state.kardinalitaeten = aufgabe?.kardinalitaeten ?? lernpfad.kardinalitaeten ?? true;
       syncCardinalitySwitch();
       if (window.Diagram) window.Diagram.renderAll();
       if (!geladen) {
-        if (!reihe.schritt) applySzenarioTitle(reihe, quest);
+        if (!lernpfad.schritt) applySzenarioTitle(lernpfad, aufgabe);
         saveErmSnapshot(storageKey);
       }
       state.diagramLocked = false;
@@ -2099,114 +2140,110 @@ window.App = {
     }
 
     if (window.RelModel?.setPersistKey) window.RelModel.setPersistKey(storageKey);
-    if (reihe.schritt) {
+    if (lernpfad.schritt) {
       state.diagramLocked = true;
       return;
     }
 
-    await loadQuestErm(quest);
+    await loadAufgabeErm(aufgabe);
 
     const loaded = window.RelModel?.loadFromStorage?.(storageKey);
-    if (!loaded) relationenmodellNeu(reihe);
+    if (!loaded) relationenmodellNeu(lernpfad);
     if (window.RelModel?.openDrawer) window.RelModel.openDrawer();
     state.diagramLocked = true;
     // Checkliste nach Laden des gespeicherten Arbeitsstands neu rendern
-    window.Quest?.renderPanel?.();
+    window.Lernpfad?.renderPanel?.();
   },
 
-  updateQuestPanel(quest, questState) {
+  updateAufgabePanel(aufgabe, lernpfadState) {
     syncCardinalitySwitch();
-    if (!quest) return;
+    if (!aufgabe) return;
 
-    const panel = document.getElementById('quest-panel');
+    const panel = document.getElementById('aufgabe-panel');
     if (!panel) return;
 
-    const mode = questState.questMode;
-    const reihe = getQuestSeries(mode);
-    const isSchritt = !!reihe?.schritt;
-    const isRelmodelSzenario = reihe?.art === 'rm' && !isSchritt;
+    const mode = lernpfadState.lernpfadId;
+    const lernpfad = lernpfadVon(mode);
+    const isSchritt = !!lernpfad?.schritt;
+    const isRelmodelSzenario = lernpfad?.art === 'rm' && !isSchritt;
     const hasChecklist = !isSchritt;
 
-    // Titel & Fortschritt (die Abschlussquest einer Schritt-Reihe zählt nicht)
-    const titleEl = panel.querySelector('#quest-title');
-    const progressEl = panel.querySelector('#quest-progress');
-    const total = window.Quest?.getMaxQuests?.(mode) || 9;
-    const aufgaben = window.Quest?.getAufgaben?.(mode) || [];
-    const effectiveTotal = Math.max(1, aufgaben.length);
-    const completedCount = aufgaben.filter((q) => (questState.completedQuests || []).includes(q.number)).length;
+    // Titel & Fortschritt (die Abschlussaufgabe eines Schritt-Lernpfads zählt nicht)
+    const titleEl = panel.querySelector('#aufgabe-title');
+    const total = window.Lernpfad?.getMaxAufgaben?.(mode) || 9;
     if (titleEl) {
-      titleEl.textContent = `${quest.number}. ${quest.title}`;
-      // Quests ohne Kardinalitäten sind schon im Titel gekennzeichnet
-      if ((quest.kardinalitaeten ?? reihe?.kardinalitaeten) === false)
-        titleEl.insertAdjacentHTML('beforeend', ' <span class="quest-title-badge">ohne Kardinalitäten</span>');
+      titleEl.textContent = `${aufgabe.number}. ${aufgabe.title}`;
+      // Aufgaben ohne Kardinalitäten sind schon im Titel gekennzeichnet
+      if ((aufgabe.kardinalitaeten ?? lernpfad?.kardinalitaeten) === false)
+        titleEl.insertAdjacentHTML('beforeend', ' <span class="aufgabe-title-badge">ohne Kardinalitäten</span>');
     }
-    if (progressEl) progressEl.textContent = `${completedCount} / ${effectiveTotal}`;
 
-    // Update Progress Bar (based on completed quests excluding final)
-    const progressFill = panel.querySelector('#quest-progress-fill');
-    if (progressFill) progressFill.style.width = (completedCount / effectiveTotal) * 100 + '%';
-
-    // Update Progress Circles – alle klickbar
-    const circlesContainer = panel.querySelector('#quest-circles');
+    // Kreise je Aufgabe – alle klickbar; das Balkenstück vor einem Kreis ist grün, wenn die Aufgabe davor gelöst ist
+    const circlesContainer = panel.querySelector('#aufgabe-circles');
     if (circlesContainer) {
       circlesContainer.innerHTML = '';
-      const completedSet = new Set((questState.completedQuests || []).map((n) => Number(n)));
+      const completedSet = new Set((lernpfadState.geloesteAufgaben || []).map((n) => Number(n)));
       const nextPending = Array.from({ length: total }, (_, idx) => idx + 1).find((n) => !completedSet.has(n)) || null;
       for (let i = 1; i <= total; i++) {
+        if (i > 1) {
+          const steg = document.createElement('span');
+          steg.className = `aufgabe-steg${completedSet.has(i - 1) ? ' erledigt' : ''}`;
+          circlesContainer.appendChild(steg);
+        }
         const circle = document.createElement('div');
-        circle.className = 'quest-circle';
-        circle.setAttribute('data-quest-number', i);
+        circle.className = 'aufgabe-circle';
+        circle.setAttribute('data-aufgabe-number', i);
         circle.textContent = i;
-        const qTitle = window.Quest?.getQuestByNumber?.(mode, i)?.title || `Aufgabe ${i}`;
+        const qTitle = window.Lernpfad?.getAufgabeByNumber?.(mode, i)?.title || `Aufgabe ${i}`;
         circle.setAttribute('data-tooltip', qTitle);
         if (!circle.hasAttribute('aria-label')) circle.setAttribute('aria-label', qTitle);
-        if (i === quest.number) circle.classList.add('current');
-        else if (questState.completedQuests.includes(i)) circle.classList.add('completed');
+        if (i === aufgabe.number) circle.classList.add('current');
+        else if (lernpfadState.geloesteAufgaben.includes(i)) circle.classList.add('completed');
         else if (nextPending !== null && i === nextPending) circle.classList.add('up-next');
         circlesContainer.appendChild(circle);
       }
     }
 
     // Update Content (nur Aufgabentext, kein Feedback)
-    const content = document.getElementById('quest-content');
+    const content = document.getElementById('aufgabe-content');
     if (content) {
       content.innerHTML = '';
 
       const taskSection = document.createElement('div');
-      taskSection.className = 'quest-section quest-task';
+      taskSection.className = 'aufgabe-section aufgabe-task';
       const taskHeader = document.createElement('h4');
       taskHeader.textContent = isSchritt || isRelmodelSzenario ? '🎯 Aufgabe' : '🎯 Szenario';
       taskSection.appendChild(taskHeader);
       const taskContent = document.createElement('div');
-      const rawTaskHtml = isSchritt ? quest.objective : quest.szenario;
+      const rawTaskHtml = isSchritt ? aufgabe.objective : aufgabe.szenario;
       const taskHtml = isSchritt
         ? String(rawTaskHtml || '').replace(/^\s*<p>\s*Aufgabe\s*:\s*<\/p>\s*/i, '')
         : rawTaskHtml;
       taskContent.innerHTML = taskHtml;
       taskSection.appendChild(taskContent);
       // ERM-Szenarien: Wörter anklicken, die zum ER-Modell gehören, werden farbig markiert
-      if (quest.masterlösung && !isSchritt) {
-        window.Quest.textmarker(taskContent, quest.masterlösung, `${mode}:${quest.number}`, taskHeader);
+      if (aufgabe.masterlösung && !isSchritt) {
+        window.Lernpfad.textmarker(taskContent, aufgabe.masterlösung, `${mode}:${aufgabe.number}`, taskHeader);
       }
 
       // Experten (ERM + Relmodel): Wrapper für Side-by-Side-Layout
-      let questBody;
+      let aufgabeBody;
       if (hasChecklist) {
-        questBody = document.createElement('div');
-        questBody.className = 'quest-body-row';
-        questBody.appendChild(taskSection);
-        content.appendChild(questBody);
+        aufgabeBody = document.createElement('div');
+        aufgabeBody.className = 'aufgabe-body-row';
+        aufgabeBody.appendChild(taskSection);
+        content.appendChild(aufgabeBody);
       } else {
         content.appendChild(taskSection);
       }
 
       // Checkliste (rechts neben dem Text)
       if (hasChecklist) {
-        const checklist = window.Quest?.getChecklistStatus?.();
+        const checklist = window.Lernpfad?.getChecklistStatus?.();
         if (checklist) {
           const checklistSection = document.createElement('div');
-          checklistSection.className = 'quest-checklist';
-          checklistSection.id = 'quest-checklist';
+          checklistSection.className = 'aufgabe-checklist';
+          checklistSection.id = 'aufgabe-checklist';
 
           const checklistTitle = document.createElement('h4');
           checklistTitle.textContent = '📋 Checkliste';
@@ -2232,33 +2269,33 @@ window.App = {
           for (const cat of categories) {
             if (!cat.data) continue;
             const row = document.createElement('div');
-            row.className = 'quest-checklist-item';
+            row.className = 'aufgabe-checklist-item';
             row.setAttribute('data-checklist-key', cat.key);
             const allDone = cat.data.done === cat.data.total;
-            if (allDone) row.classList.add('quest-checklist-item--done');
+            if (allDone) row.classList.add('aufgabe-checklist-item--done');
             const icon = document.createElement('span');
-            icon.className = 'quest-checklist-icon';
+            icon.className = 'aufgabe-checklist-icon';
             icon.textContent = allDone ? '✓' : '✗';
             const label = document.createElement('span');
-            label.className = 'quest-checklist-label';
+            label.className = 'aufgabe-checklist-label';
             label.textContent = `${cat.label} (${cat.data.done}/${cat.data.total})`;
             row.appendChild(icon);
             row.appendChild(label);
             checklistSection.appendChild(row);
           }
 
-          questBody.appendChild(checklistSection);
+          aufgabeBody.appendChild(checklistSection);
         }
       }
 
       const actions = document.createElement('div');
-      actions.className = 'quest-actions quest-actions-visible';
+      actions.className = 'aufgabe-actions aufgabe-actions-visible';
 
       const checkBtn = document.createElement('button');
-      checkBtn.id = 'btn-quest-check-manual';
+      checkBtn.id = 'btn-aufgabe-check-manual';
       checkBtn.type = 'button';
-      checkBtn.className = 'quest-btn quest-btn-check';
-      checkBtn.textContent = quest.abschluss ? 'Abschließen' : 'Überprüfen';
+      checkBtn.className = 'aufgabe-btn aufgabe-btn-check';
+      checkBtn.textContent = aufgabe.abschluss ? 'Abschließen' : 'Überprüfen';
 
       actions.appendChild(checkBtn);
 
@@ -2266,18 +2303,18 @@ window.App = {
       if (window.Szenario?.istProbe?.(mode)) {
         const zurueck = document.createElement('button');
         zurueck.type = 'button';
-        zurueck.className = 'quest-btn quest-btn-menu';
+        zurueck.className = 'aufgabe-btn aufgabe-btn-menu';
         zurueck.textContent = '✎ Zurück zum Bearbeiten';
         zurueck.addEventListener('click', () => window.Szenario.zurueckZumBearbeiten());
         actions.appendChild(zurueck);
       }
 
-      const isCurrentCompleted = (questState.completedQuests || []).includes(quest.number);
-      if (isRelmodelSzenario && isCurrentCompleted && quest.number < total) {
+      const isCurrentCompleted = (lernpfadState.geloesteAufgaben || []).includes(aufgabe.number);
+      if (isRelmodelSzenario && isCurrentCompleted && aufgabe.number < total) {
         const nextBtn = document.createElement('button');
-        nextBtn.id = 'btn-quest-next-manual';
+        nextBtn.id = 'btn-aufgabe-next-manual';
         nextBtn.type = 'button';
-        nextBtn.className = 'quest-btn quest-btn-menu';
+        nextBtn.className = 'aufgabe-btn aufgabe-btn-menu';
         nextBtn.textContent = 'Nächste Aufgabe';
         actions.appendChild(nextBtn);
       }
@@ -2286,48 +2323,48 @@ window.App = {
     }
 
     // Untere Feedback-Leiste ist deaktiviert.
-    const feedback = document.getElementById('quest-feedback');
+    const feedback = document.getElementById('aufgabe-feedback');
     if (feedback) {
       feedback.textContent = '';
-      feedback.className = 'quest-feedback';
+      feedback.className = 'aufgabe-feedback';
     }
   },
 
-  // Alle Szenarien einer Übungsreihe gelöst
-  showSeriesDone(reihe) {
+  // Alle Szenarien eines Übungs-Lernpfads gelöst
+  showLernpfadDone(lernpfad) {
     this.playFullscreenConfetti();
     return this.showAppModal({
-      title: `🎉 ${reihe.titel} geschafft!`,
-      message: `Glückwunsch! ${reihe.abschlussText || ''}`,
+      title: `🎉 ${lernpfad.titel} geschafft!`,
+      message: `Glückwunsch! ${lernpfad.abschlussText || ''}`,
       mode: 'alert',
       confirmLabel: 'Super!',
     });
   },
 
-  showQuestFeedback(message, type = 'progress') {
-    const feedback = document.getElementById('quest-feedback');
+  showAufgabeFeedback(message, type = 'progress') {
+    const feedback = document.getElementById('aufgabe-feedback');
     if (feedback) {
       // Leiste bleibt bewusst leer/unsichtbar.
       void message;
       void type;
       feedback.textContent = '';
-      feedback.className = `quest-feedback ${type}`;
+      feedback.className = `aufgabe-feedback ${type}`;
     }
   },
 
-  showQuestSuccessModal(questNumber, onComplete) {
-    const modal = document.getElementById('quest-success-modal');
+  showAufgabeSuccessModal(aufgabeNumber, onComplete) {
+    const modal = document.getElementById('aufgabe-success-modal');
     if (!modal) {
       onComplete?.();
       return;
     }
 
-    const titleEl = modal.querySelector('.quest-success-title');
-    const barFill = modal.querySelector('.quest-success-bar-fill');
-    let okBtn = modal.querySelector('.quest-success-ok-btn');
+    const titleEl = modal.querySelector('.aufgabe-success-title');
+    const barFill = modal.querySelector('.aufgabe-success-bar-fill');
+    let okBtn = modal.querySelector('.aufgabe-success-ok-btn');
     const previousActiveElement = document.activeElement;
 
-    if (titleEl) titleEl.textContent = `Aufgabe ${questNumber} geschafft!`;
+    if (titleEl) titleEl.textContent = `Aufgabe ${aufgabeNumber} geschafft!`;
 
     // Fokus vom Hintergrund lösen, damit Enter nicht an darunterliegende Buttons weitergereicht wird.
     if (previousActiveElement && typeof previousActiveElement.blur === 'function') {
@@ -2336,14 +2373,14 @@ window.App = {
 
     modal.style.display = 'flex';
     modal.setAttribute('tabindex', '-1');
-    this.spawnQuestConfetti(modal.querySelector('.quest-success-card'));
+    this.spawnAufgabeConfetti(modal.querySelector('.aufgabe-success-card'));
 
     // Ensure gradient is anchored to the full track so it is revealed while the fill grows
     if (barFill) {
-      barFill.classList.add('quest-success-gradient');
+      barFill.classList.add('aufgabe-success-gradient');
 
       const startBarAnimation = () => {
-        const barTrack = modal.querySelector('.quest-success-bar-track');
+        const barTrack = modal.querySelector('.aufgabe-success-bar-track');
         let trackWidth = 0;
         try {
           if (barTrack) {
@@ -2387,21 +2424,21 @@ window.App = {
         setTimeout(startBarAnimation, 60);
       }
     }
-    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (Schritt-Reihen, SQL-Übung Quest 1).
+    // Optional: Zeige die Theorie/Info-Box in der Erfolgs-Modalität (Schritt-Lernpfade, SQL-Übung Aufgabe 1).
     try {
       // Immer alte Box entfernen, damit beim Wechsel von Grundlagen -> Experten nichts "hängen bleibt".
-      const existing = modal.querySelector('.quest-success-concept');
+      const existing = modal.querySelector('.aufgabe-success-concept');
       if (existing) existing.remove();
 
-      const currentQuest = window.Quest?.getCurrentQuest?.();
-      const theoryHtml = currentQuest?.theory || '';
+      const currentAufgabe = window.Lernpfad?.getCurrentAufgabe?.();
+      const theoryHtml = currentAufgabe?.theory || '';
       if (theoryHtml) {
         const conceptDiv = document.createElement('div');
-        conceptDiv.className = 'quest-concept quest-success-concept';
+        conceptDiv.className = 'aufgabe-concept aufgabe-success-concept';
         conceptDiv.innerHTML = theoryHtml;
-        const barTrack = modal.querySelector('.quest-success-bar-track');
-        if (barTrack) modal.querySelector('.quest-success-card').insertBefore(conceptDiv, barTrack);
-        else modal.querySelector('.quest-success-card').appendChild(conceptDiv);
+        const barTrack = modal.querySelector('.aufgabe-success-bar-track');
+        if (barTrack) modal.querySelector('.aufgabe-success-card').insertBefore(conceptDiv, barTrack);
+        else modal.querySelector('.aufgabe-success-card').appendChild(conceptDiv);
       }
     } catch (e) {
       // ignore
@@ -2417,11 +2454,11 @@ window.App = {
       closed = true;
       modal.removeEventListener('keydown', onKeyDown, true);
       modal.style.display = 'none';
-      this.suppressQuestCheck(350);
+      this.suppressAufgabeCheck(350);
 
       // Nach dem Schließen den Check-Button explizit unscharf halten.
       requestAnimationFrame(() => {
-        const checkBtn = document.getElementById('btn-quest-check-manual');
+        const checkBtn = document.getElementById('btn-aufgabe-check-manual');
         if (checkBtn && typeof checkBtn.blur === 'function') checkBtn.blur();
       });
 
@@ -2456,21 +2493,21 @@ window.App = {
     });
   },
 
-  spawnQuestConfetti(containerEl) {
+  spawnAufgabeConfetti(containerEl) {
     if (!containerEl) return;
 
-    const oldLayer = containerEl.querySelector('.quest-confetti-layer');
+    const oldLayer = containerEl.querySelector('.aufgabe-confetti-layer');
     if (oldLayer) oldLayer.remove();
 
     const layer = document.createElement('div');
-    layer.className = 'quest-confetti-layer';
+    layer.className = 'aufgabe-confetti-layer';
 
     const colors = ['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#f472b6', '#fde047'];
     const pieces = 28;
 
     for (let i = 0; i < pieces; i += 1) {
       const piece = document.createElement('span');
-      piece.className = 'quest-confetti-piece';
+      piece.className = 'aufgabe-confetti-piece';
       piece.style.setProperty('--x', `${Math.random() * 100}%`);
       piece.style.setProperty('--drift', `${Math.random() * 80 - 40}px`);
       piece.style.setProperty('--rot', `${Math.random() * 900 - 450}deg`);
@@ -2488,18 +2525,18 @@ window.App = {
   },
 
   playFullscreenConfetti(durationMs = 4200) {
-    const existing = document.querySelector('.quest-confetti-fullscreen');
+    const existing = document.querySelector('.aufgabe-confetti-fullscreen');
     if (existing) existing.remove();
 
     const layer = document.createElement('div');
-    layer.className = 'quest-confetti-fullscreen';
+    layer.className = 'aufgabe-confetti-fullscreen';
 
     const colors = ['#38bdf8', '#22c55e', '#f59e0b', '#a78bfa', '#f472b6', '#fde047'];
     const pieces = 130;
 
     for (let i = 0; i < pieces; i += 1) {
       const piece = document.createElement('span');
-      piece.className = 'quest-confetti-piece quest-confetti-piece-screen';
+      piece.className = 'aufgabe-confetti-piece aufgabe-confetti-piece-screen';
       piece.style.setProperty('--x', `${Math.random() * 100}%`);
       piece.style.setProperty('--drift', `${Math.random() * 160 - 80}px`);
       piece.style.setProperty('--rot', `${Math.random() * 1300 - 650}deg`);
@@ -2603,11 +2640,11 @@ window.App = {
   },
 
   showValidationFailedModal(baseMessage, hintMessage) {
-    const hints = window.Quest?.getHints?.() || [];
+    const hints = window.Lernpfad?.getHints?.() || [];
     const singleHint = hints.length > 0 ? hints[0] : String(hintMessage || 'Kein zusätzlicher Hinweis verfügbar.');
 
-    // Bei Szenario-Quests (ERM + Relationenmodell) soll keine Hinweisbox angezeigt werden.
-    const showHintButton = !!getQuestSeries()?.schritt;
+    // Bei Szenario-Aufgaben (ERM + Relationenmodell) soll keine Hinweisbox angezeigt werden.
+    const showHintButton = !!lernpfadVon()?.schritt;
 
     return this.showAppModal({
       title: 'Überprüfung',
@@ -2663,18 +2700,18 @@ window.App = {
   },
 
   showCongratulationsModal(title, message, buttons = []) {
-    const modal = document.querySelector('.quest-congratulations-modal');
+    const modal = document.querySelector('.lernpfad-congratulations-modal');
     if (modal) {
       if (this._congratsTimer) {
         clearTimeout(this._congratsTimer);
         this._congratsTimer = null;
       }
 
-      const content = modal.querySelector('.quest-congratulations-content');
+      const content = modal.querySelector('.lernpfad-congratulations-content');
       if (content) {
         const h2 = content.querySelector('h2');
         const p = content.querySelector('p');
-        const btnContainer = content.querySelector('.quest-congratulations-buttons');
+        const btnContainer = content.querySelector('.lernpfad-congratulations-buttons');
 
         if (h2) h2.textContent = title;
         if (p) p.textContent = message;
@@ -2683,7 +2720,7 @@ window.App = {
           btnContainer.innerHTML = '';
           buttons.forEach((btn) => {
             const button = document.createElement('button');
-            button.className = btn.addClass || 'quest-btn-next';
+            button.className = btn.addClass || 'aufgabe-btn-next';
             button.textContent = btn.label;
             button.onclick = btn.onClick;
             btnContainer.appendChild(button);
@@ -2692,7 +2729,7 @@ window.App = {
       }
 
       modal.classList.add('visible');
-      this.spawnQuestConfetti(content || modal);
+      this.spawnAufgabeConfetti(content || modal);
       this._congratsTimer = setTimeout(() => {
         modal.classList.remove('visible');
         this._congratsTimer = null;
@@ -2701,7 +2738,7 @@ window.App = {
   },
 
   hideCongratulationsModal() {
-    const modal = document.querySelector('.quest-congratulations-modal');
+    const modal = document.querySelector('.lernpfad-congratulations-modal');
     if (this._congratsTimer) {
       clearTimeout(this._congratsTimer);
       this._congratsTimer = null;

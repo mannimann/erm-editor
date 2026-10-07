@@ -1,5 +1,5 @@
 /* ============================================================
-   quest.js – Quest-Manager, Definitionen & Validatoren
+   lernpfad.js – Aufgaben-Manager, Definitionen & Validatoren
    ============================================================ */
 'use strict';
 
@@ -248,9 +248,9 @@
     return { passed: true };
   }
 
-  function validateExpertQuest(spec) {
+  function validateExpertAufgabe(spec) {
     if (!spec) {
-      return { passed: false, error: 'Für diese Quest ist keine Musterlösung hinterlegt.' };
+      return { passed: false, error: 'Für diese Aufgabe ist keine Musterlösung hinterlegt.' };
     }
 
     for (const entityName of spec.entities || []) {
@@ -262,7 +262,7 @@
   }
 
   /**
-   * Liefert den Live-Checklistenstatus für die aktuelle Szenario-Quest.
+   * Liefert den Live-Checklistenstatus für die aktuelle Szenario-Aufgabe.
    * Gibt ein Objekt mit vier Kategorien zurück, jeweils { total, done, items[] }.
    */
   function getExpertChecklistStatus(spec) {
@@ -363,7 +363,7 @@
   }
 
   /**
-   * Liefert eine geordnete Liste von Hinweisen für die aktuelle Szenario-Quest.
+   * Liefert eine geordnete Liste von Hinweisen für die aktuelle Szenario-Aufgabe.
    * Reihenfolge: fehlende Entitäten → fehlende Beziehungen/Kardinalitäten →
    * fehlende Attribute → fehlende Primärschlüssel.
    */
@@ -512,7 +512,7 @@
   }
 
   /**
-   * Prüft NOT NULL und UNIQUE der Fremdschlüssel nach den Regeln einer Quest (Stufe Fortgeschritten).
+   * Prüft NOT NULL und UNIQUE der Fremdschlüssel nach den Regeln einer Aufgabe (Stufe Fortgeschritten).
    * Regel: { relation, spalte (Primärschlüssel, auf den der FS zeigt), notNull?, unique?, optional?, grund }
    * optional: Spalte darf fehlen (zweite Richtung einer 1:1-Beziehung).
    */
@@ -608,17 +608,17 @@
   }
 
   // Nummern ergeben sich aus der Reihenfolge.
-  function nummeriert(quests) {
-    return quests.map((quest, index) => ({ ...quest, number: index + 1 }));
+  function nummeriert(aufgaben) {
+    return aufgaben.map((aufgabe, index) => ({ ...aufgabe, number: index + 1 }));
   }
 
-  // ---- Quest-Datenbank: ERM-GRUNDLAGEN (Stufe Einstieg) ----
-  const ermGrundlagenQuests = nummeriert([
+  // ---- Aufgaben-Datenbank: ERM-GRUNDLAGEN (Stufe Einstieg) ----
+  const ermGrundlagenAufgaben = nummeriert([
     {
       title: 'Erste Entitätsklasse',
-      theory: `<p class="quest-begriff">Neuer Begriff: Entitätsklasse · Symbol: Rechteck</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Entitätsklasse · Symbol: Rechteck</p>
         <p><strong>Entitätsklasse:</strong> Ein Rechteck im ER-Modell, das eine Gruppe von ähnlichen Objekten der realen Welt darstellt. Beispiel: Schüler, Auto, Person.</p>
-        <p class="quest-begriff">Neuer Begriff: Entität · Symbol: –</p>
+        <p class="aufgabe-begriff">Neuer Begriff: Entität · Symbol: –</p>
         <p>Ein einzelnes Objekt, z. B. die Schülerin Lena, heißt <strong>Entität</strong>.</p>`,
       objective: `<p>Erstelle eine Entitätsklasse mit dem Namen <strong>„Schüler“</strong>.</p>`,
       validator: function () {
@@ -629,7 +629,7 @@
     },
     {
       title: 'Attribute hinzufügen',
-      theory: `<p class="quest-begriff">Neuer Begriff: Attribut · Symbol: Ellipse</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Attribut · Symbol: Ellipse</p>
         <p><strong>Attribut:</strong> Eine Eigenschaft einer Entitätsklasse. Beispiele: Name, E-Mail, Geburtsdatum.</p>`,
       objective: `<p>Füge zur Entitätsklasse <strong>„Schüler“</strong> zwei Attribute hinzu:</p>
         <ol>
@@ -650,7 +650,7 @@
     },
     {
       title: 'Primärschlüssel setzen',
-      theory: `<p class="quest-begriff">Neuer Begriff: Primärschlüssel · Symbol: unterstrichenes Attribut</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Primärschlüssel · Symbol: unterstrichenes Attribut</p>
         <p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die jede Entität eindeutig kennzeichnen. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
       objective: `<ol>
           <li>Erstelle ein Attribut <strong>„SchülerNr“</strong> bei der Entitätsklasse <strong>„Schüler“</strong></li>
@@ -703,7 +703,7 @@
     },
     {
       title: 'Beziehung erstellen',
-      theory: `<p class="quest-begriff">Neuer Begriff: Beziehung · Symbol: Raute</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehung · Symbol: Raute</p>
         <p><strong>Beziehung (Relationship):</strong> Eine Raute, die zwei Entitätsklassen verbindet. Mit ihnen zusammen ergibt ihr Name einen Satz: „Schüler geht in Klasse“. In welche Richtung der Satz gemeint ist, ergibt sich aus dem Sinn – nicht aus links und rechts, denn nach dem Verschieben oder dem Auto-Layout kann „Klasse“ auch links stehen.</p>`,
       objective: `<p>Erstelle eine Beziehung zwischen <strong>„Schüler“</strong> und <strong>„Klasse“</strong>:</p>
         <ol>
@@ -761,7 +761,7 @@
     },
     {
       title: 'Beziehungsattribute',
-      theory: `<p class="quest-begriff">Neuer Begriff: Beziehungsattribut · Symbol: Ellipse an der Raute</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungsattribut · Symbol: Ellipse an der Raute</p>
         <p><strong>Beziehungsattribut:</strong> Auch Beziehungen können Attribute haben! Ein Beispiel: Die Beziehung „unterrichtet“ kann das Attribut „Fach“ besitzen, um das in dieser Klasse unterrichtete Fach festzuhalten.</p>`,
       objective: `<ol>
           <li>Füge zur Beziehung <strong>„unterrichtet“</strong> ein Attribut mit dem Namen <strong>„Fach“</strong> hinzu</li>
@@ -792,7 +792,7 @@
     {
       title: '🎉 Abschluss',
       abschluss: true,
-      theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Quests abgeschlossen!</p>
+      theory: `<p><strong>Glückwunsch!</strong> Du hast alle Grundlagen-Aufgaben abgeschlossen!</p>
         <p><strong>Du hast gelernt:</strong></p>
         <ul>
           <li>Entitätsklassen modellieren</li>
@@ -808,7 +808,7 @@
           <li>Klicke auf <strong>„JSON-Export“</strong> in der Titelleiste oben rechts und speichere die Datei</li>
           <li>Klicke auf <strong>„PNG-Export“</strong> und speichere das Bild</li>
         </ol>
-        <p>Danach geht es im Menü mit der Reihe „ERM-Übung“ weiter: Bearbeite dort Szenario 1 „Hotel-Verwaltung“ – auch noch ohne Kardinalitäten.</p>`,
+        <p>Danach geht es im Menü mit dem Lernpfad „ERM-Übung“ weiter: Bearbeite dort Szenario 1 „Hotel-Verwaltung“ – auch noch ohne Kardinalitäten.</p>`,
       validator: function () {
         // Abschluss-Screen ist immer erfolgreich
         return { passed: true };
@@ -816,12 +816,12 @@
     },
   ]);
 
-  // ---- Quest-Datenbank: ERM-KARDINALITÄTEN (Stufe Einstieg) ----
+  // ---- Aufgaben-Datenbank: ERM-KARDINALITÄTEN (Stufe Einstieg) ----
   // Startet mit dem Schul-ERM aus den Grundlagen; an den Linien steht noch „?“.
-  const ermKardinalitaetenQuests = nummeriert([
+  const ermKardinalitaetenAufgaben = nummeriert([
     {
       title: 'Kardinalität und Leserichtung',
-      theory: `<p class="quest-begriff">Neuer Begriff: Kardinalität · Symbol: 1, n oder m an der Linie</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Kardinalität · Symbol: 1, n oder m an der Linie</p>
         <p><strong>Kardinalität:</strong> Sie gibt an, wie viele Entitäten auf jeder Seite einer Beziehung beteiligt sein können:</p>
         <ul>
           <li><strong>1:1</strong> (eins zu eins): Ein Schüler hat einen Schülerausweis, ein Schülerausweis gehört einem Schüler.</li>
@@ -930,16 +930,16 @@
         <ol>
           <li>Speichere dein ER-Modell mit <strong>„JSON-Export“</strong> und <strong>„PNG-Export“</strong></li>
         </ol>
-        <p>Danach geht es in der Reihe „ERM-Übung“ ab Szenario 2 weiter: erst mit vorgegebenen Kardinalitäten, dann bestimmst du sie selbst aus dem Text.</p>`,
+        <p>Danach geht es im Lernpfad „ERM-Übung“ ab Szenario 2 weiter: erst mit vorgegebenen Kardinalitäten, dann bestimmst du sie selbst aus dem Text.</p>`,
       validator: function () {
         return { passed: true };
       },
     },
   ]);
 
-  // ---- Quest-Datenbank: ERM-AUFFRISCHUNG (Stufe Fortgeschritten) ----
+  // ---- Aufgaben-Datenbank: ERM-AUFFRISCHUNG (Stufe Fortgeschritten) ----
   // Schul-ERM in großen Schritten; endet mit dem Modell aus files/schule-auffrischung.json.
-  const ermAuffrischungQuests = nummeriert([
+  const ermAuffrischungAufgaben = nummeriert([
     {
       title: 'Entitätsklassen mit Schlüsseln',
       theory: `<p><strong>Entitätsklasse</strong> (Rechteck): eine Gruppe gleichartiger Objekte, z. B. alle Schüler. Ein einzelnes Objekt, z. B. die Schülerin Lena, ist eine <strong>Entität</strong>.</p>
@@ -951,7 +951,7 @@
           <li><strong>„Lehrer“</strong>: „<u>Lehrer-Kürzel</u>“, „Vorname“, „Nachname“</li>
         </ul>`,
       validator: function () {
-        return validateExpertQuest({
+        return validateExpertAufgabe({
           entities: ['Schüler', 'Klasse', 'Lehrer'],
           attributes: {
             Schüler: ['SchülerNr', 'Vorname', 'Nachname'],
@@ -1014,7 +1014,7 @@
     },
     {
       title: 'Selbstbeziehung',
-      theory: `<p class="quest-begriff">Neuer Begriff: Selbstbeziehung · Symbol: Raute mit zwei Linien zur selben Entitätsklasse</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Selbstbeziehung · Symbol: Raute mit zwei Linien zur selben Entitätsklasse</p>
         <p><strong>Selbstbeziehung</strong> (auch: rekursive Beziehung): Eine Entitätsklasse steht mit sich selbst in Beziehung. Beide Seiten der Raute zeigen auf dieselbe Entitätsklasse.</p>`,
       objective: `<p>Schüler sind miteinander befreundet: Ein Schüler kann mit vielen anderen Schülern befreundet sein.</p>
         <ol>
@@ -1039,7 +1039,7 @@
     },
     {
       title: 'Verbundschlüssel',
-      theory: `<p class="quest-begriff">Neuer Begriff: Verbundschlüssel · Symbol: mehrere unterstrichene Attribute</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Verbundschlüssel · Symbol: mehrere unterstrichene Attribute</p>
         <p><strong>Verbundschlüssel:</strong> Ein Primärschlüssel aus mehreren Attributen. Erst zusammen kennzeichnen sie jede Entität eindeutig: Stufe 9 gibt es mehrmals, Parallelklasse a auch – aber 9 und a zusammen nur einmal.</p>`,
       objective: `<p>Die Bezeichnung „9a“ besteht eigentlich aus zwei Teilen. Ersetze bei „Klasse“ den Primärschlüssel durch einen Verbundschlüssel:</p>
         <ol>
@@ -1083,7 +1083,7 @@
           <li>Gib deinem ER-Modell in der Titelleiste einen <strong>Namen</strong> (z. B. „Schule“)</li>
           <li>Speichere es mit <strong>„JSON-Export“</strong> und <strong>„PNG-Export“</strong></li>
         </ol>
-        <p>Danach geht es im Menü mit der Reihe „ERM-Experten“ weiter!</p>`,
+        <p>Danach geht es im Menü mit dem Lernpfad „ERM-Experten“ weiter!</p>`,
       validator: function () {
         return { passed: true };
       },
@@ -1467,19 +1467,19 @@
     },
   };
 
-  function ermSzenarioQuest(s) {
+  function ermSzenarioAufgabe(s) {
     return {
       title: s.title,
       szenario: s.szenario,
       masterlösung: s.masterlösung,
       kardinalitaeten: s.ohneKardinalitaeten ? false : undefined,
       validator: function () {
-        return validateExpertQuest(this.masterlösung);
+        return validateExpertAufgabe(this.masterlösung);
       },
     };
   }
 
-  function rmSzenarioQuest(s) {
+  function rmSzenarioAufgabe(s) {
     return {
       title: s.title,
       szenario: `<p><strong>Überführe das ER-Modell „${s.title}“ in das Relationenmodell.</strong></p>
@@ -1491,7 +1491,7 @@
     };
   }
 
-  // SQL-Übung: erst die Überführung, dann NOT NULL und UNIQUE nach den sqlRegeln der Quest
+  // SQL-Übung: erst die Überführung, dann NOT NULL und UNIQUE nach den sqlRegeln der Aufgabe
   function sqlValidator() {
     const result = window.RelModel?.checkAndGetResult?.() || { passed: false };
     if (!result.passed) return result;
@@ -1500,8 +1500,8 @@
   }
 
   // SQL-Übung: Das Relationenmodell ist vorgegeben, geübt werden NOT NULL und UNIQUE.
-  // Steigerung: 1. Spalten genannt, 2. Regeln genannt, ab 3. nur noch der Szenariotext (in der Reihe Quest 2 bis 6).
-  function sqlUebungQuest(s, stufe) {
+  // Steigerung: 1. Spalten genannt, 2. Regeln genannt, ab 3. nur noch der Szenariotext (im Lernpfad Aufgabe 2 bis 6).
+  function sqlUebungAufgabe(s, stufe) {
     const spalte = (r) => {
       const was = [r.notNull && 'NOT NULL', r.unique && 'UNIQUE'].filter(Boolean).join(' und ') || 'kein NOT NULL';
       return `<li>„${r.spalte}“ in „${r.relation}“: <strong>${was}</strong> – ${r.grund}</li>`;
@@ -1535,12 +1535,12 @@
     SZENARIEN.katastrophenschutz,
   ];
 
-  const ermUebungQuests = nummeriert(UEBUNG.map(ermSzenarioQuest));
-  const ermExpertenQuests = nummeriert(EXPERTEN.map(ermSzenarioQuest));
-  const rmUebungQuests = nummeriert(UEBUNG.map(rmSzenarioQuest));
-  const rmExpertenQuests = nummeriert(EXPERTEN.map(rmSzenarioQuest));
-  // SQL-Übung: Quest 1 führt Muss, Kann und UNIQUE am Schul-Relationenmodell ein, danach die Szenarien
-  const sqlUebungQuests = nummeriert([
+  const ermUebungAufgaben = nummeriert(UEBUNG.map(ermSzenarioAufgabe));
+  const ermExpertenAufgaben = nummeriert(EXPERTEN.map(ermSzenarioAufgabe));
+  const rmUebungAufgaben = nummeriert(UEBUNG.map(rmSzenarioAufgabe));
+  const rmExpertenAufgaben = nummeriert(EXPERTEN.map(rmSzenarioAufgabe));
+  // SQL-Übung: Aufgabe 1 führt Muss, Kann und UNIQUE am Schul-Relationenmodell ein, danach die Szenarien
+  const sqlUebungAufgaben = nummeriert([
     {
       title: 'Muss, Kann und UNIQUE',
       jsonFile: 'schule-auffrischung.json',
@@ -1564,7 +1564,7 @@
           grund: 'Ein Schüler ist höchstens in einer Klasse Klassensprecher (1:1).',
         },
       ],
-      theory: `<p class="quest-begriff">Neuer Begriff: Muss-Beziehung · Kann-Beziehung</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Muss-Beziehung · Kann-Beziehung</p>
         <p><strong>Muss-Beziehung → NOT NULL:</strong> Muss jede Zeile einen Partner haben, darf der Fremdschlüssel nicht leer bleiben. Bei einer <strong>Kann-Beziehung</strong> darf er leer (NULL) sein.</p>
         <p><strong>1:1 → UNIQUE:</strong> Der Fremdschlüssel einer 1:1-Beziehung darf jeden Wert nur einmal enthalten – sonst wäre ein Schüler Sprecher mehrerer Klassen.</p>`,
       szenario: `<p><strong>Das Relationenmodell der Schule ist schon eingetragen.</strong> Klicke in der Seitenleiste auf <strong>„SQL erzeugen“</strong>. Dort legst du für jede Spalte den Datentyp fest und setzt die Regeln:</p>
@@ -1575,16 +1575,16 @@
         <p>Wähle passende Datentypen, z. B. INTEGER für SchülerNr und Klassenstufe.</p>`,
       validator: sqlValidator,
     },
-    ...EXPERTEN.map((s, i) => sqlUebungQuest(s, i + 1)),
+    ...EXPERTEN.map((s, i) => sqlUebungAufgabe(s, i + 1)),
   ]);
 
-  // ---- Quest-Datenbank: RELATIONENMODELL-GRUNDLAGEN (Stufe Einstieg, ERM aus files/schule-grundlagen.json) ----
-  const rmGrundlagenQuests = nummeriert([
+  // ---- Aufgaben-Datenbank: RELATIONENMODELL-GRUNDLAGEN (Stufe Einstieg, ERM aus files/schule-grundlagen.json) ----
+  const rmGrundlagenAufgaben = nummeriert([
     {
       title: 'Seitenleiste öffnen',
       // Die Seitenleiste bleibt beim Start zu und wird hier nicht automatisch geöffnet.
       seitenleisteSelbstOeffnen: true,
-      theory: `<p class="quest-begriff">Neuer Begriff: Relation · Symbol: Name (Attribut, Attribut, …)</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Relation · Symbol: Name (Attribut, Attribut, …)</p>
         <p><strong>Relationenmodell:</strong> Im Relationenmodell werden Daten in Tabellen (Relationen) organisiert. Jede Tabelle hat Spalten (Attribute) und Zeilen (Datensätze). Primärschlüssel identifizieren jede Zeile eindeutig.</p>
         <p>Die Überführung eines ER-Modells in ein Relationenmodell ist ein wichtiger Schritt beim Datenbank-Entwurf.</p>`,
       objective: `<p>Öffne die <strong>rechte Seitenleiste</strong> „Relationenmodell“, um mit der Überführung zu beginnen.</p>
@@ -1652,7 +1652,7 @@
     },
     {
       title: '1:n-Beziehung „geht in“',
-      theory: `<p class="quest-begriff">Neuer Begriff: Fremdschlüssel · Symbol: ↑ hinter dem Attributnamen</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Fremdschlüssel · Symbol: ↑ hinter dem Attributnamen</p>
         <p><strong>1:n-Beziehung abbilden:</strong> Bei einer 1:n-Beziehung wird der Primärschlüssel der 1-Seite als <strong>Fremdschlüssel (FS)</strong> in die Relation der n-Seite aufgenommen.</p>
         <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Bezeichnung) wird als FS in die Relation Schüler aufgenommen.</p>`,
       objective: `<p><strong>Beziehungen abbilden:</strong> Als nächstes müssen alle Beziehungen nacheinander abgebildet werden, um die Zusammenhänge zwischen den Entitätsklassen auch im Relationenmodell darzustellen. Dazu werden Primärschlüssel zwischen den beteiligten Relationen „verschoben“: Im einfachsten Fall wird der Primärschlüssel einer Seite als sog. Fremdschlüssel in der anderen Seite übernommen, damit eine eindeutige Zuordnung der Datensätze möglich ist.</p>
@@ -1680,7 +1680,7 @@
     },
     {
       title: 'n:m-Beziehung „unterrichtet“',
-      theory: `<p class="quest-begriff">Neuer Begriff: Beziehungstabelle · Symbol: eigene Relation mit dem Namen der Beziehung</p>
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungstabelle · Symbol: eigene Relation mit dem Namen der Beziehung</p>
         <p><strong>n:m-Beziehung abbilden:</strong> Eine n:m-Beziehung passt in keine der bestehenden Relationen. Die Beziehung wird deshalb eine eigene Tabelle (Relation): die <strong>Beziehungstabelle</strong>. Sie heißt wie die Beziehung.</p>
         <p>Die Beziehungstabelle erhält die Primärschlüssel <strong>beider beteiligten Entitätsklassen</strong> als <strong>Fremdschlüssel</strong>. Zusammen bilden diese ihren <strong>Primärschlüssel</strong> (einen Verbundschlüssel).</p>`,
       objective: `<p>Bilde die n:m-Beziehung „unterrichtet“ (Lehrer n : m Klasse) als Beziehungstabelle ab.</p>
@@ -1736,15 +1736,15 @@
           <li>Klicke in der Seitenleiste auf <strong>„JSON-Export“</strong> und speichere die Datei</li>
           <li>Klicke in der Seitenleiste auf <strong>„PNG-Export“</strong> und speichere das Bild</li>
         </ol>
-        <p>Danach geht es im Menü mit der Reihe „Relationenmodell-Übung“ weiter!</p>`,
+        <p>Danach geht es im Menü mit dem Lernpfad „Relationenmodell-Übung“ weiter!</p>`,
       validator: function () {
         return { passed: true };
       },
     },
   ]);
 
-  // ---- Quest-Datenbank: RELATIONENMODELL-AUFFRISCHUNG (Stufe Fortgeschritten, ERM aus files/schule-auffrischung.json) ----
-  const rmAuffrischungQuests = nummeriert([
+  // ---- Aufgaben-Datenbank: RELATIONENMODELL-AUFFRISCHUNG (Stufe Fortgeschritten, ERM aus files/schule-auffrischung.json) ----
+  const rmAuffrischungAufgaben = nummeriert([
     {
       title: 'Relationen mit Schlüsseln',
       // Die Aufgabe sagt „Öffne die Seitenleiste“ – also beim Start zu lassen.
@@ -1838,20 +1838,20 @@
         </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <p>Speichere die Relationen in der Seitenleiste mit <strong>„JSON-Export“</strong>.</p>
-        <p>Danach geht es im Menü mit der Reihe „Relationenmodell-Experten“ weiter!</p>`,
+        <p>Danach geht es im Menü mit dem Lernpfad „Relationenmodell-Experten“ weiter!</p>`,
       validator: function () {
         return { passed: true };
       },
     },
   ]);
 
-  // ---- Quest-Reihen: id steht auch im Link (?reihe=…) ----
-  // art: 'erm' oder 'rm'; schritt: Schritt-für-Schritt-Reihe (ein Modell, Erklärkästen) statt Szenarien.
+  // ---- Lernpfade: id steht auch im Link (?lernpfad=…) ----
+  // art: 'erm' oder 'rm'; schritt: Schritt-für-Schritt-Lernpfad (ein Modell, Erklärkästen) statt Szenarien.
   // Symbole: 🔷 ER-Modell erarbeiten, Tabelle (ICON_RM) Relationenmodell erarbeiten, ✏️ üben.
-  // version: neuer Speicherplatz, wenn sich die Nummerierung einer Reihe ändert.
-  // abschlussText: Glückwunsch, wenn alle Szenarien einer Übungsreihe gelöst sind.
+  // version: neuer Speicherplatz, wenn sich die Nummerierung eines Lernpfads ändert.
+  // abschlussText: Glückwunsch, wenn alle Szenarien eines Übungs-Lernpfads gelöst sind.
   const ICON_RM = '<svg class="icon-rm" aria-hidden="true"><use href="#icon-tabelle"></use></svg>';
-  const REIHEN = [
+  const LERNPFADE = [
     {
       id: 'erm-grundlagen',
       stufe: 'Einstieg',
@@ -1861,7 +1861,7 @@
       titel: 'ERM-Grundlagen',
       untertitel: 'Erstes ER-Modell, noch ohne Kardinalitäten',
       kardinalitaeten: false,
-      quests: ermGrundlagenQuests,
+      aufgaben: ermGrundlagenAufgaben,
     },
     {
       id: 'erm-kardinalitaeten',
@@ -1873,9 +1873,9 @@
       untertitel: 'Den Beziehungen Zahlen geben',
       // Eigenes Schul-ERM aus den abgeschlossenen Grundlagen, sonst die Vorlage. Das Startmodell ist
       // gesperrt: nur Kardinalitäten ändern und neue Beziehungen anlegen.
-      startModell: { reihe: 'erm-grundlagen', datei: 'schule-ohne-kardinalitaeten.json' },
+      startModell: { lernpfad: 'erm-grundlagen', datei: 'schule-ohne-kardinalitaeten.json' },
       nurKardinalitaeten: true,
-      quests: ermKardinalitaetenQuests,
+      aufgaben: ermKardinalitaetenAufgaben,
     },
     {
       id: 'erm-uebung',
@@ -1886,8 +1886,8 @@
       titel: 'ERM-Übung',
       untertitel: 'Fünf Szenarien selbst modellieren',
       abschlussText:
-        'Du modellierst jetzt selbstständig Szenarien mit 1:1-, 1:n- und n:m-Beziehungen und Beziehungsattributen. Als Nächstes überführst du ER-Modelle ins Relationenmodell: Reihe „Relationenmodell-Grundlagen“.',
-      quests: ermUebungQuests,
+        'Du modellierst jetzt selbstständig Szenarien mit 1:1-, 1:n- und n:m-Beziehungen und Beziehungsattributen. Als Nächstes überführst du ER-Modelle ins Relationenmodell: Lernpfad „Relationenmodell-Grundlagen“.',
+      aufgaben: ermUebungAufgaben,
     },
     {
       id: 'rm-grundlagen',
@@ -1898,7 +1898,7 @@
       titel: 'Relationenmodell-Grundlagen',
       untertitel: 'Das Schul-ERM Schritt für Schritt überführen',
       ermDatei: 'schule-grundlagen.json',
-      quests: rmGrundlagenQuests,
+      aufgaben: rmGrundlagenAufgaben,
     },
     {
       id: 'rm-uebung',
@@ -1910,7 +1910,7 @@
       untertitel: 'Die Übungsszenarien überführen',
       abschlussText:
         'Du überführst jetzt ER-Modelle mit allen Beziehungstypen sicher ins Relationenmodell – mit Fremdschlüsseln und Beziehungstabellen.',
-      quests: rmUebungQuests,
+      aufgaben: rmUebungAufgaben,
     },
     {
       id: 'erm-auffrischung',
@@ -1920,7 +1920,7 @@
       icon: '🔷',
       titel: 'ERM-Auffrischung',
       untertitel: 'Alles Wichtige in großen Schritten',
-      quests: ermAuffrischungQuests,
+      aufgaben: ermAuffrischungAufgaben,
     },
     {
       id: 'erm-experten',
@@ -1932,7 +1932,7 @@
       untertitel: 'Knifflige Szenarien selbst modellieren',
       abschlussText:
         'Du modellierst jetzt auch knifflige Szenarien – mit vermittelnden Entitätsklassen, mehreren Beziehungen zwischen denselben Entitätsklassen, Selbstbeziehungen und Verbundschlüsseln.',
-      quests: ermExpertenQuests,
+      aufgaben: ermExpertenAufgaben,
     },
     {
       id: 'rm-auffrischung',
@@ -1943,7 +1943,7 @@
       titel: 'Relationenmodell-Auffrischung',
       untertitel: 'Transformationsregeln kompakt',
       ermDatei: 'schule-auffrischung.json',
-      quests: rmAuffrischungQuests,
+      aufgaben: rmAuffrischungAufgaben,
     },
     {
       id: 'rm-experten',
@@ -1954,8 +1954,8 @@
       titel: 'Relationenmodell-Experten',
       untertitel: 'Knifflige ER-Modelle überführen',
       abschlussText:
-        'Du überführst jetzt auch Selbstbeziehungen, mehrere Beziehungen zwischen denselben Entitätsklassen und Verbundschlüssel. Weiter geht es mit der Reihe „SQL-Übung“.',
-      quests: rmExpertenQuests,
+        'Du überführst jetzt auch Selbstbeziehungen, mehrere Beziehungen zwischen denselben Entitätsklassen und Verbundschlüssel. Weiter geht es mit dem Lernpfad „SQL-Übung“.',
+      aufgaben: rmExpertenAufgaben,
     },
     {
       id: 'sql-uebung',
@@ -1967,11 +1967,11 @@
       untertitel: 'Muss, Kann, NOT NULL und UNIQUE',
       // Das Relationenmodell ist vorgegeben (Musterlösung), geübt wird nur „SQL erzeugen“
       rmVorgabe: true,
-      // Version 2: Quest 1 „Muss, Kann und UNIQUE“ vor den Szenarien – der alte Stand passt nicht mehr
+      // Version 2: Aufgabe 1 „Muss, Kann und UNIQUE“ vor den Szenarien – der alte Stand passt nicht mehr
       version: 2,
       abschlussText:
         'Du legst jetzt mit NOT NULL fest, welche Fremdschlüssel nicht leer bleiben dürfen, und sicherst 1:1-Beziehungen mit UNIQUE ab.',
-      quests: sqlUebungQuests,
+      aufgaben: sqlUebungAufgaben,
     },
   ];
 
@@ -2066,10 +2066,10 @@
     return [...new Set(namen)].filter((n) => n && !kommtVor(n));
   }
 
-  // Ein geprüftes Szenario (js/szenario.js) wird eine Übungsreihe mit einer Aufgabe
-  function eigeneReihe(sz) {
+  // Ein geprüftes Szenario (js/szenario.js) wird ein Übungs-Lernpfad mit einer Aufgabe
+  function eigenerLernpfad(sz) {
     const text = textAlsHtml(sz.text);
-    const quest =
+    const aufgabe =
       sz.aufgabe === 'rm'
         ? {
             title: sz.titel,
@@ -2083,7 +2083,7 @@
             masterlösung: masterAusErm(sz.erm, sz.kardinalitaeten),
             kardinalitaeten: sz.kardinalitaeten ? undefined : false,
             validator: function () {
-              return validateExpertQuest(this.masterlösung);
+              return validateExpertAufgabe(this.masterlösung);
             },
           };
     return {
@@ -2096,50 +2096,50 @@
       titel: sz.titel,
       untertitel: sz.aufgabe === 'rm' ? 'Ins Relationenmodell überführen' : 'ER-Modell zeichnen',
       abschlussText: 'Du hast das Szenario deiner Lehrkraft gelöst.',
-      quests: nummeriert([quest]),
+      aufgaben: nummeriert([aufgabe]),
     };
   }
 
-  const QUEST_WORK_PREFIX = 'erm-editor-quest-work-v1';
+  const ARBEITSSTAND_PREFIX = 'erm-editor-arbeitsstand-v1';
 
-  // ---- Quest Manager ----
-  const QuestManager = {
+  // ---- Aufgabe Manager ----
+  const LernpfadManager = {
     state: {
-      questMode: null, // Reihen-ID, z. B. 'erm-grundlagen'
-      currentQuestNumber: 1,
-      completedQuests: [],
-      unlockedQuests: [],
-      questsPanelVisible: false,
+      lernpfadId: null, // Lernpfad-ID, z. B. 'erm-grundlagen'
+      aktuelleAufgabe: 1,
+      geloesteAufgaben: [],
+      freieAufgaben: [],
+      lernpfadAktiv: false,
     },
 
-    getSeries: function (mode = this.state.questMode) {
-      return REIHEN.find((r) => r.id === mode) || null;
+    getLernpfad: function (mode = this.state.lernpfadId) {
+      return LERNPFADE.find((r) => r.id === mode) || null;
     },
 
-    getSeriesList: function () {
-      return REIHEN;
+    getLernpfade: function () {
+      return LERNPFADE;
     },
 
-    // Eigene Szenarien ersetzen die bisherigen am Ende der Reihenliste
+    // Eigene Szenarien ersetzen die bisherigen am Ende der Liste
     setEigeneSzenarien: function (liste) {
-      for (let i = REIHEN.length - 1; i >= 0; i--) if (REIHEN[i].eigen) REIHEN.splice(i, 1);
-      REIHEN.push(...liste.map(eigeneReihe));
+      for (let i = LERNPFADE.length - 1; i >= 0; i--) if (LERNPFADE[i].eigen) LERNPFADE.splice(i, 1);
+      LERNPFADE.push(...liste.map(eigenerLernpfad));
     },
 
-    getStorageKey: function (mode = this.state.questMode) {
-      return 'erm-editor-quests-' + (mode || 'none') + '-v' + (this.getSeries(mode)?.version || 1);
+    getStorageKey: function (mode = this.state.lernpfadId) {
+      return 'erm-editor-lernpfad-' + (mode || 'none') + '-v' + (this.getLernpfad(mode)?.version || 1);
     },
 
-    // Aufgaben, die zählen: alle Quests außer der Abschlussquest einer Schritt-Reihe
-    getAufgaben: function (mode = this.state.questMode) {
-      return this.getQuestsForMode(mode).filter((q) => !q.abschluss);
+    // Aufgaben, die zählen: alle Aufgaben außer der Abschlussaufgabe eines Schritt-Lernpfads
+    getAufgaben: function (mode = this.state.lernpfadId) {
+      return this.getAlleAufgaben(mode).filter((q) => !q.abschluss);
     },
 
     // Fortschritt aus dem gespeicherten Stand: { erledigt, gesamt }
     getFortschritt: function (mode) {
       let done = [];
       try {
-        done = JSON.parse(localStorage.getItem(this.getStorageKey(mode)) || '{}').completedQuests || [];
+        done = JSON.parse(localStorage.getItem(this.getStorageKey(mode)) || '{}').geloesteAufgaben || [];
       } catch (_e) {
         // leer lassen
       }
@@ -2147,185 +2147,185 @@
       return { erledigt: aufgaben.filter((q) => done.includes(q.number)).length, gesamt: aufgaben.length };
     },
 
-    // Alle Aufgaben einer Reihe gelöst?
-    isSeriesDone: function (mode) {
+    // Alle Aufgaben eines Lernpfads gelöst?
+    isLernpfadDone: function (mode) {
       const { erledigt, gesamt } = this.getFortschritt(mode);
       return gesamt > 0 && erledigt === gesamt;
     },
 
-    // Szenario-Reihen: nächste offene Aufgabe nach der aktuellen, sonst die erste offene
-    getNextOpenQuest: function () {
+    // Szenario-Lernpfade: nächste offene Aufgabe nach der aktuellen, sonst die erste offene
+    getNextOpenAufgabe: function () {
       const offen = this.getAufgaben()
         .map((q) => q.number)
-        .filter((n) => !this.state.completedQuests.includes(n));
-      return offen.find((n) => n > this.state.currentQuestNumber) || offen[0] || null;
+        .filter((n) => !this.state.geloesteAufgaben.includes(n));
+      return offen.find((n) => n > this.state.aktuelleAufgabe) || offen[0] || null;
     },
 
-    // Arbeitsstand: Schritt-Reihen bauen ein Modell auf (ein Speicherplatz), Szenario-Reihen speichern je Quest.
-    getWorkKey: function (mode = this.state.questMode, number = this.state.currentQuestNumber) {
-      const reihe = this.getSeries(mode);
-      if (!reihe) return null;
-      const id = reihe.version ? `${mode}-v${reihe.version}` : mode;
-      return reihe.schritt ? `${QUEST_WORK_PREFIX}:${id}` : `${QUEST_WORK_PREFIX}:${id}:q${Number(number) || 1}`;
+    // Arbeitsstand: Schritt-Lernpfade bauen ein Modell auf (ein Speicherplatz), Szenario-Lernpfade speichern je Aufgabe.
+    getWorkKey: function (mode = this.state.lernpfadId, number = this.state.aktuelleAufgabe) {
+      const lernpfad = this.getLernpfad(mode);
+      if (!lernpfad) return null;
+      const id = lernpfad.version ? `${mode}-v${lernpfad.version}` : mode;
+      return lernpfad.schritt ? `${ARBEITSSTAND_PREFIX}:${id}` : `${ARBEITSSTAND_PREFIX}:${id}:a${Number(number) || 1}`;
     },
 
     init: function () {
-      // Keine globale Quest lädt; init wird erst beim startQuestSeries aufgerufen
-      this.state.unlockedQuests = [1];
+      // Keine globale Aufgabe lädt; init wird erst beim startLernpfad aufgerufen
+      this.state.freieAufgaben = [1];
     },
 
     persist: function () {
       const key = this.getStorageKey();
-      // Speichere nur currentQuestNumber, completedQuests, unlockedQuests (nicht questsPanelVisible)
+      // Speichere nur aktuelleAufgabe, geloesteAufgaben, freieAufgaben (nicht lernpfadAktiv)
       const dataToSave = {
-        currentQuestNumber: this.state.currentQuestNumber,
-        completedQuests: this.state.completedQuests,
-        unlockedQuests: this.state.unlockedQuests,
+        aktuelleAufgabe: this.state.aktuelleAufgabe,
+        geloesteAufgaben: this.state.geloesteAufgaben,
+        freieAufgaben: this.state.freieAufgaben,
       };
       localStorage.setItem(key, JSON.stringify(dataToSave));
     },
 
-    startQuestSeries: function (mode) {
-      this.state.questMode = mode;
+    startLernpfad: function (mode) {
+      this.state.lernpfadId = mode;
 
-      // Lade gespeicherte Daten für diese Questreihe
+      // Lade gespeicherte Daten für diese Lernpfad
       const key = this.getStorageKey();
       const saved = localStorage.getItem(key);
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          this.state.currentQuestNumber = data.currentQuestNumber || 1;
-          this.state.completedQuests = data.completedQuests || [];
-          this.state.unlockedQuests = data.unlockedQuests || [1];
+          this.state.aktuelleAufgabe = data.aktuelleAufgabe || 1;
+          this.state.geloesteAufgaben = data.geloesteAufgaben || [];
+          this.state.freieAufgaben = data.freieAufgaben || [1];
         } catch (e) {
-          console.warn('Quest-Zustand für ' + mode + ' konnte nicht geladen werden');
-          this.state.currentQuestNumber = 1;
-          this.state.completedQuests = [];
-          this.state.unlockedQuests = [1];
+          console.warn('Aufgaben-Zustand für ' + mode + ' konnte nicht geladen werden');
+          this.state.aktuelleAufgabe = 1;
+          this.state.geloesteAufgaben = [];
+          this.state.freieAufgaben = [1];
         }
       } else {
-        this.state.currentQuestNumber = 1;
-        this.state.completedQuests = [];
-        this.state.unlockedQuests = [1];
+        this.state.aktuelleAufgabe = 1;
+        this.state.geloesteAufgaben = [];
+        this.state.freieAufgaben = [1];
       }
 
-      this.state.questsPanelVisible = true;
+      this.state.lernpfadAktiv = true;
       this.persist();
 
-      // Unterdrücke initiale Validierung für ERM-Reihen
-      if (this.getSeries(mode)?.art === 'erm') {
-        if (window.App?.suppressQuestCheck) {
-          window.App.suppressQuestCheck(1000);
+      // Unterdrücke initiale Validierung für ERM-Lernpfade
+      if (this.getLernpfad(mode)?.art === 'erm') {
+        if (window.App?.suppressAufgabeCheck) {
+          window.App.suppressAufgabeCheck(1000);
         }
       }
 
       this.renderPanel();
       // UI: Aktualisiere Badge/Dot-Anzeigen im Menü
-      if (window.App?.updateQuestDots) window.App.updateQuestDots();
+      if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
     },
 
-    getCurrentQuest: function () {
-      const quests = this.getQuestsForMode(this.state.questMode);
-      return quests.find((q) => q.number === this.state.currentQuestNumber) || null;
+    getCurrentAufgabe: function () {
+      const aufgaben = this.getAlleAufgaben(this.state.lernpfadId);
+      return aufgaben.find((q) => q.number === this.state.aktuelleAufgabe) || null;
     },
 
-    getQuestsForMode: function (mode) {
-      return this.getSeries(mode)?.quests || [];
+    getAlleAufgaben: function (mode) {
+      return this.getLernpfad(mode)?.aufgaben || [];
     },
 
-    getMaxQuests: function (mode = this.state.questMode) {
-      return this.getQuestsForMode(mode).length;
+    getMaxAufgaben: function (mode = this.state.lernpfadId) {
+      return this.getAlleAufgaben(mode).length;
     },
 
-    validateCurrentQuest: function (forceRecheck = false) {
-      // Nichts tun wenn kein Quest aktiv oder Panel verborgen
-      if (!this.state.questMode || !this.state.questsPanelVisible) return { passed: false };
+    validateCurrentAufgabe: function (forceRecheck = false) {
+      // Nichts tun wenn kein Aufgabe aktiv oder Panel verborgen
+      if (!this.state.lernpfadId || !this.state.lernpfadAktiv) return { passed: false };
 
-      const quest = this.getCurrentQuest();
-      if (!quest) return { passed: false };
+      const aufgabe = this.getCurrentAufgabe();
+      if (!aufgabe) return { passed: false };
 
-      const isAlreadyCompleted = this.state.completedQuests.includes(quest.number);
+      const isAlreadyCompleted = this.state.geloesteAufgaben.includes(aufgabe.number);
 
-      // Quest bereits abgeschlossen – nur bei manuellem Recheck erneut prüfen
+      // Aufgabe bereits abgeschlossen – nur bei manuellem Recheck erneut prüfen
       if (isAlreadyCompleted && !forceRecheck) return { passed: true };
 
       try {
-        if (!quest.validator) {
+        if (!aufgabe.validator) {
           if (forceRecheck) {
             window.App?.showValidationFailedModal?.(
-              'Diese Quest kann gerade nicht geprüft werden.',
+              'Diese Aufgabe kann gerade nicht geprüft werden.',
               'Für diese Aufgabe fehlt noch eine Prüflogik.',
             );
           }
           return { passed: false, error: 'Für diese Aufgabe fehlt eine Prüflogik.' };
         }
 
-        const result = quest.validator();
-        const maxQuests = this.getMaxQuests();
-        const reihe = this.getSeries();
+        const result = aufgabe.validator();
+        const maxAufgaben = this.getMaxAufgaben();
+        const lernpfad = this.getLernpfad();
 
         if (result.passed) {
-          if (quest.abschluss) {
-            // Abschlussquest: nur bei manuellem Klick abschließen
+          if (aufgabe.abschluss) {
+            // Abschlussaufgabe: nur bei manuellem Klick abschließen
             if (!forceRecheck) return { passed: false };
-            // Bei der letzten Quest: Zeige das Erfolgs-Modal. Erst nach Klick auf OK
-            // wird die Quest als abgeschlossen markiert, der Fullscreen-Konfetti
-            // gestartet und das Quest-Panel geschlossen.
-            window.App?.showQuestSuccessModal?.(quest.number, () => {
-              this.completeCurrentQuest();
+            // Bei der letzten Aufgabe: Zeige das Erfolgs-Modal. Erst nach Klick auf OK
+            // wird die Aufgabe als abgeschlossen markiert, der Fullscreen-Konfetti
+            // gestartet und die Aufgabenleiste geschlossen.
+            window.App?.showAufgabeSuccessModal?.(aufgabe.number, () => {
+              this.completeCurrentAufgabe();
               window.App?.playFullscreenConfetti?.();
               this.hidePanel();
             });
             return { passed: true };
           }
           if (isAlreadyCompleted && forceRecheck) {
-            window.App?.showQuestSuccessModal?.(quest.number, () => {
-              const nextNumber = quest.number + 1;
-              // Nur Schritt-Reihen teilen ein Modell; Szenarien wechseln über die Kreise oder „Nächste Aufgabe“
-              if (reihe.schritt && nextNumber <= maxQuests && nextNumber !== this.state.currentQuestNumber) {
-                this.state.currentQuestNumber = nextNumber;
-                if (!this.state.unlockedQuests.includes(nextNumber)) {
-                  this.state.unlockedQuests.push(nextNumber);
+            window.App?.showAufgabeSuccessModal?.(aufgabe.number, () => {
+              const nextNumber = aufgabe.number + 1;
+              // Nur Schritt-Lernpfade teilen ein Modell; Szenarien wechseln über die Kreise oder „Nächste Aufgabe“
+              if (lernpfad.schritt && nextNumber <= maxAufgaben && nextNumber !== this.state.aktuelleAufgabe) {
+                this.state.aktuelleAufgabe = nextNumber;
+                if (!this.state.freieAufgaben.includes(nextNumber)) {
+                  this.state.freieAufgaben.push(nextNumber);
                 }
                 this.persist();
               }
               this.renderPanel();
-              if (window.App?.updateQuestDots) window.App.updateQuestDots();
+              if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
             });
             return { passed: true };
           }
 
           // Als abgeschlossen markieren
-          this.completeCurrentQuest();
+          this.completeCurrentAufgabe();
 
-          // Modal → weiter: Schritt-Reihen zur nächsten Quest, ERM-Szenarien zur nächsten offenen Aufgabe,
-          // Relationenmodell-Szenarien erst per „Nächste Aufgabe“. Alles gelöst: Glückwunsch zur Reihe.
-          window.App?.showQuestSuccessModal?.(quest.number, () => {
-            if (reihe.schritt) {
-              this.progressToNextQuest();
-            } else if (this.isSeriesDone(reihe.id)) {
-              window.App?.showSeriesDone?.(reihe);
-            } else if (reihe.art === 'erm') {
-              const naechste = this.getQuestByNumber(reihe.id, this.getNextOpenQuest());
+          // Modal → weiter: Schritt-Lernpfade zur nächsten Aufgabe, ERM-Szenarien zur nächsten offenen Aufgabe,
+          // Relationenmodell-Szenarien erst per „Nächste Aufgabe“. Alles gelöst: Glückwunsch zum Lernpfad.
+          window.App?.showAufgabeSuccessModal?.(aufgabe.number, () => {
+            if (lernpfad.schritt) {
+              this.progressToNextAufgabe();
+            } else if (this.isLernpfadDone(lernpfad.id)) {
+              window.App?.showLernpfadDone?.(lernpfad);
+            } else if (lernpfad.art === 'erm') {
+              const naechste = this.getAufgabeByNumber(lernpfad.id, this.getNextOpenAufgabe());
               // Nach dem Szenario ohne Kardinalitäten (Hotel) kommen erst die ERM-Kardinalitäten
               if (
-                quest.kardinalitaeten === false &&
+                aufgabe.kardinalitaeten === false &&
                 naechste.kardinalitaeten !== false &&
-                !this.isSeriesDone('erm-kardinalitaeten')
+                !this.isLernpfadDone('erm-kardinalitaeten')
               ) {
                 window.App?.showAppModal?.({
                   title: 'Geschafft!',
-                  message: `Als Nächstes lernst du Kardinalitäten: Starte im Menü die Reihe „ERM-Kardinalitäten“. Danach geht es hier mit Szenario ${naechste.number} weiter.`,
+                  message: `Als Nächstes lernst du Kardinalitäten: Starte im Menü den Lernpfad „ERM-Kardinalitäten“. Danach geht es hier mit Szenario ${naechste.number} weiter.`,
                   mode: 'alert',
                   confirmLabel: 'OK',
                 });
               } else {
-                this.jumpToQuest(naechste.number);
-                window.App?.onQuestChanged?.(this.getCurrentQuest(), this.state);
+                this.jumpToAufgabe(naechste.number);
+                window.App?.onAufgabeChanged?.(this.getCurrentAufgabe(), this.state);
               }
             }
             this.renderPanel();
-            if (window.App?.updateQuestDots) window.App.updateQuestDots();
+            if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
           });
         } else {
           // Keine untere Feedback-Leiste nutzen; bei manuellem Check stattdessen Modal-Hinweis.
@@ -2347,144 +2347,144 @@
       }
     },
 
-    completeCurrentQuest: function () {
-      const number = this.state.currentQuestNumber;
-      if (!this.state.completedQuests.includes(number)) {
-        this.state.completedQuests.push(number);
+    completeCurrentAufgabe: function () {
+      const number = this.state.aktuelleAufgabe;
+      if (!this.state.geloesteAufgaben.includes(number)) {
+        this.state.geloesteAufgaben.push(number);
       }
       this.persist();
     },
 
-    progressToNextQuest: function () {
-      const maxQuests = this.getMaxQuests();
-      if (this.state.currentQuestNumber < maxQuests) {
-        if (window.App?.onBeforeQuestChange) {
-          window.App.onBeforeQuestChange(this.state);
+    progressToNextAufgabe: function () {
+      const maxAufgaben = this.getMaxAufgaben();
+      if (this.state.aktuelleAufgabe < maxAufgaben) {
+        if (window.App?.onBeforeAufgabeChange) {
+          window.App.onBeforeAufgabeChange(this.state);
         }
-        this.state.currentQuestNumber += 1;
-        const nextNumber = this.state.currentQuestNumber;
-        if (!this.state.unlockedQuests.includes(nextNumber)) {
-          this.state.unlockedQuests.push(nextNumber);
+        this.state.aktuelleAufgabe += 1;
+        const nextNumber = this.state.aktuelleAufgabe;
+        if (!this.state.freieAufgaben.includes(nextNumber)) {
+          this.state.freieAufgaben.push(nextNumber);
         }
         this.persist();
-        // Arbeitsstand der nächsten Quest laden
-        if (window.App?.onQuestChanged) {
-          const quest = this.getCurrentQuest();
-          window.App.onQuestChanged(quest, this.state);
+        // Arbeitsstand der nächsten Aufgabe laden
+        if (window.App?.onAufgabeChanged) {
+          const aufgabe = this.getCurrentAufgabe();
+          window.App.onAufgabeChanged(aufgabe, this.state);
         }
         return true;
       }
-      return false; // Alle Quests abgeschlossen
+      return false; // Alle Aufgaben abgeschlossen
     },
 
-    jumpToQuest: function (number) {
-      if (window.App?.onBeforeQuestChange) {
-        window.App.onBeforeQuestChange(this.state);
+    jumpToAufgabe: function (number) {
+      if (window.App?.onBeforeAufgabeChange) {
+        window.App.onBeforeAufgabeChange(this.state);
       }
-      this.state.currentQuestNumber = number;
-      if (!this.state.unlockedQuests.includes(number)) {
-        this.state.unlockedQuests.push(number);
+      this.state.aktuelleAufgabe = number;
+      if (!this.state.freieAufgaben.includes(number)) {
+        this.state.freieAufgaben.push(number);
       }
       this.persist();
       return true;
     },
 
     resetAllProgress: function () {
-      // Lösche alle Quest-Speicherungen für alle Reihen (auch die der Reihen vor dem Umbau 2026)
+      // Lösche alle Aufgaben-Speicherungen für alle Lernpfade (auch die aus der Zeit vor dem Umbau 2026)
       [
-        'erm-editor-quests-grundlagen-v1',
-        'erm-editor-quests-experten-v1',
-        'erm-editor-quests-experten-v2',
-        'erm-editor-quests-experten-v3',
-        'erm-editor-quests-experten-v4',
-        'erm-editor-quests-relmodel-grundlagen-v1',
-        'erm-editor-quests-relmodel-experten-v1',
-        'erm-editor-quests-sql-uebung-v1',
-        ...REIHEN.map((r) => this.getStorageKey(r.id)),
+        'erm-editor-lernpfad-grundlagen-v1',
+        'erm-editor-lernpfad-experten-v1',
+        'erm-editor-lernpfad-experten-v2',
+        'erm-editor-lernpfad-experten-v3',
+        'erm-editor-lernpfad-experten-v4',
+        'erm-editor-lernpfad-relmodel-grundlagen-v1',
+        'erm-editor-lernpfad-relmodel-experten-v1',
+        'erm-editor-lernpfad-sql-uebung-v1',
+        ...LERNPFADE.map((r) => this.getStorageKey(r.id)),
       ].forEach((key) => localStorage.removeItem(key));
 
       this.state = {
-        questMode: null,
-        currentQuestNumber: 1,
-        completedQuests: [],
-        unlockedQuests: [1],
-        questsPanelVisible: false,
+        lernpfadId: null,
+        aktuelleAufgabe: 1,
+        geloesteAufgaben: [],
+        freieAufgaben: [1],
+        lernpfadAktiv: false,
       };
       this.hidePanel();
-      if (window.App?.updateQuestDots) window.App.updateQuestDots();
+      if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
     },
 
-    resetCurrentSeriesProgress: function () {
-      const reihe = this.getSeries();
-      if (!reihe) return;
+    resetLernpfadProgress: function () {
+      const lernpfad = this.getLernpfad();
+      if (!lernpfad) return;
 
-      // Lösche alle Arbeitsstände dieser Questreihe
-      const numbers = reihe.schritt ? [1] : reihe.quests.map((q) => q.number);
-      numbers.forEach((n) => localStorage.removeItem(this.getWorkKey(reihe.id, n)));
+      // Lösche alle Arbeitsstände dieser Lernpfad
+      const numbers = lernpfad.schritt ? [1] : lernpfad.aufgaben.map((q) => q.number);
+      numbers.forEach((n) => localStorage.removeItem(this.getWorkKey(lernpfad.id, n)));
 
-      this.state.currentQuestNumber = 1;
-      this.state.completedQuests = [];
-      this.state.unlockedQuests = [1];
-      this.state.questsPanelVisible = true;
+      this.state.aktuelleAufgabe = 1;
+      this.state.geloesteAufgaben = [];
+      this.state.freieAufgaben = [1];
+      this.state.lernpfadAktiv = true;
       this.persist();
 
-      const modal = document.querySelector('.quest-congratulations-modal');
+      const modal = document.querySelector('.lernpfad-congratulations-modal');
       if (modal) {
         modal.classList.remove('visible');
       }
 
       this.renderPanel();
-      if (window.App?.updateQuestDots) window.App.updateQuestDots();
+      if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
     },
 
     hidePanel: function () {
-      // Erst den Quest-Modus verlassen, dann das freie Modell zurückholen (ohne Quest-Sperren)
-      this.state.questsPanelVisible = false;
-      if (window.App?.onQuestPanelClosing) {
-        window.App.onQuestPanelClosing(this.state);
+      // Erst den Aufgaben-Modus verlassen, dann das freie Modell zurückholen (ohne Aufgaben-Sperren)
+      this.state.lernpfadAktiv = false;
+      if (window.App?.onLernpfadClosing) {
+        window.App.onLernpfadClosing(this.state);
       }
       if (window.AppState?.state) window.AppState.state.diagramLocked = false;
       this.persist();
       this.renderPanel();
-      // „?“ an offenen Kardinalitäten gibt es nur während einer Quest
+      // „?“ an offenen Kardinalitäten gibt es nur während einer Aufgabe
       window.Diagram?.renderAll?.();
-      const modal = document.querySelector('.quest-congratulations-modal');
+      const modal = document.querySelector('.lernpfad-congratulations-modal');
       if (modal) {
         modal.classList.remove('visible');
       }
     },
 
     renderPanel: function () {
-      // Update quest panel visibility
-      const panel = document.getElementById('quest-panel');
+      // Update aufgabe panel visibility
+      const panel = document.getElementById('aufgabe-panel');
       if (!panel) return;
 
-      if (this.state.questsPanelVisible && this.state.questMode) {
+      if (this.state.lernpfadAktiv && this.state.lernpfadId) {
         panel.classList.add('visible');
       } else {
         panel.classList.remove('visible');
       }
 
-      // Render quest content
-      if (this.state.questMode && window.App?.updateQuestPanel) {
-        window.App.updateQuestPanel(this.getCurrentQuest(), this.state);
+      // Render aufgabe content
+      if (this.state.lernpfadId && window.App?.updateAufgabePanel) {
+        window.App.updateAufgabePanel(this.getCurrentAufgabe(), this.state);
       }
     },
 
     getChecklistStatus: function () {
-      const reihe = this.getSeries();
+      const lernpfad = this.getLernpfad();
       // SQL-Übung: Relationen sind vorgegeben, eine Checkliste würde nichts zeigen
-      if (!reihe || reihe.schritt || reihe.rmVorgabe) return null;
-      if (reihe.art === 'rm') return getRelmodelChecklistStatus();
-      const quest = this.getCurrentQuest();
-      return quest?.masterlösung ? getExpertChecklistStatus(quest.masterlösung) : null;
+      if (!lernpfad || lernpfad.schritt || lernpfad.rmVorgabe) return null;
+      if (lernpfad.art === 'rm') return getRelmodelChecklistStatus();
+      const aufgabe = this.getCurrentAufgabe();
+      return aufgabe?.masterlösung ? getExpertChecklistStatus(aufgabe.masterlösung) : null;
     },
 
     getHints: function () {
-      const reihe = this.getSeries();
-      if (reihe?.art !== 'erm' || reihe.schritt) return [];
-      const quest = this.getCurrentQuest();
-      return quest?.masterlösung ? getExpertHints(quest.masterlösung) : [];
+      const lernpfad = this.getLernpfad();
+      if (lernpfad?.art !== 'erm' || lernpfad.schritt) return [];
+      const aufgabe = this.getCurrentAufgabe();
+      return aufgabe?.masterlösung ? getExpertHints(aufgabe.masterlösung) : [];
     },
   };
 
@@ -2532,7 +2532,7 @@
     return formen.map(normalizeName);
   }
 
-  // `${Reihe}:${Quest}` → { markiert: Set, klicks } – bleibt beim Neuzeichnen des Panels erhalten
+  // `${Lernpfad}:${Aufgabe}` → { markiert: Set, klicks } – bleibt beim Neuzeichnen des Panels erhalten
   const textmarkerStand = new Map();
 
   // Klicks je Szenario: so viele, wie das ER-Modell Elemente hat, plus 5 für Fehlgriffe, mindestens 20 –
@@ -2678,15 +2678,15 @@
   }
 
   // ---- Export ----
-  window.Quest = QuestManager;
-  QuestManager.textmarker = textmarker;
-  Object.assign(QuestManager, { masterAusErm, nichtImText, textAlsHtml });
-  // Liefert eine Quest-Definition nach Reihenname und Nummer (für Tooltips/Labels)
-  QuestManager.getQuestByNumber = function (mode, number) {
-    const quests = QuestManager.getQuestsForMode(mode);
-    return quests.find((q) => Number(q.number) === Number(number)) || null;
+  window.Lernpfad = LernpfadManager;
+  LernpfadManager.textmarker = textmarker;
+  Object.assign(LernpfadManager, { masterAusErm, nichtImText, textAlsHtml });
+  // Liefert eine Aufgaben-Definition nach Lernpfad und Nummer (für Tooltips/Labels)
+  LernpfadManager.getAufgabeByNumber = function (mode, number) {
+    const aufgaben = LernpfadManager.getAlleAufgaben(mode);
+    return aufgaben.find((q) => Number(q.number) === Number(number)) || null;
   };
-  QuestManager.init();
+  LernpfadManager.init();
   // Panel-Zustand nach Seitenneuladen wiederherstellen
-  QuestManager.renderPanel();
+  LernpfadManager.renderPanel();
 })();

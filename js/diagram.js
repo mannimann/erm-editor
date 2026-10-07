@@ -126,9 +126,9 @@
     return window.AppState.state;
   }
 
-  // Reihe ERM-Kardinalitäten: Das Startmodell ist vorgegeben – nur Kardinalitäten ändern, neue Beziehungen anlegen
+  // Lernpfad ERM-Kardinalitäten: Das Startmodell ist vorgegeben – nur Kardinalitäten ändern, neue Beziehungen anlegen
   function nurKardinalitaeten() {
-    return !!window.Quest?.state?.questsPanelVisible && !!window.Quest.getSeries?.()?.nurKardinalitaeten;
+    return !!window.Lernpfad?.state?.lernpfadAktiv && !!window.Lernpfad.getLernpfad?.()?.nurKardinalitaeten;
   }
 
   function istFest(node) {
@@ -201,7 +201,7 @@
   let ctxTarget = null;
   let activeModalCleanup = null;
   const viewState = { x: 0, y: 0, scale: 1 };
-  let questValidateTimeout = null; // Debounce timer for quest validation
+  let aufgabeValidateTimeout = null; // Debounce timer for aufgabe validation
   let autoLayoutVariantCounter = 0;
 
   const ZOOM_MIN = 0.35;
@@ -303,11 +303,11 @@
     let visibleTop = box.top;
     let visibleBottom = box.bottom;
 
-    // Wenn das Quest-Panel sichtbar ist, liegt es ueber dem unteren Teil des Canvas.
+    // Wenn die Aufgabenleiste sichtbar ist, liegt sie über dem unteren Teil des Canvas.
     // Die Mitte soll dann auf den verbleibenden sichtbaren Bereich bezogen werden.
-    const questPanel = document.getElementById('quest-panel');
-    if (questPanel && questPanel.classList.contains('visible')) {
-      const panelRect = questPanel.getBoundingClientRect();
+    const aufgabePanel = document.getElementById('aufgabe-panel');
+    if (aufgabePanel && aufgabePanel.classList.contains('visible')) {
+      const panelRect = aufgabePanel.getBoundingClientRect();
       const overlapTop = Math.max(box.top, panelRect.top);
       const overlapBottom = Math.min(box.bottom, panelRect.bottom);
       if (overlapBottom > overlapTop) {
@@ -762,7 +762,7 @@
     return String(raw || '').toLowerCase();
   }
 
-  // Modus „ohne Kardinalitäten“ (Schalter im Header, Quest-Reihe ERM-Grundlagen): keine Zahlen
+  // Modus „ohne Kardinalitäten“ (Schalter im Header, Lernpfad ERM-Grundlagen): keine Zahlen
   function withCardinalities() {
     return S().kardinalitaeten !== false;
   }
@@ -1615,15 +1615,15 @@
     S().nodes.forEach(renderNode);
     if (window.AppState?.persistDebounced) window.AppState.persistDebounced();
 
-    // Debounced Quest Validation – nur wenn Panel aktiv
-    if (questValidateTimeout) clearTimeout(questValidateTimeout);
-    questValidateTimeout = setTimeout(() => {
-      const mode = window.Quest?.state?.questMode;
-      const shouldAutoValidate = window.Quest?.getSeries?.(mode)?.art === 'erm';
-      if (window.Quest?.state?.questsPanelVisible && shouldAutoValidate) {
-        window.Quest.validateCurrentQuest();
+    // Debounced Aufgabe Validation – nur wenn Panel aktiv
+    if (aufgabeValidateTimeout) clearTimeout(aufgabeValidateTimeout);
+    aufgabeValidateTimeout = setTimeout(() => {
+      const mode = window.Lernpfad?.state?.lernpfadId;
+      const shouldAutoValidate = window.Lernpfad?.getLernpfad?.(mode)?.art === 'erm';
+      if (window.Lernpfad?.state?.lernpfadAktiv && shouldAutoValidate) {
+        window.Lernpfad.validateCurrentAufgabe();
       }
-      questValidateTimeout = null;
+      aufgabeValidateTimeout = null;
     }, 600);
   }
 
@@ -1790,11 +1790,11 @@
 
     edgesLayer.appendChild(line);
 
-    // Zahl an der Linie. Fehlt sie, steht während einer Quest „?“ (Aufforderung), sonst nichts.
+    // Zahl an der Linie. Fehlt sie, steht während einer Aufgabe „?“ (Aufforderung), sonst nichts.
     const cardinalityText =
       isRelationshipEdge(edge) && withCardinalities()
         ? (toNode.type === 'entity' ? edgeLabel(edge, 'to') : edgeLabel(edge, 'from')) ||
-          (window.Quest?.state?.questsPanelVisible ? '?' : '')
+          (window.Lernpfad?.state?.lernpfadAktiv ? '?' : '')
         : '';
 
     if (cardinalityText) {

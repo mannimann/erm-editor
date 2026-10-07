@@ -6,7 +6,7 @@
 (function () {
   const FK_SUFFIX = '↑';
 
-  // Gemeinsame Namens-Normalisierung für ERM- und Relationenmodell-Quests:
+  // Gemeinsame Namens-Normalisierung für ERM- und Relationenmodell-Aufgaben:
   // Groß-/Kleinschreibung egal, ä = ae, ö = oe, ü = ue, ß = ss ...
   function foldName(s) {
     return String(s || '')
@@ -680,14 +680,14 @@
     renderSolution();
   }
 
-  // Laufende Quest-Reihe (null im freien Modus)
-  function questReihe() {
-    return window.Quest?.state?.questsPanelVisible ? window.Quest.getSeries?.() : null;
+  // Laufender Lernpfad (null im freien Modus)
+  function aktiverLernpfad() {
+    return window.Lernpfad?.state?.lernpfadAktiv ? window.Lernpfad.getLernpfad?.() : null;
   }
 
   // SQL-Übung: Das Relationenmodell ist vorgegeben – nur ansehen, eingestellt wird unter „SQL erzeugen“
   function rmGesperrt() {
-    return !!questReihe()?.rmVorgabe;
+    return !!aktiverLernpfad()?.rmVorgabe;
   }
 
   // ---- Render: Schüler-Eingabe ----
@@ -696,9 +696,9 @@
     const gesperrt = rmGesperrt();
     const drawer = document.getElementById('relmodel-drawer');
     drawer?.classList.toggle('rm-gesperrt', gesperrt);
-    // Relationenmodell-Schritt-Reihen (Erarbeitung): ohne Musterlösung
-    const reihe = questReihe();
-    drawer?.classList.toggle('rm-ohne-loesung', reihe?.art === 'rm' && !!reihe.schritt);
+    // Relationenmodell-Schritt-Lernpfade (Erarbeitung): ohne Musterlösung
+    const lernpfad = aktiverLernpfad();
+    drawer?.classList.toggle('rm-ohne-loesung', lernpfad?.art === 'rm' && !!lernpfad.schritt);
     const titel = document.getElementById('student-relations-title');
     if (titel) titel.textContent = gesperrt ? 'Vorgegebene Relationen' : 'Deine Relationen';
     const container = document.getElementById('student-relations-list');
@@ -712,18 +712,18 @@
   function renderAndPersist() {
     persistStudentRelations();
     renderStudentForm();
-    // Debounced Quest-Auto-Check bei Relmodel-Grundlagen
-    notifyQuestChange();
+    // Debounced Aufgaben-Auto-Check bei Relmodel-Grundlagen
+    notifyAufgabeChange();
   }
 
-  let _questChangeTimer = null;
-  function notifyQuestChange() {
-    if (_questChangeTimer) clearTimeout(_questChangeTimer);
-    _questChangeTimer = setTimeout(() => {
-      _questChangeTimer = null;
-      const reihe = window.Quest?.getSeries?.(window.Quest?.state?.questMode);
-      if (reihe?.art === 'rm' && reihe.schritt && window.Quest.state.questsPanelVisible) {
-        window.Quest.validateCurrentQuest();
+  let _aufgabeChangeTimer = null;
+  function notifyAufgabeChange() {
+    if (_aufgabeChangeTimer) clearTimeout(_aufgabeChangeTimer);
+    _aufgabeChangeTimer = setTimeout(() => {
+      _aufgabeChangeTimer = null;
+      const lernpfad = window.Lernpfad?.getLernpfad?.(window.Lernpfad?.state?.lernpfadId);
+      if (lernpfad?.art === 'rm' && lernpfad.schritt && window.Lernpfad.state.lernpfadAktiv) {
+        window.Lernpfad.validateCurrentAufgabe();
       }
     }, 600);
   }
@@ -1774,7 +1774,7 @@
     });
   }
 
-  // Musterlösung zuklappen (Knopf „Lösung ausblenden“, Wechsel der Quest)
+  // Musterlösung zuklappen (Knopf „Lösung ausblenden“, Wechsel der Aufgabe)
   function loesungAusblenden() {
     document.getElementById('solution-display').style.display = 'none';
     document.getElementById('btn-show-solution').style.display = '';

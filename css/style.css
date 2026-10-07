@@ -88,7 +88,7 @@ a[data-tooltip],
 .rel-btn[data-tooltip]:not(:disabled),
 .attr-key-toggle[data-tooltip],
 .prop-related-link[data-tooltip],
-.quest-circle[data-tooltip],
+.aufgabe-circle[data-tooltip],
 [role='button'][data-tooltip]:not(:disabled) {
   cursor: pointer;
 }
@@ -421,7 +421,7 @@ body.is-resizing-drawer {
   position: relative;
 }
 
-.quest-dot {
+.lernpfad-dot {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -429,10 +429,10 @@ body.is-resizing-drawer {
   background: #f97316;
   flex-shrink: 0;
 }
-.quest-dot--pulse {
-  animation: quest-dot-pulse 1.2s ease-in-out infinite;
+.lernpfad-dot--pulse {
+  animation: lernpfad-dot-pulse 1.2s ease-in-out infinite;
 }
-@keyframes quest-dot-pulse {
+@keyframes lernpfad-dot-pulse {
   0%,
   100% {
     opacity: 1;
@@ -517,22 +517,8 @@ body.is-resizing-drawer {
 }
 
 .tab-dropdown-item-subtitle {
-  font-size: 0.72rem;
-  color: #93c5fd;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.88;
-}
-
-/* Kleine Punkt-Markierung an Quest-Items (rechts) */
-.quest-item-dot {
-  display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #f97316;
-  flex-shrink: 0;
-  margin-left: 8px;
+  font-size: 0.78rem;
+  color: #94a3b8;
 }
 
 /* Ensure the left text block wraps and leaves space for the dot */
@@ -543,11 +529,6 @@ body.is-resizing-drawer {
   flex: 1 1 auto;
   min-width: 0;
 }
-.tab-dropdown-item .quest-item-dot {
-  align-self: center;
-  margin-left: 12px;
-}
-
 .tab-btn-right {
   margin-left: auto;
   border-left: 1px solid #334155;
@@ -2040,18 +2021,17 @@ body.is-resizing-drawer #relmodel-drawer {
 }
 
 /* ============================================================
-   QUEST-PANEL & GAMIFICATION
+   AUFGABE-PANEL & GAMIFICATION
    ============================================================ */
 
-/* Quest-Panel Container */
-#quest-panel {
+/* Aufgabenleiste */
+#aufgabe-panel {
   position: fixed;
   bottom: 0;
   left: var(--toolbar-width);
   right: 0; /* JS passt den Wert an wenn der Relationsmodell-Drawer geöffnet ist */
-  height: 300px;
-  min-height: 180px;
-  max-height: 60vh;
+  /* Höhe nach Inhalt (höchstens 45 % des Bildschirms); Ziehen am Griff setzt eine feste Höhe */
+  max-height: 45vh;
   background: rgba(30, 41, 59, 0.98);
   border-top: 3px solid #2563eb;
   color: #f8fafc;
@@ -2070,28 +2050,28 @@ body.is-resizing-drawer #relmodel-drawer {
     visibility 0.2s;
 }
 
-#quest-panel.visible {
+#aufgabe-panel.visible {
   visibility: visible;
   transform: none;
 }
 
 /* Start über einen Link: Panel gleitet erst nach dem Laden herein (js/app.js) */
-body.quest-spaeter #quest-panel {
+body.aufgabe-spaeter #aufgabe-panel {
   visibility: hidden;
   transform: translateY(100%);
 }
 
-body.quest-spaeter .quest-panel-resizer {
+body.aufgabe-spaeter .aufgabe-panel-resizer {
   visibility: hidden;
 }
 
 /* Ziehen an einer Kante: Größe folgt sofort dem Zeiger */
-body.is-resizing-drawer #quest-panel {
+body.is-resizing-drawer #aufgabe-panel {
   transition: none;
 }
 
-/* Quest-Panel Resizer (obere Kante) wird per JS .visible gesteuert */
-.quest-panel-resizer {
+/* Ziehgriff der Aufgabenleiste (obere Kante) wird per JS .visible gesteuert */
+.aufgabe-panel-resizer {
   visibility: hidden;
   position: fixed;
   bottom: 300px; /* JS synchronisiert diesen Wert mit der Panel-Höhe */
@@ -2107,7 +2087,7 @@ body.is-resizing-drawer #quest-panel {
     visibility 0.2s;
 }
 
-.quest-panel-resizer.visible {
+.aufgabe-panel-resizer.visible {
   visibility: visible;
   opacity: 1;
 }
@@ -2115,15 +2095,15 @@ body.is-resizing-drawer #quest-panel {
 @media (prefers-reduced-motion: reduce) {
   #relmodel-drawer,
   #relmodel-resizer,
-  #quest-panel,
-  .quest-panel-resizer,
+  #aufgabe-panel,
+  .aufgabe-panel-resizer,
   .sql-panel,
-  #quests-menu {
+  #lernpfade-menu {
     transition: none;
   }
 }
 
-.quest-panel-resizer::before {
+.aufgabe-panel-resizer::before {
   content: '';
   position: absolute;
   left: 50%;
@@ -2137,56 +2117,135 @@ body.is-resizing-drawer #quest-panel {
   transition: background 0.15s ease;
 }
 
-.quest-panel-resizer:hover::before,
-.quest-panel-resizer.is-dragging::before {
+.aufgabe-panel-resizer:hover::before,
+.aufgabe-panel-resizer.is-dragging::before {
   background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
 }
 
-/* Quest Header */
-.quest-header {
-  padding: 12px 16px;
+/* Aufgabe Header */
+.aufgabe-header {
+  padding: 10px 16px;
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
   border-bottom: 1px solid #475569;
+  container-type: inline-size;
 }
 
-.quest-title-row {
+/* Eine Zeile: Titel, Fortschritt, Zurücksetzen, Schließen */
+.aufgabe-title-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 8px 16px;
 }
 
-.quest-title {
+.aufgabe-title {
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
-.quest-progress {
-  font-size: 0.85rem;
-  color: #cbd5e1;
-  margin-right: 8px;
-}
-
-.quest-reset-btn {
-  background: #f59e0b;
-  border: none;
-  color: #1f2937;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 4px 8px;
+.aufgabe-reset-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #64748b;
   border-radius: 6px;
-  margin-right: 8px;
-  transition: background 0.2s ease;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 3px 9px;
+  cursor: pointer;
 }
 
-.quest-reset-btn:hover {
-  background: #fbbf24;
+.aufgabe-reset-btn:hover {
+  border-color: #f87171;
+  color: #fca5a5;
 }
 
-.quest-close-btn {
+/* Schmale Leiste: Fortschritt in eigener Zeile, Zurücksetzen nur im Menü „⋯“ */
+.aufgabe-mehr {
+  display: none;
+}
+
+@container (max-width: 760px) {
+  .aufgabe-title-row {
+    flex-wrap: wrap;
+  }
+
+  .aufgabe-title {
+    flex: 1;
+  }
+
+  .aufgabe-title-row .aufgabe-circles {
+    order: 10;
+    flex-basis: 100%;
+  }
+
+  .aufgabe-reset-btn {
+    display: none;
+  }
+
+  .aufgabe-mehr {
+    display: block;
+  }
+}
+
+/* Menü „⋯“ (Lernpfad zurücksetzen) */
+.aufgabe-mehr {
+  position: relative;
+}
+
+.aufgabe-mehr-btn {
+  list-style: none;
+  cursor: pointer;
+  color: #cbd5e1;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.aufgabe-mehr-btn::-webkit-details-marker {
+  display: none;
+}
+
+.aufgabe-mehr-btn:hover,
+.aufgabe-mehr[open] .aufgabe-mehr-btn {
+  background: #475569;
+  color: #f8fafc;
+}
+
+.aufgabe-mehr-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 2;
+  min-width: 200px;
+  padding: 4px;
+  background: #0f172a;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.aufgabe-mehr-menu button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: #fca5a5;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.aufgabe-mehr-menu button:hover {
+  background: rgba(220, 38, 38, 0.2);
+}
+
+.aufgabe-close-btn {
   background: none;
   border: none;
   color: #cbd5e1;
@@ -2197,34 +2256,35 @@ body.is-resizing-drawer #quest-panel {
   transition: opacity 0.2s;
 }
 
-.quest-close-btn:hover {
+.aufgabe-close-btn:hover {
   opacity: 1;
 }
 
-/* Progress Bar */
-.quest-progress-bar {
-  height: 4px;
-  background: #6b7280;
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.quest-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #16a34a, #22c55e);
-  transition: width 0.4s ease;
-  border-radius: 2px;
-}
-
-/* Progress Circles */
-.quest-circles {
+/* Fortschritt: Kreise, verbunden durch Balkenstücke */
+.aufgabe-circles {
+  flex: 1 1 240px;
   display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
 }
 
-.quest-circle {
+.aufgabe-circle {
+  flex-shrink: 0;
+}
+
+.aufgabe-steg {
+  flex: 1 1 10px;
+  min-width: 4px;
+  max-width: 32px;
+  height: 3px;
+  background: #64748b;
+}
+
+.aufgabe-steg.erledigt {
+  background: #22c55e;
+}
+
+.aufgabe-circle {
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -2239,24 +2299,24 @@ body.is-resizing-drawer #quest-panel {
   transition: all 0.2s ease;
 }
 
-.quest-circle:hover:not(.locked):not(.completed):not(.current):not(.up-next) {
+.aufgabe-circle:hover:not(.locked):not(.completed):not(.current):not(.up-next) {
   background: #64748b;
   border-color: #94a3b8;
 }
 
-.quest-circle.completed {
+.aufgabe-circle.completed {
   background: #16a34a;
   border-color: #22c55e;
   color: #f8fafc;
   font-weight: bold;
 }
 
-.quest-circle.completed:hover {
+.aufgabe-circle.completed:hover {
   background: #15803d;
   border-color: #16a34a;
 }
 
-.quest-circle.current {
+.aufgabe-circle.current {
   background: #2563eb;
   border-color: #3b82f6;
   color: #f8fafc;
@@ -2264,12 +2324,12 @@ body.is-resizing-drawer #quest-panel {
   box-shadow: 0 0 8px rgba(37, 99, 235, 0.5);
 }
 
-.quest-circle.current:hover {
+.aufgabe-circle.current:hover {
   background: #1d4ed8;
   border-color: #2563eb;
 }
 
-.quest-circle.up-next {
+.aufgabe-circle.up-next {
   background: #e5e7eb; /* light gray */
   border-color: #d1d5db;
   color: #374151;
@@ -2277,20 +2337,21 @@ body.is-resizing-drawer #quest-panel {
   box-shadow: none;
 }
 
-.quest-circle.up-next:hover {
+.aufgabe-circle.up-next:hover {
   background: #d1d5db;
   border-color: #9ca3af;
   box-shadow: none;
 }
 
-.quest-circle.locked {
+.aufgabe-circle.locked {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Quest Content */
-#quest-content {
+/* Aufgabe Content */
+#aufgabe-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 12px 16px;
   font-size: 0.9rem;
@@ -2298,36 +2359,36 @@ body.is-resizing-drawer #quest-panel {
 }
 
 /* Side-by-Side Layout: Text links, Checkliste rechts */
-.quest-body-row {
+.aufgabe-body-row {
   display: flex;
   gap: 16px;
   align-items: flex-start;
 }
 
-.quest-body-row > .quest-section {
+.aufgabe-body-row > .aufgabe-section {
   flex: 1;
   min-width: 0;
 }
 
-.quest-body-row > .quest-checklist {
+.aufgabe-body-row > .aufgabe-checklist {
   flex: 0 0 200px;
   margin-top: 0;
   position: sticky;
   top: 0;
 }
 
-.quest-section {
+.aufgabe-section {
   margin-bottom: 8px;
 }
 
-.quest-section h4 {
+.aufgabe-section h4 {
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 4px;
   color: #cbd5e1;
 }
 
-.quest-concept {
+.aufgabe-concept {
   background: rgba(59, 130, 246, 0.1);
   border-left: 3px solid #3b82f6;
   padding: 8px 12px;
@@ -2335,82 +2396,82 @@ body.is-resizing-drawer #quest-panel {
   margin-bottom: 12px;
 }
 
-.quest-concept p {
+.aufgabe-concept p {
   margin: 0;
   font-size: 0.85rem;
   color: #dbeafe;
 }
 
-.quest-concept ul,
-.quest-concept ol {
+.aufgabe-concept ul,
+.aufgabe-concept ol {
   margin: 6px 0 0;
   padding-left: 20px;
 }
 
-.quest-concept li {
+.aufgabe-concept li {
   margin: 0 0 4px;
   color: #dbeafe;
 }
 
-.quest-task p,
-.quest-task li {
+.aufgabe-task p,
+.aufgabe-task li {
   margin: 0 0 4px 0;
   font-size: 0.9rem;
   color: #e2e8f0;
 }
 
-.quest-task ol,
-.quest-task ul {
+.aufgabe-task ol,
+.aufgabe-task ul {
   margin: 4px 0;
   padding-left: 20px;
 }
 
-.quest-task strong {
+.aufgabe-task strong {
   color: #fbbf24;
   font-weight: 600;
 }
 
-/* Quest Feedback deaktiviert */
-#quest-feedback {
+/* Aufgabe Feedback deaktiviert */
+#aufgabe-feedback {
   display: none !important;
 }
 
-#quest-feedback:empty {
+#aufgabe-feedback:empty {
   padding: 0;
 }
 
-#quest-feedback.success {
+#aufgabe-feedback.success {
   background: #16a34a;
   color: #f0fdf4;
   padding: 10px 16px;
 }
 
-#quest-feedback.error {
+#aufgabe-feedback.error {
   background: #dc2626;
   color: #fff;
   padding: 10px 16px;
 }
 
-#quest-feedback.progress {
+#aufgabe-feedback.progress {
   background: #d97706;
   color: #fff;
   padding: 10px 16px;
 }
 
-/* Quest Actions */
-.quest-actions {
+/* Aufgabe Actions */
+.aufgabe-actions {
   display: none;
   margin-top: 10px;
 }
 
-.quest-actions.quest-actions-visible {
+.aufgabe-actions.aufgabe-actions-visible {
   display: flex;
+  justify-content: flex-end;
   gap: 10px;
 }
 
-.quest-btn {
-  flex: 1;
-  padding: 8px 12px;
+.aufgabe-btn {
+  padding: 8px 18px;
   border: none;
   border-radius: 4px;
   font-size: 0.85rem;
@@ -2419,37 +2480,37 @@ body.is-resizing-drawer #quest-panel {
   transition: all 0.2s ease;
 }
 
-.quest-btn-check {
+.aufgabe-btn-check {
   background: #2563eb;
   color: white;
 }
 
-.quest-btn-check:hover {
+.aufgabe-btn-check:hover {
   background: #1d4ed8;
 }
 
-.quest-btn-load-erm {
+.aufgabe-btn-load-erm {
   background: #475569;
   color: #f8fafc;
   margin-top: 10px;
   flex: none;
 }
 
-.quest-btn-load-erm:hover {
+.aufgabe-btn-load-erm:hover {
   background: #64748b;
 }
 
-.quest-btn-menu {
+.aufgabe-btn-menu {
   background: #475569;
   color: #f8fafc;
 }
 
-.quest-btn-menu:hover {
+.aufgabe-btn-menu:hover {
   background: #64748b;
 }
 
-/* Erfolgs-Modal (einzelne Quest) */
-#quest-success-modal {
+/* Erfolgs-Modal (einzelne Aufgabe) */
+#aufgabe-success-modal {
   position: fixed;
   inset: 0;
   background: rgba(var(--color-header-rgb), 0.78);
@@ -2460,7 +2521,7 @@ body.is-resizing-drawer #quest-panel {
   animation: fadeIn 0.2s ease;
 }
 
-.quest-success-card {
+.aufgabe-success-card {
   position: relative;
   overflow: hidden;
   background: var(--color-toolbar);
@@ -2474,26 +2535,26 @@ body.is-resizing-drawer #quest-panel {
   animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.quest-success-icon {
+.aufgabe-success-icon {
   font-size: 3rem;
   color: #93c5fd;
   line-height: 1;
   margin-bottom: 8px;
 }
 
-.quest-success-title {
+.aufgabe-success-title {
   font-size: 1.5rem;
   color: #e2e8f0;
   margin: 0 0 6px;
 }
 
-.quest-success-message {
+.aufgabe-success-message {
   color: #cbd5e1;
   font-size: 0.9rem;
   margin: 0 0 18px;
 }
 
-.quest-success-bar-track {
+.aufgabe-success-bar-track {
   height: 12px;
   background: #334155;
   border-radius: 6px;
@@ -2501,7 +2562,7 @@ body.is-resizing-drawer #quest-panel {
   margin-bottom: 20px;
 }
 
-.quest-success-bar-fill {
+.aufgabe-success-bar-fill {
   height: 100%;
   width: 0%;
   background: linear-gradient(90deg, #3b82f6 0%, #10b981 25%, #f59e0b 50%, #ef4444 75%, #a78bfa 100%);
@@ -2510,7 +2571,7 @@ body.is-resizing-drawer #quest-panel {
   border-radius: 6px;
 }
 
-.quest-success-ok-btn {
+.aufgabe-success-ok-btn {
   padding: 9px 28px;
   background: var(--color-entity);
   color: #ffffff;
@@ -2522,12 +2583,12 @@ body.is-resizing-drawer #quest-panel {
   transition: background 0.2s ease;
 }
 
-.quest-success-ok-btn:hover {
+.aufgabe-success-ok-btn:hover {
   background: #1d4ed8;
 }
 
 /* Disabled state for OK button in success modal */
-.quest-success-ok-btn:disabled {
+.aufgabe-success-ok-btn:disabled {
   /* keep the same blue background while disabled to avoid a color flash on enable */
   opacity: 0.75;
   cursor: not-allowed;
@@ -2537,7 +2598,7 @@ body.is-resizing-drawer #quest-panel {
 }
 
 /* Modal-specific variant of the info box */
-.quest-success-concept {
+.aufgabe-success-concept {
   background: rgba(59, 130, 246, 0.08);
   border-left: 3px solid #3b82f6;
   padding: 12px 14px;
@@ -2550,20 +2611,20 @@ body.is-resizing-drawer #quest-panel {
 }
 
 /* Single Pastell-Gradient utility (used by the success bar) */
-.quest-success-gradient {
+.aufgabe-success-gradient {
   background: linear-gradient(90deg, #3b82f6 0%, #10b981 25%, #f59e0b 50%, #ef4444 75%, #a78bfa 100%);
 }
 
 /* Ensure paragraph and list text inside the success concept use the larger size */
-.quest-success-concept p,
-.quest-success-concept li {
+.aufgabe-success-concept p,
+.aufgabe-success-concept li {
   font-size: 1.15rem;
   line-height: 1.45;
   color: #dbeafe;
 }
 
 /* Glückwunsch-Modal */
-.quest-congratulations-modal {
+.lernpfad-congratulations-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -2577,11 +2638,11 @@ body.is-resizing-drawer #quest-panel {
   animation: fadeIn 0.3s ease;
 }
 
-.quest-congratulations-modal.visible {
+.lernpfad-congratulations-modal.visible {
   display: flex !important;
 }
 
-.quest-congratulations-content {
+.lernpfad-congratulations-content {
   position: relative;
   overflow: hidden;
   background: var(--color-toolbar);
@@ -2594,25 +2655,25 @@ body.is-resizing-drawer #quest-panel {
   animation: slideUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.quest-congratulations-content h2 {
+.lernpfad-congratulations-content h2 {
   font-size: 2rem;
   color: #e2e8f0;
   margin-bottom: 8px;
 }
 
-.quest-congratulations-content p {
+.lernpfad-congratulations-content p {
   color: #cbd5e1;
   margin-bottom: 16px;
   line-height: 1.6;
 }
 
-.quest-congratulations-buttons {
+.lernpfad-congratulations-buttons {
   display: flex;
   gap: 12px;
   margin-top: 24px;
 }
 
-.quest-btn-next {
+.aufgabe-btn-next {
   flex: 1;
   padding: 12px 16px;
   background: var(--color-entity);
@@ -2625,11 +2686,11 @@ body.is-resizing-drawer #quest-panel {
   transition: background 0.2s ease;
 }
 
-.quest-btn-next:hover {
+.aufgabe-btn-next:hover {
   background: #1d4ed8;
 }
 
-.quest-btn-menu-main {
+.aufgabe-btn-menu-main {
   flex: 1;
   padding: 12px 16px;
   background: #334155;
@@ -2642,7 +2703,7 @@ body.is-resizing-drawer #quest-panel {
   transition: background 0.2s ease;
 }
 
-.quest-btn-menu-main:hover {
+.aufgabe-btn-menu-main:hover {
   background: #475569;
 }
 
@@ -2724,7 +2785,7 @@ body.is-resizing-drawer #quest-panel {
   background: #475569;
 }
 
-.quest-confetti-layer {
+.aufgabe-confetti-layer {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -2732,7 +2793,7 @@ body.is-resizing-drawer #quest-panel {
   z-index: 5;
 }
 
-.quest-confetti-fullscreen {
+.aufgabe-confetti-fullscreen {
   position: fixed;
   inset: 0;
   overflow: hidden;
@@ -2740,7 +2801,7 @@ body.is-resizing-drawer #quest-panel {
   z-index: 2600;
 }
 
-.quest-confetti-piece {
+.aufgabe-confetti-piece {
   position: absolute;
   top: -12px;
   left: var(--x);
@@ -2749,11 +2810,11 @@ body.is-resizing-drawer #quest-panel {
   border-radius: 2px;
   opacity: 0;
   transform: translate3d(0, 0, 0) rotate(0deg);
-  animation: questConfettiFall var(--dur) ease-out var(--delay) forwards;
+  animation: aufgabeConfettiFall var(--dur) ease-out var(--delay) forwards;
 }
 
-.quest-confetti-piece-screen {
-  animation-name: questConfettiFallScreen;
+.aufgabe-confetti-piece-screen {
+  animation-name: aufgabeConfettiFallScreen;
 }
 
 /* Konfetti-Animation */
@@ -2777,7 +2838,7 @@ body.is-resizing-drawer #quest-panel {
   }
 }
 
-@keyframes questConfettiFall {
+@keyframes aufgabeConfettiFall {
   0% {
     opacity: 0;
     transform: translate3d(0, -6px, 0) rotate(0deg);
@@ -2791,7 +2852,7 @@ body.is-resizing-drawer #quest-panel {
   }
 }
 
-@keyframes questConfettiFallScreen {
+@keyframes aufgabeConfettiFallScreen {
   0% {
     opacity: 0;
     transform: translate3d(0, -10px, 0) rotate(0deg);
@@ -2805,31 +2866,22 @@ body.is-resizing-drawer #quest-panel {
   }
 }
 
-/* Responsive Quest Panel */
+/* Responsive Aufgabe Panel */
 @media (max-width: 768px) {
-  #quest-panel {
-    height: 280px;
-    min-height: 240px;
-  }
-
-  .quest-body-row {
+  .aufgabe-body-row {
     flex-direction: column;
   }
 
-  .quest-body-row > .quest-checklist {
+  .aufgabe-body-row > .aufgabe-checklist {
     flex: none;
     width: 100%;
   }
 
-  #quest-content {
+  #aufgabe-content {
     font-size: 0.85rem;
   }
 
-  .quest-circles {
-    gap: 4px;
-  }
-
-  .quest-circle {
+  .aufgabe-circle {
     width: 18px;
     height: 18px;
     font-size: 0.6rem;
@@ -2848,7 +2900,7 @@ body.is-resizing-drawer #quest-panel {
 }
 
 /* ===== Experten-Checkliste ===== */
-.quest-checklist {
+.aufgabe-checklist {
   margin-top: 14px;
   padding: 10px 14px;
   background: rgba(100, 116, 139, 0.12);
@@ -2856,18 +2908,18 @@ body.is-resizing-drawer #quest-panel {
   border-radius: 8px;
 }
 
-.quest-body-row > .quest-checklist {
+.aufgabe-body-row > .aufgabe-checklist {
   margin-top: 0;
 }
 
-.quest-checklist h4 {
+.aufgabe-checklist h4 {
   font-size: 0.82rem;
   font-weight: 600;
   color: #94a3b8;
   margin: 0 0 8px;
 }
 
-.quest-checklist-item {
+.aufgabe-checklist-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2880,11 +2932,11 @@ body.is-resizing-drawer #quest-panel {
     color 0.25s ease;
 }
 
-.quest-checklist-item--done {
+.aufgabe-checklist-item--done {
   color: #4ade80;
 }
 
-.quest-checklist-icon {
+.aufgabe-checklist-icon {
   flex-shrink: 0;
   width: 18px;
   height: 18px;
@@ -2902,12 +2954,12 @@ body.is-resizing-drawer #quest-panel {
     transform 0.25s ease;
 }
 
-.quest-checklist-item--done .quest-checklist-icon {
+.aufgabe-checklist-item--done .aufgabe-checklist-icon {
   background: #16a34a;
   color: #f0fdf4;
 }
 
-.quest-checklist-label {
+.aufgabe-checklist-label {
   transition: color 0.25s ease;
 }
 
@@ -2927,12 +2979,12 @@ body.is-resizing-drawer #quest-panel {
   }
 }
 
-.quest-checklist-item--just-checked {
+.aufgabe-checklist-item--just-checked {
   animation: checklist-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   background: rgba(34, 197, 94, 0.12);
 }
 
-.quest-checklist-item--just-checked .quest-checklist-icon {
+.aufgabe-checklist-item--just-checked .aufgabe-checklist-icon {
   animation: checklist-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -3027,10 +3079,10 @@ body.is-resizing-drawer #quest-panel {
   }
 }
 
-/* ===== Quest-Menü: Reihen nach Stufe gruppiert, Stufen nebeneinander ===== */
-#quests-menu {
+/* ===== Lernpfad-Menü: Lernpfade nach Stufe gruppiert, Stufen nebeneinander ===== */
+#lernpfade-menu {
   display: grid; /* auch mit [hidden]: so lässt sich das Ein- und Ausblenden animieren */
-  grid-template-columns: repeat(2, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, minmax(340px, 1fr));
   gap: 0 8px;
   transform-origin: top;
   transition:
@@ -3039,13 +3091,13 @@ body.is-resizing-drawer #quest-panel {
     visibility 0.15s;
 }
 
-#quests-menu[hidden] {
+#lernpfade-menu[hidden] {
   visibility: hidden;
   opacity: 0;
   transform: translateY(-6px);
 }
 
-.quest-menu-group-title {
+.lernpfad-menu-group-title {
   padding: 8px 11px 4px;
   font-size: 0.7rem;
   font-weight: 700;
@@ -3055,7 +3107,7 @@ body.is-resizing-drawer #quest-panel {
 }
 
 @media (max-width: 860px) {
-  #quests-menu {
+  #lernpfade-menu {
     grid-template-columns: 1fr;
     max-height: calc(100vh - 120px);
     overflow-y: auto;
@@ -3063,14 +3115,14 @@ body.is-resizing-drawer #quest-panel {
 }
 
 /* Erste Zeile des Erklärkastens: „Neuer Begriff: … · Symbol: …“ */
-.quest-concept .quest-begriff {
+.aufgabe-concept .aufgabe-begriff {
   font-size: 0.78rem;
   font-weight: 700;
   color: #93c5fd;
   margin-bottom: 2px;
 }
 
-.quest-concept .quest-begriff ~ .quest-begriff {
+.aufgabe-concept .aufgabe-begriff ~ .aufgabe-begriff {
   margin-top: 8px;
 }
 
@@ -3158,7 +3210,7 @@ body.is-resizing-drawer #quest-panel {
   gap: 8px;
 }
 
-/* Schalter während einer Quest gesperrt (die Reihe legt den Modus fest) */
+/* Schalter während einer Aufgabe gesperrt (der Lernpfad legt den Modus fest) */
 .header-switch:has(input:disabled) {
   opacity: 0.75;
 }
@@ -3174,74 +3226,26 @@ body.is-resizing-drawer #quest-panel {
   color: #b45309;
 }
 
-/* ===== Quest-Menü: Trennlinien und Fortschrittsbalken ===== */
-.quest-menu-group .tab-dropdown-item {
+/* ===== Lernpfad-Menü: Trennlinien und Fortschrittsbalken ===== */
+.lernpfad-menu-group .tab-dropdown-item {
   border-radius: 0;
   border-width: 0 0 1px;
   border-bottom-color: rgba(71, 85, 105, 0.55);
 }
 
-.quest-menu-group .tab-dropdown-item:last-child {
+.lernpfad-menu-group .tab-dropdown-item:last-child {
   border-bottom-color: transparent;
 }
 
-.quest-menu-group .tab-dropdown-item:hover {
+.lernpfad-menu-group .tab-dropdown-item:hover {
   border-radius: 6px;
 }
 
-/* Laufende Quest-Reihe */
+/* Laufender Lernpfad */
 .tab-dropdown-item[aria-current='true'] {
   background: rgba(37, 99, 235, 0.22);
   box-shadow: inset 3px 0 0 #3b82f6;
   color: #ffffff;
-}
-
-.quest-menu-progress {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.quest-menu-progress-track {
-  flex: 1;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(71, 85, 105, 0.6);
-  overflow: hidden;
-}
-
-.quest-menu-progress-fill {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #38bdf8, #60a5fa);
-  transition: width 0.3s ease;
-}
-
-.quest-menu-progress.fertig .quest-menu-progress-fill {
-  background: linear-gradient(90deg, #22c55e, #4ade80);
-}
-
-.quest-menu-progress-text {
-  min-width: 52px;
-  font-size: 0.72rem;
-  color: #94a3b8;
-  text-align: right;
-  white-space: nowrap;
-}
-
-.quest-menu-progress.fertig .quest-menu-progress-text {
-  color: #4ade80;
-}
-
-.quest-menu-legende {
-  grid-column: 1 / -1;
-  padding: 8px 11px 4px;
-  border-top: 1px solid rgba(71, 85, 105, 0.55);
-  font-size: 0.72rem;
-  color: #94a3b8;
 }
 
 /* ===== Header: Kardinalitäten getrennt vom Layout-Paar ===== */
@@ -3267,8 +3271,8 @@ body.is-resizing-drawer #quest-panel {
   white-space: normal;
 }
 
-/* ===== Quest-Titel: „ohne Kardinalitäten“ ===== */
-.quest-title-badge {
+/* ===== Aufgaben-Titel: „ohne Kardinalitäten“ ===== */
+.aufgabe-title-badge {
   display: inline-block;
   margin-left: 6px;
   padding: 1px 8px;
@@ -3404,14 +3408,14 @@ body.is-resizing-drawer #quest-panel {
   vertical-align: -0.18em;
 }
 
-/* Quest-Menü: senkrechte Linie zwischen Einstieg und Fortgeschritten */
-.quest-menu-group + .quest-menu-group {
+/* Lernpfad-Menü: senkrechte Linie zwischen Einstieg und Fortgeschritten */
+.lernpfad-menu-group + .lernpfad-menu-group {
   border-left: 1px solid rgba(71, 85, 105, 0.7);
   padding-left: 8px;
 }
 
 @media (max-width: 860px) {
-  .quest-menu-group + .quest-menu-group {
+  .lernpfad-menu-group + .lernpfad-menu-group {
     border-left: none;
     padding-left: 0;
     border-top: 1px solid rgba(71, 85, 105, 0.7);
@@ -3429,14 +3433,14 @@ body.is-resizing-drawer #quest-panel {
   display: none;
 }
 
-/* SQL erzeugen: gleitet von rechts über das ER-Diagramm; Quest-Panel und Relationenmodell bleiben sichtbar.
-   --quest-hoehe setzt js/app.js, damit das Panel über dem Quest-Panel endet. */
+/* SQL erzeugen: gleitet von rechts über das ER-Diagramm; Aufgabenleiste und Relationenmodell bleiben sichtbar.
+   --aufgabe-hoehe setzt js/app.js, damit das Panel über der Aufgabenleiste endet. */
 .sql-panel {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: var(--quest-hoehe, 0px);
+  bottom: var(--aufgabe-hoehe, 0px);
   z-index: 30;
   display: flex;
   flex-direction: column;
@@ -3546,28 +3550,28 @@ body.sql-zieht {
 }
 
 /* ===== Eigene Szenarien (js/szenario.js) ===== */
-.quest-menu-eigene {
+.lernpfad-menu-eigene {
   grid-column: 1 / -1;
   border-top: 1px solid rgba(71, 85, 105, 0.7);
 }
 
-.quest-menu-group.quest-menu-eigene {
+.lernpfad-menu-group.lernpfad-menu-eigene {
   border-left: none;
   padding-left: 0;
 }
 
-.quest-menu-eigen-zeile {
+.lernpfad-menu-eigen-zeile {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.quest-menu-eigen-zeile .tab-dropdown-item {
+.lernpfad-menu-eigen-zeile .tab-dropdown-item {
   flex: 1;
 }
 
-.quest-menu-entfernen,
-.quest-menu-aktion {
+.lernpfad-menu-entfernen,
+.lernpfad-menu-aktion {
   border: 1px solid rgba(100, 116, 139, 0.6);
   border-radius: 6px;
   background: transparent;
@@ -3575,29 +3579,153 @@ body.sql-zieht {
   cursor: pointer;
 }
 
-.quest-menu-entfernen {
+.lernpfad-menu-entfernen {
   width: 30px;
   height: 30px;
 }
 
-.quest-menu-entfernen:hover {
+.lernpfad-menu-entfernen:hover {
   color: #fca5a5;
   border-color: #f87171;
 }
 
-.quest-menu-aktionen {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 6px 11px 4px;
+/* Gleichmäßiges Raster: alle Einträge so hoch wie der höchste (die Stufen-Spalten sind gleich hoch) */
+.lernpfad-menu-group:not(.lernpfad-menu-eigene) {
+  display: grid;
+  grid-template-rows: auto;
+  grid-auto-rows: 1fr;
 }
 
-.quest-menu-aktion {
+/* Lernpfad-Menü: Nummer im Kreis, der Ring zeigt den Fortschritt; eine Linie verbindet die Schritte */
+.lernpfad-eintrag {
+  position: relative;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.lernpfad-nr {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  /* Ring: grün bis --fortschritt, Rest grau; innen die Menüfarbe */
+  background:
+    radial-gradient(circle, #1e293b 60%, transparent 62%), conic-gradient(#22c55e var(--fortschritt, 0%), #475569 0);
+}
+
+.lernpfad-eintrag.fertig .lernpfad-nr {
+  background: #16a34a;
+  color: #fff;
+}
+
+.lernpfad-menu-group:not(.lernpfad-menu-eigene) .lernpfad-eintrag:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 23px; /* Mitte der Nummer */
+  top: 38px;
+  bottom: -10px;
+  width: 2px;
+  background: #475569;
+}
+
+.lernpfad-status {
+  flex-shrink: 0;
+  align-self: center;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.lernpfad-eintrag.fertig .lernpfad-status {
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.lernpfad-status.neu {
+  padding: 1px 7px;
+  border: 1px solid #f97316;
+  border-radius: 999px;
+  color: #fdba74;
+}
+
+/* Unten: Bereich für Lehrkräfte */
+.lernpfad-menu-lehrkraft {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding: 10px 11px 6px;
+  border-top: 1px solid rgba(71, 85, 105, 0.7);
+}
+
+.lernpfad-menu-lehrkraft-titel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-right: 4px;
+}
+
+/* Links zu den Lernpfaden */
+.links-modal-card {
+  max-width: min(980px, 96vw);
+}
+
+.link-zeile {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) auto minmax(200px, 2fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.link-titel {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.link-ab {
+  font-size: 0.8rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.link-url {
+  width: 100%;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  background: #f8fafc;
+}
+
+@media (max-width: 760px) {
+  .link-zeile {
+    grid-template-columns: 1fr auto;
+  }
+
+  .link-url {
+    grid-column: 1 / -1;
+  }
+}
+
+.lernpfad-menu-aktion {
   padding: 6px 10px;
   font-size: 0.8rem;
 }
 
-.quest-menu-aktion:hover {
+.lernpfad-menu-aktion:hover {
   background: rgba(51, 65, 85, 0.55);
   color: #fff;
 }
@@ -3698,7 +3826,7 @@ fieldset.szenario-feld label {
 /* Ziehen, Verschieben und Zoomen übernimmt js/diagram.js – nicht der Browser */
 #er-canvas,
 #relmodel-resizer,
-.quest-panel-resizer,
+.aufgabe-panel-resizer,
 .sql-trenner,
 #modal-title {
   touch-action: none;
@@ -3729,20 +3857,20 @@ fieldset.szenario-feld label {
     width: 16px;
   }
 
-  .quest-panel-resizer {
+  .aufgabe-panel-resizer {
     height: 14px;
   }
 }
 
 /* ===== Seitenleiste einklappen (schmale Bildschirme, nur per Button) ===== */
 #btn-toolbar-toggle,
-#btn-quest-fold {
+#btn-aufgabe-fold {
   display: none;
 }
 
 @media (max-width: 1100px) {
   #btn-toolbar-toggle,
-  #btn-quest-fold {
+  #btn-aufgabe-fold {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3754,7 +3882,7 @@ fieldset.szenario-feld label {
 
   /* Doppelpfeil als SVG (exakt mittig); Richtung folgt aria-expanded */
   #btn-toolbar-toggle svg,
-  #btn-quest-fold svg {
+  #btn-aufgabe-fold svg {
     width: 16px;
     height: 16px;
     fill: none;
@@ -3769,11 +3897,11 @@ fieldset.szenario-feld label {
     transform: rotate(180deg);
   }
 
-  #btn-quest-fold svg {
+  #btn-aufgabe-fold svg {
     transform: rotate(-90deg);
   }
 
-  #btn-quest-fold[aria-expanded='false'] svg {
+  #btn-aufgabe-fold[aria-expanded='false'] svg {
     transform: rotate(90deg);
   }
 
@@ -3798,25 +3926,25 @@ fieldset.szenario-feld label {
     padding: 12px 0;
   }
 
-  body.toolbar-collapsed #quest-panel,
-  body.toolbar-collapsed .quest-panel-resizer {
+  body.toolbar-collapsed #aufgabe-panel,
+  body.toolbar-collapsed .aufgabe-panel-resizer {
     left: 52px;
   }
 }
 
-/* ===== Quest-Panel einklappen (Tablet) ===== */
+/* ===== Aufgabenleiste einklappen (Tablet) ===== */
 @media (max-width: 1100px) {
-  #btn-quest-fold {
+  #btn-aufgabe-fold {
     margin-right: 10px;
   }
 
-  /* --quest-kopf: Höhe der Kopfzeile, setzt js/app.js beim Einklappen */
-  #quest-panel.eingeklappt {
-    height: var(--quest-kopf, auto) !important;
+  /* --aufgabe-kopf: Höhe der Kopfzeile, setzt js/app.js beim Einklappen */
+  #aufgabe-panel.eingeklappt {
+    height: var(--aufgabe-kopf, auto) !important;
     min-height: 0;
   }
 
-  #quest-panel.eingeklappt > :not(.quest-header) {
+  #aufgabe-panel.eingeklappt > :not(.aufgabe-header) {
     display: none;
   }
 }

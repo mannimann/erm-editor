@@ -1,8 +1,8 @@
 /* ============================================================
    szenario.js  –  Eigene Szenarien von Lehrkräften
    Die Lehrkraft zeichnet die Musterlösung als ER-Modell und schreibt den Text. Daraus wird eine Datei
-   (.erm-szenario.json) oder ein Link (#szenario=…). Schüler öffnen sie als Übungsreihe; geprüft wird
-   gegen das ER-Modell (js/quest.js: masterAusErm) bzw. dessen Relationenmodell.
+   (.erm-szenario.json) oder ein Link (#szenario=…). Schüler öffnen sie als Übungs-Lernpfad; geprüft wird
+   gegen das ER-Modell (js/lernpfad.js: masterAusErm) bzw. dessen Relationenmodell.
    ============================================================ */
 'use strict';
 
@@ -73,7 +73,7 @@
 
   // Beziehungen mit zwei Seiten, aber ohne Zahl an einer Linie
   function fehlendeKardinalitaeten(erm) {
-    const ohne = window.Quest.masterAusErm(erm, true).relationships.filter((r) => !r.cardinality);
+    const ohne = window.Lernpfad.masterAusErm(erm, true).relationships.filter((r) => !r.cardinality);
     return ohne.map((r) => r.name);
   }
 
@@ -117,7 +117,7 @@
     return JSON.parse(await new Blob(teile).text());
   }
 
-  // ---- Eigene Szenarien im Browser (localStorage), als Reihen im Quest-Menü ----
+  // ---- Eigene Szenarien im Browser (localStorage), als Lernpfade im Menü ----
   function liste() {
     try {
       const daten = JSON.parse(localStorage.getItem(LISTE_KEY) || '[]');
@@ -133,11 +133,11 @@
     } catch (_e) {
       // Speicher voll: Szenario gilt nur bis zum Neuladen
     }
-    window.Quest.setEigeneSzenarien(szenarien);
-    window.App?.baueQuestMenu?.();
+    window.Lernpfad.setEigeneSzenarien(szenarien);
+    window.App?.baueLernpfadMenu?.();
   }
 
-  // Szenario übernehmen (Datei, Link, „Selbst ausprobieren“) und als Quest starten
+  // Szenario übernehmen (Datei, Link, „Selbst ausprobieren“) und als Aufgabe starten
   async function importieren(daten) {
     const { sz, fehler } = pruefeSzenario(daten);
     if (fehler) {
@@ -146,7 +146,7 @@
     }
     const alle = liste();
     if (!alle.some((x) => x.id === sz.id)) speichern([...alle, sz]);
-    return window.App?.startQuestSeries?.(`eigen-${sz.id}`);
+    return window.App?.startLernpfad?.(`eigen-${sz.id}`);
   }
 
   async function ausLink(text) {
@@ -161,21 +161,22 @@
     }
   }
 
-  async function entfernen(reiheId) {
-    const sz = liste().find((x) => `eigen-${x.id}` === reiheId);
+  async function entfernen(lernpfadId) {
+    const sz = liste().find((x) => `eigen-${x.id}` === lernpfadId);
     if (!sz) return;
     const ok = await window.App?.showConfirmModal?.(
       `Szenario „${sz.titel}“ und deinen Arbeitsstand dazu entfernen?`,
       'Szenario entfernen',
     );
     if (!ok) return;
-    if (window.Quest.state.questsPanelVisible && window.Quest.state.questMode === reiheId) window.Quest.hidePanel();
-    fortschrittLoeschen(reiheId);
+    if (window.Lernpfad.state.lernpfadAktiv && window.Lernpfad.state.lernpfadId === lernpfadId)
+      window.Lernpfad.hidePanel();
+    fortschrittLoeschen(lernpfadId);
     speichern(liste().filter((x) => x.id !== sz.id));
   }
 
-  function fortschrittLoeschen(reiheId) {
-    [window.Quest.getStorageKey(reiheId), window.Quest.getWorkKey(reiheId, 1)].forEach((k) =>
+  function fortschrittLoeschen(lernpfadId) {
+    [window.Lernpfad.getStorageKey(lernpfadId), window.Lernpfad.getWorkKey(lernpfadId, 1)].forEach((k) =>
       localStorage.removeItem(k),
     );
   }
@@ -245,7 +246,7 @@
     const zeilen = [];
     const fehler = (text) => zeilen.push({ art: 'fehler', text });
     const warnung = (text) => zeilen.push({ art: 'warnung', text });
-    const m = window.Quest.masterAusErm(e.erm, e.kardinalitaeten);
+    const m = window.Lernpfad.masterAusErm(e.erm, e.kardinalitaeten);
     const liste = (namen) => namen.map((n) => `„${n}“`).join(', ');
 
     if (!String(e.titel).trim()) fehler('Gib dem Szenario einen Titel.');
@@ -290,7 +291,7 @@
     if (e.aufgabe === 'rm' && nmDoppelt.length)
       fehler(`Zum Überführen brauchen n:m-Beziehungen verschiedene Namen: ${liste([...new Set(nmDoppelt)])}.`);
 
-    const fehlt = window.Quest.nichtImText(m, e.text);
+    const fehlt = window.Lernpfad.nichtImText(m, e.text);
     if (fehlt.length && String(e.text).trim()) warnung(`Im Text nicht gefunden: ${liste(fehlt)}.`);
     return zeilen;
   }
@@ -320,9 +321,9 @@
   }
 
   function dialogOeffnen() {
-    if (window.Quest?.state?.questsPanelVisible) {
+    if (window.Lernpfad?.state?.lernpfadAktiv) {
       window.App?.showAlertModal?.(
-        'Schließe zuerst die Quest: Die Musterlösung zeichnest du im freien Editor.',
+        'Schließe zuerst den Lernpfad: Die Musterlösung zeichnest du im freien Editor.',
         'Eigenes Szenario',
       );
       return;
@@ -392,11 +393,11 @@
     await importieren(daten);
   }
 
-  const istProbe = (reiheId) => reiheId === `eigen-${localStorage.getItem(PROBE_KEY)}`;
+  const istProbe = (lernpfadId) => lernpfadId === `eigen-${localStorage.getItem(PROBE_KEY)}`;
 
-  // Aus der Probe zurück: Quest schließen (das ER-Modell der Lehrkraft kommt zurück), Dialog öffnen
+  // Aus der Probe zurück: Aufgabe schließen (das ER-Modell der Lehrkraft kommt zurück), Dialog öffnen
   function zurueckZumBearbeiten() {
-    window.Quest.hidePanel();
+    window.Lernpfad.hidePanel();
     dialogOeffnen();
   }
 
@@ -427,8 +428,8 @@
     });
   });
 
-  // Gespeicherte Szenarien gleich beim Laden als Reihen anmelden (vor dem Aufbau des Quest-Menüs)
-  window.Quest.setEigeneSzenarien(liste());
+  // Gespeicherte Szenarien gleich beim Laden als Lernpfade anmelden (vor dem Aufbau des Lernpfad-Menüs)
+  window.Lernpfad.setEigeneSzenarien(liste());
 
   window.Szenario = {
     FORMAT,
