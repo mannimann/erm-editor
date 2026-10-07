@@ -2147,11 +2147,33 @@ body.is-resizing-drawer #aufgabe-panel {
   container-type: inline-size;
 }
 
-/* Eine Zeile: Titel, Fortschritt, Zurücksetzen, Schließen */
+/* Eine Zeile: Kreise, Titel, Knöpfe. Passt der Titel nicht mehr daneben (viele Kreise, schmale Leiste),
+   setzt js/app.js .umgebrochen: Der Titel rückt in eine zweite Zeile, die Knöpfe bleiben oben rechts */
 .aufgabe-title-row {
   display: flex;
   align-items: center;
   gap: 8px 16px;
+}
+
+.aufgabe-title-row.umgebrochen {
+  flex-wrap: wrap;
+}
+
+.aufgabe-title-row.umgebrochen .aufgabe-title {
+  order: 1;
+  flex-basis: 100%;
+}
+
+/* Umgebrochen: Die Kreisreihe füllt den Rest der ersten Zeile neben den Knöpfen; ist er knapp, werden die
+   Balkenstücke kürzer (bis 4 px), statt die Knöpfe in die nächste Zeile zu schieben */
+.aufgabe-title-row.umgebrochen .aufgabe-circles {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.aufgabe-reset-btn,
+.aufgabe-mehr {
+  margin-left: auto;
 }
 
 .aufgabe-title {
@@ -2179,21 +2201,12 @@ body.is-resizing-drawer #aufgabe-panel {
   color: #fca5a5;
 }
 
-/* Schmale Leiste: Fortschritt in eigener Zeile, Zurücksetzen nur im Menü „⋯“ */
+/* Schmale Leiste: Zurücksetzen nur im Menü „⋯“ */
 .aufgabe-mehr {
   display: none;
 }
 
 @container (max-width: 760px) {
-  .aufgabe-title-row {
-    flex-wrap: wrap;
-  }
-
-  .aufgabe-title-row .aufgabe-circles {
-    order: 10;
-    flex-basis: 100%;
-  }
-
   .aufgabe-reset-btn {
     display: none;
   }
@@ -2275,10 +2288,9 @@ body.is-resizing-drawer #aufgabe-panel {
 
 /* Fortschritt: Kreise, verbunden durch Balkenstücke */
 .aufgabe-circles {
-  flex: 0 1 auto;
+  flex: none;
   display: flex;
   align-items: center;
-  min-width: 0;
 }
 
 .aufgabe-circle {

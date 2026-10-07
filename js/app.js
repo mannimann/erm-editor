@@ -870,6 +870,23 @@ function initTabs() {
   if (aufgabePanelResizer && aufgabePanel) {
     // Die Höhe folgt dem Inhalt: Ziehgriff und SQL-Panel mitführen, wenn sich die Aufgabe ändert
     new ResizeObserver(() => syncAufgabePanelResizer()).observe(aufgabePanel);
+
+    // Kopfzeile: Bleiben dem Titel neben Kreisen und Knöpfen keine 220 px, rückt er in eine zweite Zeile
+    // (style.css: .umgebrochen; dort dürfen die Balkenstücke kürzer werden). Gemessen wird ohne den Titel und
+    // mit der natürlichen Breite der Kreisreihe, das Ergebnis hängt also nicht vom Umbruch ab.
+    const kopfZeile = aufgabePanel.querySelector('.aufgabe-title-row');
+    const kopfTitel = document.getElementById('aufgabe-title');
+    const kopfKreise = document.getElementById('aufgabe-circles');
+    const kopfUmbrechen = () => {
+      const kreise = kopfKreise.querySelectorAll('.aufgabe-circle');
+      const kreisBreite = kreise.length * (kreise[0]?.offsetWidth || 0) + (kreise.length - 1) * 24; // 24: .aufgabe-steg
+      const andere = [...kopfZeile.children].filter((el) => el !== kopfTitel && el !== kopfKreise && el.offsetParent);
+      const breite = andere.reduce((summe, el) => summe + el.offsetWidth + 16, kreisBreite + 16); // 16: gap
+      kopfZeile.classList.toggle('umgebrochen', breite + 220 > kopfZeile.clientWidth);
+    };
+    const kopfBeobachter = new ResizeObserver(kopfUmbrechen);
+    kopfBeobachter.observe(kopfZeile);
+    kopfBeobachter.observe(kopfKreise); // andere Zahl Kreise
     let aufgabePanelStartY = 0;
     let aufgabePanelStartH = 0;
 
