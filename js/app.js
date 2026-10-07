@@ -159,6 +159,32 @@ function buildPersistPayload() {
 }
 
 const RELMODEL_PERSIST_KEY = 'erm-relmodel-student-v1';
+// Ansicht beim Neuladen wiederherstellen: laufender Lernpfad, rechte Seitenleiste (offen, Breite).
+// Aufgabe und Arbeitsstand speichert der Lernpfad selbst. Gelesen wird einmal beim Laden, bevor der Aufbau sie ändert.
+const ANSICHT_KEY = 'erm-editor-ansicht-v1';
+const gespeicherteAnsicht = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(ANSICHT_KEY)) || {};
+  } catch (_e) {
+    return {};
+  }
+})();
+// Neuladen ohne Link: Die Seitenleiste bleibt während des Aufbaus (auch beim Wiederherstellen des Lernpfads)
+// fest im gespeicherten Zustand und ohne Animation – kein kurzes Auf- und Zuklappen. Ein Link legt sie selbst fest.
+let seitenleisteFest =
+  new URLSearchParams(window.location.search).get('lernpfad') || window.location.hash.startsWith('#szenario=')
+    ? undefined
+    : gespeicherteAnsicht.seitenleiste;
+
+function ansichtMerken(teil) {
+  try {
+    const ansicht = JSON.parse(localStorage.getItem(ANSICHT_KEY)) || {};
+    localStorage.setItem(ANSICHT_KEY, JSON.stringify({ ...ansicht, ...teil }));
+  } catch (_e) {
+    // ohne Speicher: beim Neuladen startet der freie Editor
+  }
+}
+
 const RELMODEL_ERM_LERNPFAD_KEY = 'erm-relmodel-erm-lernpfad-v1'; // Relationenmodell während einer ERM-Aufgabe
 let aktiverArbeitsstand = null; // Speicherschlüssel des ER-Modells, das gerade aus einer ERM-Aufgabe geladen ist
 
@@ -602,7 +628,11 @@ function baueLernpfadMenu() {
   const menu = document.getElementById('lernpfade-menu');
   if (!menu) return;
   const lernpfade = window.Lernpfad?.getLernpfade?.() || [];
-  const eintrag = (r, nr) => `<button class="tab-dropdown-item lernpfad-eintrag" type="button" data-lernpfad="${r.id}">
+  // ER-Modell und Relationenmodell farbig getrennt; der erste Eintrag eines Blocks trägt dessen Namen auf der Trennlinie
+  const ART = { erm: 'ER-Modell', rm: 'Relationenmodell' };
+  const eintrag = (r, nr, blockStart) => `<button class="tab-dropdown-item lernpfad-eintrag art-${r.art}${
+    blockStart ? ' art-start' : ''
+  }" type="button" data-lernpfad="${r.id}"${blockStart ? ` data-art="${ART[r.art]}"` : ''}>
       <span class="lernpfad-nr" aria-hidden="true">${nr || r.icon}</span>
       <span class="tab-dropdown-item-text">
         <span class="tab-dropdown-item-title">${nr ? `${r.icon} ` : ''}${escapeHtml(r.titel)}</span>
@@ -627,7 +657,7 @@ function baueLernpfadMenu() {
           stufe,
           lernpfade
             .filter((r) => r.stufe === stufe && !r.eigen)
-            .map((r, i) => eintrag(r, i + 1))
+            .map((r, i, liste) => eintrag(r, i + 1, r.art !== liste[i - 1]?.art))
             .join(''),
         ),
       )
@@ -688,6 +718,7 @@ function baueLinkListe() {
 
 // ---- Tabs ----
 function initTabs() {
+  if (seitenleisteFest !== undefined) document.body.classList.add('ansicht-laden');
   const lernpfadeToggleBtn = document.getElementById('btn-lernpfade-toggle');
   const lernpfadeMenu = document.getElementById('lernpfade-menu');
   const lernpfadeDropdown = lernpfadeToggleBtn?.closest('.tab-dropdown');
@@ -709,7 +740,8 @@ function initTabs() {
   baueLernpfadMenu();
 
   // Schmale Bildschirme: höchstens die halbe Breite, damit das ERM daneben sichtbar bleibt
-  let lastOpenWidth = Math.min(relmodelDrawer.getBoundingClientRect().width || 460, window.innerWidth / 2);
+  let lastOpenWidth =
+    gespeicherteAnsicht.breite || Math.min(relmodelDrawer.getBoundingClientRect().width || 460, window.innerWidth / 2);
 
   const clampDrawerWidth = (value) => {
     const maxWidth = Math.max(320, Math.min(window.innerWidth * 0.72, mainLayout.getBoundingClientRect().width - 180));
@@ -741,9 +773,11 @@ function initTabs() {
   };
 
   const setDrawerState = (open) => {
+    if (seitenleisteFest !== undefined) open = seitenleisteFest;
     relmodelDrawer.classList.toggle('collapsed', !open);
     relmodelResizer.classList.toggle('collapsed', !open);
     relmodelBtn.classList.toggle('active', open);
+    ansichtMerken({ seitenleiste: open });
 
     // Tablet: Platz fürs Diagramm neben dem Relationenmodell
     if (open && tabletMedia.matches) setToolbarCollapsed(true);
@@ -762,6 +796,7 @@ function initTabs() {
   };
 
   const stopResize = () => {
+    ansichtMerken({ breite: lastOpenWidth });
     relmodelResizer.classList.remove('is-dragging');
     document.body.classList.remove('is-resizing-drawer');
     window.removeEventListener('pointermove', onPointerMove);
@@ -1581,10 +1616,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.RelModel) window.RelModel.syncFromDiagram();
   }
 
-  // Drawer öffnen wenn RelModel-Daten aus localStorage geladen wurden
-  if (window.RelModel?.hadPersistedData?.()) {
-    window.AppTabs?.setDrawerState(true);
-  }
+  // Seitenleiste wie vor dem Neuladen; beim ersten Besuch offen, wenn schon Relationen gespeichert sind
+  window.AppTabs?.setDrawerState(gespeicherteAnsicht.seitenleiste ?? !!window.RelModel?.hadPersistedData?.());
 
   document.getElementById('btn-import').addEventListener('click', () => {
     if (state.diagramLocked) {
@@ -1616,7 +1649,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Startet eine Lernpfad. Das freie Modell bleibt gespeichert und kommt beim Schließen der Aufgabe zurück.
-  async function startLernpfadFlow(mode) {
+  // wiederherstellen: Neuladen der Seite – kein Hinweis aufs gespeicherte eigene Modell
+  async function startLernpfadFlow(mode, wiederherstellen = false) {
     const lernpfad = lernpfadVon(mode);
     if (!window.Lernpfad || !lernpfad) return false;
     closeLernpfadMenu();
@@ -1624,7 +1658,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Offene Änderungen sichern: im freien Modus das eigene Modell, sonst den Stand der laufenden Aufgabe
     flushPersist();
     const ausFreiemModus = !window.Lernpfad.state.lernpfadAktiv;
-    if (ausFreiemModus && (state.nodes.length || window.RelModel?.getStudentRelations?.().length)) {
+    if (
+      !wiederherstellen &&
+      ausFreiemModus &&
+      (state.nodes.length || window.RelModel?.getStudentRelations?.().length)
+    ) {
       window.App?.showTopToast?.(
         'Dein eigenes Modell ist gespeichert – es kommt zurück, wenn du den Lernpfad schließt.',
         7000,
@@ -1640,6 +1678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.Lernpfad.startLernpfad(mode);
+    ansichtMerken({ lernpfad: mode });
 
     if (lernpfad.art === 'rm' && lernpfad.schritt) {
       // Schritt-Lernpfad: ein ER-Modell und ein Arbeitsstand für den ganzen Lernpfad
@@ -1852,7 +1891,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(async () => {
       const params = new URLSearchParams(window.location.search);
-      if (!params.get('lernpfad') && !window.location.hash.startsWith('#szenario=')) return;
+      if (!params.get('lernpfad') && !window.location.hash.startsWith('#szenario=')) {
+        // Neu geladen: den zuletzt offenen Lernpfad wieder öffnen, die Seitenleiste wie zuvor
+        const id = gespeicherteAnsicht.lernpfad;
+        if (id && lernpfadVon(id)) await startLernpfadFlow(id, true);
+        seitenleisteFest = undefined;
+        requestAnimationFrame(() => requestAnimationFrame(() => document.body.classList.remove('ansicht-laden')));
+        return;
+      }
       // Aufgabenleiste erst nach dem Laden hereingleiten lassen, damit man sie bemerkt
       document.body.classList.add('aufgabe-spaeter');
       try {
@@ -2100,6 +2146,7 @@ window.App = {
   // Aufgabe schließen: ihren Stand sichern und das freie Modell (ER- und Relationenmodell) zurückholen
   onLernpfadClosing(lernpfadState) {
     window.SQLExport?.schliessen();
+    ansichtMerken({ lernpfad: null });
     const lernpfad = lernpfadVon(lernpfadState?.lernpfadId);
     if (!lernpfad) return;
     const storageKey = getArbeitsstandKey(lernpfad.id, lernpfadState.aktuelleAufgabe || 1);

@@ -2458,6 +2458,15 @@
       // Update aufgabe panel visibility
       const panel = document.getElementById('aufgabe-panel');
       if (!panel) return;
+      const warSichtbar = panel.classList.contains('visible');
+      const vorher = panel.offsetHeight;
+      // Andere Aufgabe: eine von Hand gezogene Höhe gilt nicht mehr, die Leiste passt sich dem Inhalt an
+      const aufgabeKey = `${this.state.lernpfadId}:${this.state.aktuelleAufgabe}`;
+      if (aufgabeKey !== this._aufgabeKey) {
+        this._aufgabeKey = aufgabeKey;
+        panel.style.height = '';
+        panel.style.maxHeight = '';
+      }
 
       if (this.state.lernpfadAktiv && this.state.lernpfadId) {
         panel.classList.add('visible');
@@ -2468,6 +2477,14 @@
       // Render aufgabe content
       if (this.state.lernpfadId && window.App?.updateAufgabePanel) {
         window.App.updateAufgabePanel(this.getCurrentAufgabe(), this.state);
+      }
+
+      // Neue Aufgabe oder neuer Inhalt in der offenen Leiste: Höhe weich angleichen (die Höhe folgt dem Inhalt, CSS kann „auto“
+      // nicht animieren)
+      const nachher = panel.offsetHeight;
+      const ruhig = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      if (warSichtbar && panel.classList.contains('visible') && vorher !== nachher && !ruhig) {
+        panel.animate([{ height: `${vorher}px` }, { height: `${nachher}px` }], { duration: 220, easing: 'ease-out' });
       }
     },
 

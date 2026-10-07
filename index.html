@@ -276,8 +276,8 @@
       </main>
 
       <!-- === RELATIONEN-MODELL-DRAWER (RECHTS) === -->
-      <div id="relmodel-resizer" aria-hidden="true"></div>
-      <aside id="relmodel-drawer" aria-label="Relationenmodell">
+      <div id="relmodel-resizer" class="collapsed" aria-hidden="true"></div>
+      <aside id="relmodel-drawer" class="collapsed" aria-label="Relationenmodell">
         <main id="relmodel-container" data-tab-content="relmodel">
           <div id="relmodel-header">
             <h2>Überführung ins Relationenmodell</h2>
@@ -349,6 +349,21 @@
           </div>
         </main>
       </aside>
+      <script>
+        // Vor dem ersten Zeichnen: Seitenleiste wie vor dem Neuladen (gespeicherteAnsicht in js/app.js), sonst
+        // springt sie, bis die Skripte laufen. Ein Link legt sie selbst fest.
+        try {
+          const ansicht = JSON.parse(localStorage.getItem('erm-editor-ansicht-v1')) || {};
+          const link = new URLSearchParams(location.search).has('lernpfad') || location.hash.startsWith('#szenario=');
+          if (ansicht.seitenleiste && !link) {
+            document.getElementById('relmodel-resizer').classList.remove('collapsed');
+            document.getElementById('relmodel-drawer').classList.remove('collapsed');
+            if (ansicht.breite) document.getElementById('relmodel-drawer').style.width = `${ansicht.breite}px`;
+          }
+        } catch (_e) {
+          // ohne Speicher: Seitenleiste zu
+        }
+      </script>
     </div>
 
     <!-- ===== MODAL: Eigenes Szenario erstellen (js/szenario.js) ===== -->
@@ -740,9 +755,10 @@
           >
             <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3 3 8l5 5M13 3 8 8l5 5" /></svg>
           </button>
-          <h3 id="aufgabe-title" class="aufgabe-title">Aufgabe 1</h3>
-          <!-- Fortschritt: Kreise je Aufgabe, verbunden durch Balkenstücke (grün nach gelösten Aufgaben) -->
+          <!-- Fortschritt vor dem Titel: Die Kreise stehen still, wenn die Aufgabe wechselt.
+               Kreise je Aufgabe, verbunden durch Balkenstücke (grün nach gelösten Aufgaben) -->
           <div id="aufgabe-circles" class="aufgabe-circles"></div>
+          <h3 id="aufgabe-title" class="aufgabe-title">Aufgabe 1</h3>
           <!-- Zurücksetzen: als Knopf; ist die Leiste schmal, nur im Menü „⋯“ (style.css) -->
           <button class="aufgabe-reset-btn" type="button" data-aufgabe-reset title="Lernpfad zurücksetzen">
             ↺ Zurücksetzen

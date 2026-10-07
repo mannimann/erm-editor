@@ -1036,7 +1036,9 @@ body.is-resizing-drawer {
     max-width 0.2s ease;
 }
 
-/* Ziehen am Rand: Breite folgt sofort dem Zeiger */
+/* Ziehen am Rand: Breite folgt sofort dem Zeiger. Beim Neuladen (ansicht-laden, js/app.js) ohne Animation */
+body.ansicht-laden #relmodel-drawer,
+body.ansicht-laden #relmodel-resizer,
 body.is-resizing-drawer #relmodel-drawer {
   transition: none;
 }
@@ -2141,7 +2143,7 @@ body.is-resizing-drawer #aufgabe-panel {
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
-  flex: 0 1 auto;
+  flex: 1;
   min-width: 0;
 }
 
@@ -2170,10 +2172,6 @@ body.is-resizing-drawer #aufgabe-panel {
 @container (max-width: 760px) {
   .aufgabe-title-row {
     flex-wrap: wrap;
-  }
-
-  .aufgabe-title {
-    flex: 1;
   }
 
   .aufgabe-title-row .aufgabe-circles {
@@ -2262,7 +2260,7 @@ body.is-resizing-drawer #aufgabe-panel {
 
 /* Fortschritt: Kreise, verbunden durch Balkenstücke */
 .aufgabe-circles {
-  flex: 1 1 240px;
+  flex: 0 1 auto;
   display: flex;
   align-items: center;
   min-width: 0;
@@ -2273,9 +2271,9 @@ body.is-resizing-drawer #aufgabe-panel {
 }
 
 .aufgabe-steg {
-  flex: 1 1 10px;
+  flex: 0 1 auto;
+  width: 24px; /* als Breite, nicht flex-basis: zählt so zur Breite der Kreisreihe */
   min-width: 4px;
-  max-width: 32px;
   height: 3px;
   background: #64748b;
 }
@@ -2353,6 +2351,7 @@ body.is-resizing-drawer #aufgabe-panel {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  container-type: inline-size; /* schmale Leiste: Checkliste unter dem Text (siehe unten) */
   padding: 12px 16px;
   font-size: 0.9rem;
   line-height: 1.4;
@@ -2417,6 +2416,7 @@ body.is-resizing-drawer #aufgabe-panel {
 .aufgabe-task li {
   margin: 0 0 4px 0;
   font-size: 0.9rem;
+  line-height: 1.5;
   color: #e2e8f0;
 }
 
@@ -2867,16 +2867,21 @@ body.is-resizing-drawer #aufgabe-panel {
 }
 
 /* Responsive Aufgabe Panel */
-@media (max-width: 768px) {
+/* Schmale Leiste: Checkliste unter dem Text */
+@container (max-width: 760px) {
   .aufgabe-body-row {
     flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
   }
 
   .aufgabe-body-row > .aufgabe-checklist {
     flex: none;
-    width: 100%;
+    position: static;
   }
+}
 
+@media (max-width: 768px) {
   #aufgabe-content {
     font-size: 0.85rem;
   }
@@ -3244,8 +3249,42 @@ body.is-resizing-drawer #aufgabe-panel {
 /* Laufender Lernpfad */
 .tab-dropdown-item[aria-current='true'] {
   background: rgba(37, 99, 235, 0.22);
-  box-shadow: inset 3px 0 0 #3b82f6;
   color: #ffffff;
+}
+
+/* Blöcke ER-Modell (blau) und Relationenmodell (grün): Streifen links, beschriftete Linie am Blockanfang */
+.lernpfad-eintrag.art-erm {
+  box-shadow: inset 3px 0 0 #3b82f6;
+}
+
+.lernpfad-eintrag.art-rm {
+  box-shadow: inset 3px 0 0 #10b981;
+}
+
+.lernpfad-menu-group .lernpfad-eintrag.art-start {
+  border-top: 2px solid #64748b;
+}
+
+.lernpfad-eintrag.art-start::after {
+  content: attr(data-art);
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #1e293b;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+}
+
+.lernpfad-eintrag.art-erm::after {
+  color: #93c5fd;
+}
+
+.lernpfad-eintrag.art-rm::after {
+  color: #6ee7b7;
 }
 
 /* ===== Header: Kardinalitäten getrennt vom Layout-Paar ===== */
@@ -3415,10 +3454,17 @@ body.is-resizing-drawer #aufgabe-panel {
 }
 
 @media (max-width: 860px) {
+  /* Untereinander: Fortgeschritten deutlich abgesetzt */
   .lernpfad-menu-group + .lernpfad-menu-group {
     border-left: none;
     padding-left: 0;
-    border-top: 1px solid rgba(71, 85, 105, 0.7);
+    margin-top: 10px;
+    border-top: 3px solid #475569;
+  }
+
+  .lernpfad-menu-group + .lernpfad-menu-group .lernpfad-menu-group-title {
+    padding-top: 10px;
+    color: #e2e8f0;
   }
 }
 
