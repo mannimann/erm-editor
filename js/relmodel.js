@@ -680,16 +680,25 @@
     renderSolution();
   }
 
+  // Laufende Quest-Reihe (null im freien Modus)
+  function questReihe() {
+    return window.Quest?.state?.questsPanelVisible ? window.Quest.getSeries?.() : null;
+  }
+
   // SQL-Übung: Das Relationenmodell ist vorgegeben – nur ansehen, eingestellt wird unter „SQL erzeugen“
   function rmGesperrt() {
-    return !!window.Quest?.state?.questsPanelVisible && !!window.Quest.getSeries?.()?.rmVorgabe;
+    return !!questReihe()?.rmVorgabe;
   }
 
   // ---- Render: Schüler-Eingabe ----
   function renderStudentForm() {
     ensureStudentIds();
     const gesperrt = rmGesperrt();
-    document.getElementById('relmodel-drawer')?.classList.toggle('rm-gesperrt', gesperrt);
+    const drawer = document.getElementById('relmodel-drawer');
+    drawer?.classList.toggle('rm-gesperrt', gesperrt);
+    // Relationenmodell-Schritt-Reihen (Erarbeitung): ohne Musterlösung
+    const reihe = questReihe();
+    drawer?.classList.toggle('rm-ohne-loesung', reihe?.art === 'rm' && !!reihe.schritt);
     const titel = document.getElementById('student-relations-title');
     if (titel) titel.textContent = gesperrt ? 'Vorgegebene Relationen' : 'Deine Relationen';
     const container = document.getElementById('student-relations-list');

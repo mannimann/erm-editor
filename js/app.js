@@ -779,8 +779,10 @@ function initTabs() {
     const isVisible = questPanel.classList.contains('visible');
     const eingeklappt = questPanel.classList.contains('eingeklappt') && tabletMedia.matches;
     questPanelResizer.classList.toggle('visible', isVisible && !eingeklappt);
+    const h = isVisible ? questPanel.getBoundingClientRect().height : 0;
+    // SQL-Panel (js/sql.js) endet über dem Quest-Panel
+    document.documentElement.style.setProperty('--quest-hoehe', `${h}px`);
     if (isVisible) {
-      const h = questPanel.getBoundingClientRect().height;
       questPanelResizer.style.bottom = `${h}px`;
       questPanelResizer.style.right = questPanel.style.right || '0';
     }
@@ -1789,9 +1791,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     window.addEventListener('hashchange', szenarioAusLink);
 
-    setTimeout(async function startFromLink() {
+    async function startFromLink(params) {
       if (await szenarioAusLink()) return;
-      const params = new URLSearchParams(window.location.search);
       const reihe = params.get('reihe');
       if (!reihe) return;
       // Parameter entfernen, damit ein Neuladen nicht erneut startet
@@ -1806,6 +1807,18 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!(await startQuestSeriesFlow(reihe))) return;
       const questNum = parseInt(params.get('quest'), 10);
       if (questNum >= 1 && questNum <= window.Quest.getMaxQuests()) await switchQuestWithGuards(questNum);
+    }
+
+    setTimeout(async () => {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get('reihe') && !window.location.hash.startsWith('#szenario=')) return;
+      // Quest-Panel erst nach dem Laden hereingleiten lassen, damit man es bemerkt
+      document.body.classList.add('quest-spaeter');
+      try {
+        await startFromLink(params);
+      } finally {
+        setTimeout(() => document.body.classList.remove('quest-spaeter'), 500);
+      }
     }, 0);
   }
   // Tooltip migration + global floating tooltip manager
@@ -2021,6 +2034,7 @@ window.App = {
   },
 
   onRelmodelStudentChanged() {
+    window.SQLExport?.aktualisieren();
     const reihe = getQuestSeries();
     if (reihe?.art === 'rm' && !reihe.schritt && window.Quest.state.questsPanelVisible) {
       updateExpertChecklist();
@@ -2028,6 +2042,7 @@ window.App = {
   },
 
   onBeforeQuestChange(questState) {
+    window.SQLExport?.schliessen();
     const reihe = getQuestSeries(questState?.questMode);
     if (!reihe || !questState?.questsPanelVisible) return;
     const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);
@@ -2043,6 +2058,7 @@ window.App = {
 
   // Quest schließen: ihren Stand sichern und das freie Modell (ER- und Relationenmodell) zurückholen
   onQuestPanelClosing(questState) {
+    window.SQLExport?.schliessen();
     const reihe = getQuestSeries(questState?.questMode);
     if (!reihe) return;
     const storageKey = getQuestWorkStorageKey(reihe.id, questState.currentQuestNumber || 1);

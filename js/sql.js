@@ -256,8 +256,9 @@
     const attr = rels.find((r) => r.id === relId)?.attrs.find((a) => a.id === attrId);
     if (!attr) return;
     Object.assign(attr, werte);
-    if (!loesung) R().setStudentRelations(rels);
-    render();
+    // Eigene Relationen: setStudentRelations meldet die Änderung, das Panel rendert dann über aktualisieren()
+    if (loesung) render();
+    else R().setStudentRelations(rels);
   }
 
   function auswahlfeld(optionen, wert, onChange) {
@@ -421,13 +422,38 @@
     document.getElementById('sql-erweitert-wrap').hidden = s === 'Einstieg' || s === 'Fortgeschritten';
     document.getElementById('sql-erweitert').checked = istErweitert();
     render();
-    const backdrop = document.getElementById('modal-sql-backdrop');
-    backdrop.style.display = 'flex';
-    backdrop.focus();
+    document.getElementById('sql-panel').classList.add('offen');
+    knoepfe();
   }
 
   function schliessen() {
-    document.getElementById('modal-sql-backdrop').style.display = 'none';
+    document.getElementById('sql-panel').classList.remove('offen');
+    knoepfe();
+  }
+
+  const istOffen = () => document.getElementById('sql-panel')?.classList.contains('offen');
+
+  // Der Knopf, der das Panel geöffnet hat, blendet es wieder aus
+  function knoepfe() {
+    [
+      ['btn-sql', false],
+      ['btn-sql-solution', true],
+    ].forEach(([id, ausLoesung]) => {
+      const aktiv = istOffen() && !!loesung === ausLoesung;
+      const btn = document.getElementById(id);
+      btn.textContent = aktiv ? '🛢 SQL ausblenden' : '🛢 SQL erzeugen';
+      btn.setAttribute('aria-expanded', aktiv);
+    });
+  }
+
+  function umschalten(ausLoesung) {
+    if (istOffen() && !!loesung === ausLoesung) schliessen();
+    else oeffnen(ausLoesung);
+  }
+
+  // Relationen im Relationenmodell geändert: Code bleibt aktuell, solange das Panel offen ist
+  function aktualisieren() {
+    if (istOffen() && !loesung) render();
   }
 
   async function kopieren() {
@@ -460,10 +486,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const backdrop = document.getElementById('modal-sql-backdrop');
-    if (!backdrop) return;
-    document.getElementById('btn-sql').addEventListener('click', () => oeffnen());
-    document.getElementById('btn-sql-solution').addEventListener('click', () => oeffnen(true));
+    const panel = document.getElementById('sql-panel');
+    if (!panel) return;
+    document.getElementById('btn-sql').addEventListener('click', () => umschalten(false));
+    document.getElementById('btn-sql-solution').addEventListener('click', () => umschalten(true));
     document.getElementById('btn-sql-close').addEventListener('click', schliessen);
     document.getElementById('btn-sql-kopieren').addEventListener('click', kopieren);
     document.getElementById('btn-sql-speichern').addEventListener('click', speichern);
@@ -471,13 +497,9 @@
       erweitertFrei = e.target.checked;
       render();
     });
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) schliessen();
-    });
-
     // Spaltenbreite: Trenner ziehen (links 240 px bis Gesamtbreite − 240 px)
-    const trenner = backdrop.querySelector('.sql-trenner');
-    const body = backdrop.querySelector('.sql-modal-body');
+    const trenner = panel.querySelector('.sql-trenner');
+    const body = panel.querySelector('.sql-modal-body');
     trenner.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       const links = body.getBoundingClientRect().left;
@@ -498,9 +520,9 @@
       window.addEventListener('pointerup', loslassen);
     });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && backdrop.style.display !== 'none') schliessen();
+      if (e.key === 'Escape' && istOffen()) schliessen();
     });
   });
 
-  window.SQLExport = { generateSQL, sqlName };
+  window.SQLExport = { generateSQL, sqlName, aktualisieren, schliessen };
 })();

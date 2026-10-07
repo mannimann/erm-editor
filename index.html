@@ -241,6 +241,38 @@
           <g id="edges-layer"></g>
           <g id="nodes-layer"></g>
         </svg>
+        <!-- SQL erzeugen (js/sql.js): gleitet von rechts über das ER-Diagramm -->
+        <div id="sql-panel" class="sql-panel" role="dialog" aria-labelledby="modal-sql-title">
+          <div class="info-modal-header">
+            <h3 id="modal-sql-title">🛢 SQL erzeugen</h3>
+            <button class="info-modal-close" id="btn-sql-close" aria-label="Schließen">&times;</button>
+          </div>
+          <div class="info-modal-body sql-modal-body">
+            <div class="sql-einstellungen">
+              <p class="table-preview-hint">
+                Der Code ist für <strong>SQLite</strong>. Dort gibt es die Datentypen: <strong>INTEGER</strong> (ganze
+                Zahl), <strong>REAL</strong> (Kommazahl) und <strong>TEXT</strong>. Ein Datum speicherst du als TEXT
+                (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den Typ
+                seines Primärschlüssels.
+              </p>
+              <label id="sql-erweitert-wrap" class="sql-erweitert">
+                <input type="checkbox" id="sql-erweitert" />
+                NOT NULL (Muss-Beziehung) und UNIQUE (1:1-Beziehung) einstellen
+              </label>
+              <div id="sql-spalten"></div>
+            </div>
+            <div class="sql-trenner" role="separator" aria-orientation="vertical" title="Breite der Spalten ziehen"></div>
+            <div class="sql-code">
+              <h4>SQL-Code <small>(geänderte Zeilen leuchten kurz auf)</small></h4>
+              <div id="sql-fehler"></div>
+              <pre id="sql-ausgabe" class="sql-ausgabe"></pre>
+              <div class="sql-aktionen">
+                <button id="btn-sql-kopieren" class="rel-btn primary" type="button">📋 Kopieren</button>
+                <button id="btn-sql-speichern" class="rel-btn" type="button">⬇ Als .sql speichern</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
 
       <!-- === RELATIONEN-MODELL-DRAWER (RECHTS) === -->
@@ -317,48 +349,6 @@
           </div>
         </main>
       </aside>
-    </div>
-
-    <!-- ===== MODAL: SQL erzeugen (js/sql.js) ===== -->
-    <div
-      id="modal-sql-backdrop"
-      class="info-modal-backdrop"
-      style="display: none"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-sql-title"
-    >
-      <div class="info-modal-card sql-modal-card">
-        <div class="info-modal-header">
-          <h3 id="modal-sql-title">🛢 SQL erzeugen</h3>
-          <button class="info-modal-close" id="btn-sql-close" aria-label="Schließen">&times;</button>
-        </div>
-        <div class="info-modal-body sql-modal-body">
-          <div class="sql-einstellungen">
-            <p class="table-preview-hint">
-              Der Code ist für <strong>SQLite</strong>. Dort gibt es die Datentypen: <strong>INTEGER</strong> (ganze
-              Zahl), <strong>REAL</strong> (Kommazahl) und <strong>TEXT</strong>. Ein Datum speicherst du als TEXT
-              (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den Typ
-              seines Primärschlüssels.
-            </p>
-            <label id="sql-erweitert-wrap" class="sql-erweitert">
-              <input type="checkbox" id="sql-erweitert" />
-              NOT NULL (Muss-Beziehung) und UNIQUE (1:1-Beziehung) einstellen
-            </label>
-            <div id="sql-spalten"></div>
-          </div>
-          <div class="sql-trenner" role="separator" aria-orientation="vertical" title="Breite der Spalten ziehen"></div>
-          <div class="sql-code">
-            <h4>SQL-Code <small>(geänderte Zeilen leuchten kurz auf)</small></h4>
-            <div id="sql-fehler"></div>
-            <pre id="sql-ausgabe" class="sql-ausgabe"></pre>
-            <div class="sql-aktionen">
-              <button id="btn-sql-kopieren" class="rel-btn primary" type="button">📋 Kopieren</button>
-              <button id="btn-sql-speichern" class="rel-btn" type="button">⬇ Als .sql speichern</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- ===== MODAL: Eigenes Szenario erstellen (js/szenario.js) ===== -->

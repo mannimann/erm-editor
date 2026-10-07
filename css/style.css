@@ -2075,6 +2075,16 @@ body.is-resizing-drawer #relmodel-drawer {
   transform: none;
 }
 
+/* Start über einen Link: Panel gleitet erst nach dem Laden herein (js/app.js) */
+body.quest-spaeter #quest-panel {
+  visibility: hidden;
+  transform: translateY(100%);
+}
+
+body.quest-spaeter .quest-panel-resizer {
+  visibility: hidden;
+}
+
 /* Ziehen an einer Kante: Größe folgt sofort dem Zeiger */
 body.is-resizing-drawer #quest-panel {
   transition: none;
@@ -2107,6 +2117,7 @@ body.is-resizing-drawer #quest-panel {
   #relmodel-resizer,
   #quest-panel,
   .quest-panel-resizer,
+  .sql-panel,
   #quests-menu {
     transition: none;
   }
@@ -3407,8 +3418,10 @@ body.is-resizing-drawer #quest-panel {
   }
 }
 
-/* SQL-Übung: Relationenmodell vorgegeben – nicht bearbeiten, keine Musterlösung */
+/* SQL-Übung: Relationenmodell vorgegeben – nicht bearbeiten, keine Musterlösung.
+   Relationenmodell-Erarbeitung: keine Musterlösung */
 #relmodel-drawer.rm-gesperrt #solution-area,
+#relmodel-drawer.rm-ohne-loesung #solution-area,
 #relmodel-drawer.rm-gesperrt #btn-add-relation,
 #relmodel-drawer.rm-gesperrt #btn-check,
 #relmodel-drawer.rm-gesperrt #btn-reset-relmodel,
@@ -3416,14 +3429,30 @@ body.is-resizing-drawer #quest-panel {
   display: none;
 }
 
-/* SQL erzeugen: links die Einstellungen, rechts der Code */
-.sql-modal-card {
+/* SQL erzeugen: gleitet von rechts über das ER-Diagramm; Quest-Panel und Relationenmodell bleiben sichtbar.
+   --quest-hoehe setzt js/app.js, damit das Panel über dem Quest-Panel endet. */
+.sql-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--quest-hoehe, 0px);
+  z-index: 30;
   display: flex;
   flex-direction: column;
-  max-width: 96vw;
-  width: 1600px;
-  height: 85vh;
-  overflow: hidden;
+  background: #fff;
+  box-shadow: -8px 0 24px rgba(15, 23, 42, 0.18);
+  container-type: inline-size;
+  visibility: hidden;
+  transform: translateX(100%);
+  transition:
+    transform 0.2s ease,
+    visibility 0.2s;
+}
+
+.sql-panel.offen {
+  visibility: visible;
+  transform: none;
 }
 
 .sql-modal-body {
@@ -3488,15 +3517,11 @@ body.sql-zieht {
   }
 }
 
-/* Tablet: Einstellungen und Code untereinander, nur der Dialog scrollt */
-@media (max-width: 1100px) {
-  .sql-modal-card {
-    height: auto;
-    overflow-y: auto;
-  }
-
+/* Schmales Panel: Einstellungen und Code untereinander, der ganze Inhalt scrollt */
+@container (max-width: 760px) {
   .sql-modal-body {
-    flex: none;
+    overflow-y: auto;
+    align-content: start;
     grid-template-columns: 1fr !important;
   }
 
