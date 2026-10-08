@@ -69,13 +69,36 @@ In `test/pruefen.js`, Teil 3 (Relationenmodell-Prüfung), ergänzen:
 - 1:1 mit Rollenname auf einer Seite und zusätzlichem Fremdschlüssel auf der anderen → Hinweis
   „beide Richtungen“ erscheint weiterhin.
 
-## Offene Fragen
+## Entscheidungen (umgesetzt 08.10.2026)
 
-- Soll „verweist auf“ im Relationenmodell-Formular immer sichtbar sein oder nur aufklappbar, damit
-  das Formular für Klasse 9 schlank bleibt?
-- Soll der Editor bei einem nichtssagenden Fremdschlüsselnamen wie `name` oder `id` einen Hinweis
-  geben (Konvention 2), auch wenn die Prüfung ihn akzeptiert?
+- „verweist auf“ ist nicht nötig, solange die Rolle eindeutig ist: Ein übrig gebliebener Schüler-FS
+  bekommt den freien Lösungs-FS, wenn alle freien Lösungs-FS der Relation auf dieselbe Tabelle zeigen
+  (Selbstbeziehung, `start`/`ziel`). Nur bei mehreren möglichen Zieltabellen braucht es „verweist auf“
+  oder Tabelle bzw. Schlüssel im Namen. Im Formular ist die Auswahl über den Pfeil neben FS aufklappbar.
+- Kein Rollenname, wenn der Name eine andere Tabelle oder deren Primärschlüssel nennt (falsch
+  platzierter FS) oder ein unmarkiertes Attribut den Lösungs-FS schon beim Namen nennt.
+- Nichtssagender FS-Name (`id`, `nr`, `nummer`, `name`, `bezeichnung`, `titel`): nur ein 💡-Hinweis mit
+  Vorschlag nach Konvention 2, die Prüfung besteht trotzdem.
 
-# weiteres TODO
+# Überprüfung der Relationenmodell-Prüfung (08.10.2026)
 
-Prüfe nochmal die Logik beim Überprüfen des Relationenmodells. Ich habe das Gefühl, dass das noch nicht komplett korrekt funktioniert. Teste vor allem die Hinweise in der Hinweisbox oberhalb des Relationenmodells.
+Typische Fehler an allen Szenarien durchgespielt, Meldungen der Hinweisbox gelesen. Behoben:
+
+- Fremdschlüssel doppelt (`Gastnummer↑` und unmarkiertes `Gast`) bestand die Prüfung.
+- Eigener PS oder ein erwartetes Attribut als FS markiert (`Lizenznummer↑` in pilot, `Anreisedatum↑`)
+  ersetzte einen fehlenden Fremdschlüssel.
+- Doppelte Relation (zweimal „Gast“) wurde nicht bemerkt.
+- Ganz fehlender FS hieß „X sollte als FS markiert sein“, bei der 1:n-Selbstbeziehung sogar mit dem
+  eigenen PS als Namen. Jetzt: „Fremdschlüssel X (verweist auf „T“) fehlt“, als Fehler statt Hinweis.
+- Bei zwei FS mit ähnlichem Namen wurde der falsche als überflüssig gemeldet (Zuordnung jetzt
+  größtmöglich, exakte Namen zuerst).
+- 1:1 mit Verbundschlüssel in der Gegenrichtung (Sprecher-Klasse in schüler) wurde abgelehnt.
+- n:m-Selbstbeziehung mit Rollennamen (`schülernr↑`, `freund↑`) wurde abgelehnt.
+- Checkliste und Korrekturliste urteilen jetzt wie die Prüfung (gleiche Zuordnung, gleiche Meldungen
+  zu unerwarteten Attributen und Markierungen). Test: Teil 3 in `test/pruefen.js`.
+- Lernpfad Relationenmodell-Grundlagen: Die automatische Prüfung lief beim Tippen eines Relations- oder
+  Attributnamens nicht an (Aufgabe 2 blieb offen). Aufgabe 5 und 7 nennen „Klasse_Bezeichnung“ bzw.
+  „Klasse“ als sinnvollere Namen und akzeptieren sie.
+- „Überprüfen“ klappt nur Relationen ohne Meldung zu; unfertige bleiben, wie sie sind. Alle Meldungen
+  stehen im Kasten oben, nicht mehr in den Karten (nur ✔ an einer Karte zeigt dort noch ihren Fehler).
+  Neu im Kasten: doppeltes Attribut (bestand vorher die Prüfung) und Relation ohne Namen.

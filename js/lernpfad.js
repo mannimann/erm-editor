@@ -514,17 +514,31 @@
     return !!getStudentRelAttr(relName, attrName)?.isFk;
   }
 
-  // Fremdschlüssel (kein PS) in relName, die auf baseName zeigen – auch umbenannt („SchülerNr-Sprecher“)
-  // oder nach der Zieltabelle benannt („Klasse“).
+  // Fremdschlüssel (kein PS) in relName, die auf baseName zeigen – auch umbenannt („SchülerNr-Sprecher“),
+  // nach der Zieltabelle („Klasse“) oder nach der Rolle benannt („Fahrlehrer“).
   function getStudentFks(relName, baseName) {
     const R = window.RelModel;
     const solRel = (R.getCheckSolution?.() || []).find((r) => normalizeName(r.name) === normalizeName(relName));
     const solFks = (solRel?.attrs || []).filter(
       (a) => a.isFk && !a.isPk && normalizeName(a._fkBaseName || a.name) === normalizeName(baseName),
     );
-    return (getStudentRelByName(relName)?.attrs || []).filter(
+    const attrs = getStudentRelByName(relName)?.attrs || [];
+    const paare = solRel ? R.fkZuordnung(solRel, attrs) : new Map();
+    return attrs.filter(
       (a) =>
-        a.isFk && !a.isPk && (R.fkRawNameMatches(a.name, baseName) || solFks.some((sf) => R.fkMatches(a.name, sf))),
+        a.isFk &&
+        !a.isPk &&
+        (R.fkRawNameMatches(a.name, baseName) ||
+          solFks.some((sf) => R.fkMatches(a.name, sf) || paare.get(sf) === a)),
+    );
+  }
+
+  // Attribute in relName, die auf die Klasse verweisen: „Bezeichnung“, „Klasse_Bezeichnung“ oder „Klasse“
+  // (Lernpfad Relationenmodell-Grundlagen)
+  function klassenFs(relName) {
+    const R = window.RelModel;
+    return (getStudentRelByName(relName)?.attrs || []).filter(
+      (a) => R.fkRawNameMatches(a.name, 'Bezeichnung') || R.fkRawNameMatches(a.name, 'Klasse'),
     );
   }
 
@@ -589,6 +603,14 @@
     const extras = studentRels
       .filter((r) => String(r.name || '').trim() && !solution.some((s) => normalizeName(s.name) === normalizeName(r.name)))
       .map((r) => `Relation „${r.name.trim()}“ ist nicht Teil der Lösung.`);
+    // Wie removeCompletelyEmptyRelations: eine gerade angelegte, noch leere Relation zählt nicht
+    if (studentRels.some((r) => !String(r.name || '').trim() && r.attrs.some((a) => String(a.name || '').trim())))
+      extras.push('Eine Relation hat noch keinen Namen.');
+    studentRels
+      .filter((r) => String(r.name || '').trim())
+      .filter((r, i, alle) => alle.findIndex((x) => normalizeName(x.name) === normalizeName(r.name)) !== i)
+      .filter((r) => solution.some((s) => normalizeName(s.name) === normalizeName(r.name)))
+      .forEach((r) => extras.push(`Relation „${r.name.trim()}“ ist doppelt vorhanden.`));
 
     for (const solRel of solution) {
       // Fehlt die Relation, zählen ihre Attribute und Schlüssel als offen
@@ -601,22 +623,16 @@
         studentRels.some((r) => normalizeName(r.name) === normalizeName(solRel.name)),
       );
 
-      const matches = (studAttr, solAttr) => {
-        if (normalizeName(studAttr.name) === normalizeName(solAttr.name)) return true;
-        if (!solAttr.isFk) return false;
-        return solRel._hasSelfRefFks
-          ? R.selfRefFkRawNameMatchesBase(studAttr.name, solRel._selfRefBasePk)
-          : R.fkMatches(studAttr.name, solAttr);
-      };
-      // Jedem Lösungsattribut genau ein Schülerattribut zuordnen
-      const assign = (cat, solAttrs, studAttrs) => {
-        const used = new Set();
-        for (const solAttr of solAttrs) {
-          const match = studAttrs.find((a) => !used.has(a) && matches(a, solAttr));
-          if (match) used.add(match);
-          tick(cat, `${solRel.name}.${solAttr.name}`, !!match);
-        }
-      };
+      // Dieselben Regeln wie die Prüfung in relmodel.js: Fremdschlüssel nach Name oder Rolle zugeordnet,
+      // bei einer Selbstbeziehung aus einer n:m-Beziehung zwei Attribute als PS und FS
+      const selbst = solRel._hasSelfRefFks;
+      const paare = selbst ? new Map() : R.fkZuordnung(solRel, studRel.attrs, studentRels, solution);
+      const selbstFs = selbst ? R.selbstFsGueltig(solRel, studRel.attrs, solution) : [];
+      // ok für einen Fremdschlüssel der Lösung; bei der Selbstbeziehung zählt die Anzahl
+      const fkOk = (solAttr) =>
+        selbst
+          ? selbstFs.length > solRel.attrs.filter((a) => a.isFk).indexOf(solAttr)
+          : paare.has(solAttr);
 
       for (const attr of solRel.attrs.filter((a) => !a.isFk)) {
         tick(
@@ -625,20 +641,44 @@
           studRel.attrs.some((a) => normalizeName(a.name) === normalizeName(attr.name)),
         );
       }
-      assign(
-        primaryKeys,
-        solRel.attrs.filter((a) => a.isPk),
-        studRel.attrs.filter((a) => a.isPk),
+      const solPks = solRel.attrs.filter((a) => a.isPk);
+      // wie pkMatches in relmodel.js: ein PS, der zugleich FS ist, darf wie ein FS heißen
+      const pkPasst = (a, pk) =>
+        normalizeName(a.name) === normalizeName(pk.name) ||
+        (pk.isFk && (R.fkMatches(a.name, pk) || paare.get(pk) === a));
+      solPks.forEach((pk, i) => {
+        const ok = selbst
+          ? studRel.attrs.filter((a) => a.isPk && R.selbstFsPasst(a.name, solRel, solution)).length > i
+          : studRel.attrs.some((a) => a.isPk && pkPasst(a, pk));
+        tick(primaryKeys, `${solRel.name}.${pk.name}`, ok);
+      });
+      for (const fk of solRel.attrs.filter((a) => a.isFk)) tick(foreignKeys, `${solRel.name}.${fk.name}`, fkOk(fk));
+
+      // Was die Prüfung sonst noch bemängelt (Korrekturliste): unerwartete Attribute, falsche Markierungen
+      const gemeldet = new Set();
+      const melden = (a, text) => {
+        if (gemeldet.has(a) || !String(a.name || '').trim()) return;
+        gemeldet.add(a);
+        extras.push(text(`„${a.name.trim()}“ in „${solRel.name}“`));
+      };
+      const erwartet = (a) => solRel.attrs.some((s) => !s.isFk && normalizeName(s.name) === normalizeName(a.name));
+      R.unerwarteteAttribute(solRel, studRel.attrs, paare).forEach((a) =>
+        melden(a, (wo) => `Attribut ${wo} ist nicht erwartet.`),
       );
-      assign(
-        foreignKeys,
-        solRel.attrs.filter((a) => a.isFk),
-        studRel.attrs.filter((a) => a.isFk),
-      );
-      // Attribute, die zu keinem Attribut der Lösung passen (Korrekturliste der Prüfung)
-      studRel.attrs
-        .filter((a) => String(a.name || '').trim() && !solRel.attrs.some((s) => matches(a, s)))
-        .forEach((a) => extras.push(`Attribut „${a.name.trim()}“ in „${solRel.name}“ ist nicht erwartet.`));
+      R.doppelteAttribute(studRel.attrs).forEach((a) => melden(a, (wo) => `Attribut ${wo} ist doppelt vorhanden.`));
+      for (const a of studRel.attrs) {
+        if (selbst) {
+          if (selbstFs.includes(a)) continue;
+          // Ein passender Name, dem nur PS oder FS fehlt, zeigt schon das ✗ beim FS
+          if (a.isFk && (!R.selbstFsPasst(a.name, solRel, solution) || selbstFs.length >= 2))
+            melden(a, (wo) => `Attribut ${wo} ist nicht erwartet.`);
+          else if (a.isPk && !a.isFk && erwartet(a)) melden(a, (wo) => `${wo} ist kein Primärschlüssel.`);
+          continue;
+        }
+        if (a.isFk && ![...paare.values()].includes(a))
+          melden(a, (wo) => (erwartet(a) ? `${wo} ist kein Fremdschlüssel.` : `Attribut ${wo} ist nicht erwartet.`));
+        else if (a.isPk && !solPks.some((pk) => pkPasst(a, pk))) melden(a, (wo) => `${wo} ist kein Primärschlüssel.`);
+      }
     }
 
     return { relations, attributes, primaryKeys, foreignKeys, extras };
@@ -1520,7 +1560,7 @@
     return {
       title: s.title,
       szenario: `<p><strong>Überführe das ER-Modell „${s.title}“ in das Relationenmodell.</strong></p>
-        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>`,
+        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt, oder nach seiner Rolle (z. B. „Vorgesetzter“); eine Beziehungstabelle heißt wie die Beziehung.</p>`,
       jsonFile: s.jsonFile,
       validator: function () {
         return window.RelModel?.checkAndGetResult?.() || { passed: false };
@@ -1694,12 +1734,16 @@
         <p>Beispiel: Ein Schüler geht in <em>eine</em> Klasse (1-Seite), aber eine Klasse hat <em>viele</em> Schüler (n-Seite). → Der PS von Klasse (Bezeichnung) wird als FS in die Relation Schüler aufgenommen.</p>`,
       objective: `<p><strong>Beziehungen abbilden:</strong> Als nächstes müssen alle Beziehungen nacheinander abgebildet werden, um die Zusammenhänge zwischen den Entitätsklassen auch im Relationenmodell darzustellen. Dazu werden Primärschlüssel zwischen den beteiligten Relationen „verschoben“: Im einfachsten Fall wird der Primärschlüssel einer Seite als sog. Fremdschlüssel in der anderen Seite übernommen, damit eine eindeutige Zuordnung der Datensätze möglich ist.</p>
         <p>Bilde die 1:n-Beziehung <strong>„geht in“</strong> (Schüler n : 1 Klasse) ab.</p>
-        <p>Füge bei der Relation <strong>„Schüler“</strong> den Fremdschlüssel <strong>„Bezeichnung“</strong> hinzu und markiere ihn als <strong>Fremdschlüssel (FS)</strong>.</p>`,
+        <p>Füge bei der Relation <strong>„Schüler“</strong> den Fremdschlüssel <strong>„Bezeichnung“</strong> hinzu und markiere ihn als <strong>Fremdschlüssel (FS)</strong>.</p>
+        <p><strong>Tipp:</strong> Sinnvoller ist der Name <strong>„Klasse_Bezeichnung“</strong> oder kurz <strong>„Klasse“</strong>. „Bezeichnung“ allein verrät nicht, worauf der Fremdschlüssel verweist – der Tabellenname im Namen schon. Alle drei Namen sind richtig.</p>`,
       validator: function () {
-        if (!studentRelHasAttr('Schüler', 'Bezeichnung'))
-          return { passed: false, error: '„Bezeichnung“ fehlt als Fremdschlüssel bei „Schüler“.' };
-        if (!studentRelAttrIsFk('Schüler', 'Bezeichnung'))
-          return { passed: false, error: '„Bezeichnung“ muss bei „Schüler“ als Fremdschlüssel markiert sein.' };
+        const fs = klassenFs('Schüler');
+        if (!fs.length) return { passed: false, error: '„Bezeichnung“ fehlt als Fremdschlüssel bei „Schüler“.' };
+        if (!fs.some((a) => a.isFk))
+          return {
+            passed: false,
+            error: `„${fs[0].name}“ muss bei „Schüler“ als Fremdschlüssel markiert sein.`,
+          };
         return { passed: true };
       },
     },
@@ -1723,18 +1767,22 @@
       objective: `<p>Bilde die n:m-Beziehung „unterrichtet“ (Lehrer n : m Klasse) als Beziehungstabelle ab.</p>
         <ol>
           <li>Erstelle eine neue Relation <strong>„unterrichtet“</strong></li>
-          <li>Füge die Attribute <strong>„Lehrer-Kürzel“</strong> und <strong>„Bezeichnung“</strong> hinzu</li>
+          <li>Füge die Attribute <strong>„Lehrer-Kürzel“</strong> und <strong>„Bezeichnung“</strong> hinzu (oder wie bei „Schüler“ <strong>„Klasse_Bezeichnung“</strong> bzw. <strong>„Klasse“</strong>)</li>
           <li>Markiere beide als <strong>Primärschlüssel (PS)</strong> und <strong>Fremdschlüssel (FS)</strong></li>
         </ol>`,
       validator: function () {
         if (!getStudentRelByName('unterrichtet')) return { passed: false, error: 'Die Relation „unterrichtet“ fehlt.' };
-        for (const attr of ['Lehrer-Kürzel', 'Bezeichnung']) {
-          if (!studentRelHasAttr('unterrichtet', attr))
-            return { passed: false, error: `Das Attribut „${attr}“ fehlt bei „unterrichtet“.` };
-          if (!studentRelAttrIsPk('unterrichtet', attr))
-            return { passed: false, error: `„${attr}“ muss bei „unterrichtet“ als Primärschlüssel markiert sein.` };
-          if (!studentRelAttrIsFk('unterrichtet', attr))
-            return { passed: false, error: `„${attr}“ muss bei „unterrichtet“ als Fremdschlüssel markiert sein.` };
+        const lehrer = getStudentRelAttr('unterrichtet', 'Lehrer-Kürzel');
+        for (const [name, attr] of [
+          ['Lehrer-Kürzel', lehrer ? [lehrer] : []],
+          ['Bezeichnung', klassenFs('unterrichtet')],
+        ]) {
+          if (!attr.length) return { passed: false, error: `Das Attribut „${name}“ fehlt bei „unterrichtet“.` };
+          const a = attr.find((x) => x.isPk && x.isFk) || attr[0];
+          if (!a.isPk)
+            return { passed: false, error: `„${a.name}“ muss bei „unterrichtet“ als Primärschlüssel markiert sein.` };
+          if (!a.isFk)
+            return { passed: false, error: `„${a.name}“ muss bei „unterrichtet“ als Fremdschlüssel markiert sein.` };
         }
         return { passed: true };
       },
@@ -2110,7 +2158,7 @@
       sz.aufgabe === 'rm'
         ? {
             title: sz.titel,
-            szenario: `<p><strong>Überführe das ER-Modell „${esc(sz.titel)}“ in das Relationenmodell.</strong> Lege die Relationen in der rechten Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${
+            szenario: `<p><strong>Überführe das ER-Modell „${esc(sz.titel)}“ in das Relationenmodell.</strong> Lege die Relationen in der rechten Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt, oder nach seiner Rolle (z. B. „Vorgesetzter“); eine Beziehungstabelle heißt wie die Beziehung.</p>${
               String(sz.text || '').trim() ? `<p><strong>Hinweise:</strong></p>${text}` : ''
             }`,
             erm: sz.erm,

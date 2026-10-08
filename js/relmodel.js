@@ -93,6 +93,136 @@
     return !!solAttr._fkTabelle && fkRawNameMatches(studentName, solAttr._fkTabelle);
   }
 
+  // Tabelle, die der Schüler bei „verweist auf“ gewählt hat (fkTarget, dasselbe Feld wie im SQL-Panel)
+  function zielTabelle(attr, studRels) {
+    const t = attr.fkTarget;
+    return (t && studRels.find((r) => r.id === t.rel)?.name) || '';
+  }
+
+  // Nennt der Name eine andere Tabelle als ziel oder deren Primärschlüssel? Dann ist er kein Rollenname,
+  // sondern ein falsch platzierter Fremdschlüssel („schülernr↑“ in klasse). Den Namen der eigenen Tabelle
+  // darf er tragen („bühne_leitung“), ihren Primärschlüssel nur bei einer Selbstbeziehung.
+  function zeigtWoandersHin(name, ziel, eigene, solution) {
+    return solution.some((r) => {
+      const n = normalizeName(r.name);
+      if (n === normalizeName(ziel)) return false;
+      return (
+        (n !== normalizeName(eigene) && fkRawNameMatches(name, r.name)) ||
+        r.attrs.some((a) => a.isPk && !a.isFk && fkRawNameMatches(name, a.name))
+      );
+    });
+  }
+
+  /**
+   * Ordnet jedem Fremdschlüssel einer Lösungs-Relation höchstens einen Fremdschlüssel des Schülers zu
+   * (Map Lösung → Schüler): zuerst nach dem Namen, dann die übrigen nach ihrer Rolle („leitung↑“ auf
+   * mitarbeiter). Eine Rolle zählt, wenn bei „verweist auf“ die richtige Tabelle gewählt ist oder alle noch
+   * freien Fremdschlüssel der Lösung auf dieselbe Tabelle zeigen. Rollen nur für einspaltige Fremdschlüssel.
+   */
+  function fkZuordnung(solRel, studAttrs, studRels = _studentRelations, solution = _solution) {
+    const solFks = solRel.attrs.filter((a) => a.isFk);
+    // Ein erwartetes Attribut der Relation (der eigene PS „Lizenznummer“, „Anreisedatum“) ist nie ein FS
+    const erwartet = solRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
+    const studFks = studAttrs.filter((a) => a.isFk && !erwartet.includes(normAttr(a.name)));
+    const paare = new Map();
+    const vergeben = new Set();
+    const paar = (sf, a) => paare.set(sf, a) && vergeben.add(a);
+    // Nach dem Namen: größtmögliche Zuordnung über Augmentierungspfade, exakte Namen zuerst
+    // („Gastnummer↑“ neben „Gast↑“: Gastnummer gehört zum Lösungs-FS Gastnummer)
+    const exakt = (a, sf) => [sf.name, sf._fkBaseName].some((n) => n && normAttr(n) === normAttr(a.name));
+    const kandidaten = new Map(
+      solFks.map((sf) => [
+        sf,
+        studFks.filter((a) => fkMatches(a.name, sf)).sort((a, b) => exakt(b, sf) - exakt(a, sf)),
+      ]),
+    );
+    const halter = new Map(); // Schüler-FS → Lösungs-FS
+    const versuche = (sf, besucht) =>
+      kandidaten.get(sf).some((a) => {
+        if (besucht.has(a)) return false;
+        besucht.add(a);
+        if (halter.has(a) && !versuche(halter.get(a), besucht)) return false;
+        halter.set(a, sf);
+        return true;
+      });
+    solFks.forEach((sf) => versuche(sf, new Set()));
+    solFks.forEach((sf) => {
+      const a = [...halter].find(([, s]) => s === sf)?.[0];
+      if (a) paar(sf, a);
+    });
+    // Frei ist ein Lösungs-FS nur, wenn ihn kein unmarkiertes Attribut beim Namen nennt (außer den
+    // erwarteten wie dem eigenen PS „Lizenznummer“ neben „Pilot-Lizenznummer“)
+    const unmarkiert = studAttrs.filter((a) => !a.isFk && !erwartet.includes(normAttr(a.name)));
+    const frei = () =>
+      solFks.filter((sf) => !paare.has(sf) && sf._fkTabelle && !unmarkiert.some((a) => fkMatches(a.name, sf)));
+    studFks
+      .filter((a) => !vergeben.has(a))
+      .sort((a, b) => !!zielTabelle(b, studRels) - !!zielTabelle(a, studRels))
+      .forEach((a) => {
+        // Ein gewähltes Ziel gilt auch, wenn der Name eine andere Tabelle nennt
+        const ziel = zielTabelle(a, studRels);
+        const offen = frei().filter(
+          (sf) => ziel || !zeigtWoandersHin(a.name, sf._fkTabelle, solRel.name, solution),
+        );
+        const tabellen = new Set(offen.map((sf) => normalizeName(sf._fkTabelle)));
+        const sf = ziel
+          ? offen.find((s) => normalizeName(s._fkTabelle) === normalizeName(ziel))
+          : tabellen.size === 1 && offen[0];
+        if (sf) paar(sf, a);
+      });
+    return paare;
+  }
+
+  /**
+   * Passt ein Name zur Selbstbeziehung einer n:m-Relation („ist befreundet mit“)? Der Basis-PS mit Zusatz
+   * („SchülerNr2“, „SchülerNr-Freund“) oder ein Rollenname („Freund“), der keine andere Tabelle nennt und kein
+   * erwartetes Attribut der Relation ist.
+   */
+  function selbstFsPasst(name, solRel, solution = _solution) {
+    if (selfRefFkRawNameMatchesBase(name, solRel._selfRefBasePk || '')) return true;
+    return (
+      !solRel.attrs.some((a) => !a.isFk && normAttr(a.name) === normAttr(name)) &&
+      !zeigtWoandersHin(name, solRel._selfRefEntity || '', solRel.name, solution)
+    );
+  }
+
+  // Selbstbeziehung einer n:m-Relation: Attribute (PS und FS), die als ihre zwei Fremdschlüssel zählen.
+  // Nach dem Basis-PS benannte zählen alle, Rollennamen („Freund“) füllen bis zu zwei auf.
+  function selbstFsGueltig(solRel, studAttrs, solution = _solution) {
+    const base = (a) => selfRefFkRawNameMatchesBase(a.name, solRel._selfRefBasePk || '');
+    const kandidaten = studAttrs.filter((a) => a.isPk && a.isFk && selbstFsPasst(a.name, solRel, solution));
+    return [...kandidaten.filter(base), ...kandidaten.filter((a) => !base(a))].filter((a, i) => base(a) || i < 2);
+  }
+
+  // Unmarkierte Attribute, die weder erwartet sind noch (auch per Prä-/Postfix) für einen noch fehlenden
+  // Fremdschlüssel stehen; neben einem schon zugeordneten FS ist ein zweites überflüssig (paare: fkZuordnung)
+  function unerwarteteAttribute(solRel, studAttrs, paare) {
+    const erwartet = solRel.attrs.filter((a) => !a.isFk).map((a) => normAttr(a.name));
+    const freieFks = solRel.attrs.filter((sf) => sf.isFk && !paare.has(sf));
+    return studAttrs.filter((a) => {
+      const sa = normAttr(a.name);
+      if (a.isFk || !sa || erwartet.includes(sa)) return false;
+      if (freieFks.some((sf) => fkMatches(a.name, sf))) return false;
+      // Selbstbeziehung: dafür kommt „sollte als PS und FS markiert sein“, solange noch eins fehlt
+      return !(
+        solRel._hasSelfRefFks &&
+        (a.isPk || selfRefFkRawNameMatchesBase(a.name, solRel._selfRefBasePk)) &&
+        selbstFsPasst(a.name, solRel) &&
+        selbstFsGueltig(solRel, studAttrs).length < 2
+      );
+    });
+  }
+
+  // Zweites, drittes … Attribut mit demselben Namen („Vorname“, „vorname“)
+  function doppelteAttribute(attrs) {
+    return attrs.filter(
+      (a, i) => normAttr(a.name) && attrs.findIndex((b) => normAttr(b.name) === normAttr(a.name)) !== i,
+    );
+  }
+
+  // Fremdschlüsselnamen, die nicht sagen, worauf sie verweisen (Lehrbuch: dann den Tabellennamen nehmen)
+  const NICHTSSAGEND = ['id', 'nr', 'nummer', 'name', 'bezeichnung', 'titel'];
+
   function sortAttrsPrimaryFirst(attrs) {
     return attrs.sort((a, b) => {
       if (!!a.isPk !== !!b.isPk) return a.isPk ? -1 : 1;
@@ -474,10 +604,11 @@
           const entity = getNode(entityIds[0]);
           const pk = getPkAttr(entityIds[0]);
           if (entity && pk) {
-            addAttr(mnRel, pk + '1', true, true, entity.name + '1', rel.id);
-            addAttr(mnRel, pk + '2', true, true, entity.name + '2', rel.id);
+            addAttr(mnRel, pk + '1', true, true, entity.name, rel.id);
+            addAttr(mnRel, pk + '2', true, true, entity.name, rel.id);
             mnRel._hasSelfRefFks = true;
             mnRel._selfRefBasePk = pk;
+            mnRel._selfRefEntity = entity.name;
           }
         } else {
           // Normale M:N-Beziehung: alle PK-Attribute der beteiligten Entitäten als FK übernehmen
@@ -541,8 +672,10 @@
             targetEntityName: targetEntity.name,
             sourcePk: srcPk,
             targetPk: tgtPk,
+            targetPks: getPkAttrs(targetEntity.id),
             relAttrNames: relAttrs.map((a) => a.name),
             relationshipName: rel.name,
+            via: rel.id,
           });
         }
       }
@@ -558,6 +691,8 @@
         isPk: !!attr.isPk,
         isFk: !!attr.isFk,
         _fkBaseName: attr.isFk ? attr._fkBaseName || '' : '',
+        _fkVia: attr.isFk ? attr._fkVia || '' : '',
+        _fkZiel: attr.isFk ? attr._fkSourceEntity || '' : '',
         // Name der Zieltabelle, wenn der Fremdschlüssel allein auf ihren Schlüssel zeigt (erlaubt „mannschaft↑“)
         _fkTabelle:
           attr.isFk &&
@@ -748,6 +883,8 @@
       rel.name = e.target.value;
       clearInlineError(rel);
       persistStudentRelations();
+      // Auch beim Tippen prüfen: Der Name allein kann eine Aufgabe lösen („Relationen anlegen“)
+      notifyAufgabeChange();
     });
     nameInput.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
@@ -1032,6 +1169,7 @@
       attr.name = e.target.value;
       clearInlineError(rel);
       persistStudentRelations();
+      notifyAufgabeChange();
     });
     let _suppressBlur = false;
     inp.addEventListener('change', (e) => {
@@ -1131,8 +1269,76 @@
     row.appendChild(inp);
     row.appendChild(pkLbl);
     row.appendChild(fkLbl);
+    if (attr.isFk) row.appendChild(buildFkZielToggle(rel, attr, row));
     row.appendChild(delAttrBtn);
+    if (attr.isFk && _fkZielOffen.has(attr.id)) row.appendChild(buildFkZielSelect(rel, attr, row));
     return row;
+  }
+
+  // „verweist auf“ ist nur nötig, wenn ein Rollenname nicht eindeutig ist – darum aufklappbar
+  const _fkZielOffen = new Set(); // Attribut-IDs mit aufgeklappter Auswahl
+  function buildFkZielToggle(rel, attr, row) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn-fk-ziel';
+    btn.textContent = '→';
+    btn.setAttribute('aria-expanded', String(_fkZielOffen.has(attr.id)));
+    zielAmPfeil(btn, attr);
+    // Fokus im Namensfeld lassen, sonst rendert dessen blur die Zeile neu, bevor der Klick ankommt
+    btn.addEventListener('mousedown', (e) => e.preventDefault());
+    btn.addEventListener('click', () => {
+      const offen = row.querySelector('.fk-ziel');
+      if (offen) {
+        _fkZielOffen.delete(attr.id);
+        offen.remove();
+      } else {
+        _fkZielOffen.add(attr.id);
+        row.appendChild(buildFkZielSelect(rel, attr, row)).querySelector('select').focus();
+      }
+      btn.setAttribute('aria-expanded', String(!offen));
+    });
+    return btn;
+  }
+
+  // Gewähltes Ziel am Pfeil zeigen, auch wenn die Auswahl zugeklappt ist
+  function zielAmPfeil(btn, attr) {
+    const t = attr.fkTarget;
+    const r = t && _studentRelations.find((x) => x.id === t.rel);
+    const a = r && r.attrs.find((x) => x.id === t.attr);
+    btn.classList.toggle('gewaehlt', !!a);
+    const text = a ? `verweist auf ${r.name}.${a.name}` : 'verweist auf …';
+    btn.dataset.tooltip = text; // nicht title: das wandelt app.js nur einmal in data-tooltip um
+    btn.setAttribute('aria-label', text);
+  }
+
+  function buildFkZielSelect(rel, attr, row) {
+    const label = document.createElement('label');
+    label.className = 'fk-ziel';
+    label.textContent = 'verweist auf ';
+    const select = document.createElement('select');
+    const option = (text, value) => {
+      const o = document.createElement('option');
+      o.textContent = text;
+      o.value = value;
+      select.appendChild(o);
+    };
+    option('– nicht gewählt –', '');
+    _studentRelations.forEach((r) =>
+      r.attrs
+        .filter((a) => a.isPk && a !== attr && (a.name || '').trim())
+        .forEach((a) => option(`${r.name || '?'}.${a.name}`, `${r.id}|${a.id}`)),
+    );
+    const t = attr.fkTarget;
+    select.value = t ? `${t.rel}|${t.attr}` : '';
+    select.addEventListener('change', () => {
+      const [relId, attrId] = select.value.split('|');
+      attr.fkTarget = select.value ? { rel: relId, attr: attrId } : null;
+      zielAmPfeil(row.querySelector('.btn-fk-ziel'), attr);
+      clearInlineError(rel);
+      persistStudentRelations();
+    });
+    label.appendChild(select);
+    return label;
   }
 
   // ---- Render: Musterlösung ----
@@ -1209,7 +1415,7 @@
       attrs: rel.attrs.map((a) => ({ ...a })),
     }));
     const bothDirectionErrors = [];
-    const altDirectionAttrs = {}; // { sourceEntityName: studentAttrName }
+    const bothDirectionRels = []; // Relationsnamen, in denen der FS beider Richtungen steht
 
     _oneToOneInfos.forEach((info) => {
       const {
@@ -1220,6 +1426,7 @@
         relAttrNames,
         relationshipName,
         resolvedSourceFkName,
+        via,
       } = info;
       if (!sourcePk || !targetPk) return;
 
@@ -1231,46 +1438,64 @@
       );
 
       // Standard-Richtung: FK(sourcePk) in target – prüfe sowohl den Original-PK als auch den abgebildeten FK-Namen
-      const hasStandard = studTarget?.attrs.some(
-        (a) =>
-          a.isFk &&
-          (fkRawNameMatches(a.name, sourcePk) ||
-            fkRawNameMatches(a.name, sourceEntityName) ||
-            (resolvedSourceFkName && fkRawNameMatches(a.name, resolvedSourceFkName))),
+      // – auch als Rollenname („kapitän↑“), wenn die Zuordnung ihn dem FK dieser Beziehung gibt
+      const solTarget = solution.find(
+        (r) => normalizeRelationToken(r.name) === normalizeRelationToken(targetEntityName),
       );
-      // Alternative Richtung: FK(targetPk) in source. Erkannt, wenn source mehr Attribute auf Basis von
-      // targetPk hat, als die Musterlösung dort aus anderen Beziehungen erwartet (z. B. „Teamname-Kapitän“
-      // neben „Teamname“ aus „spielt in“). Auch noch nicht als FS markierte Attribute zählen.
-      // ponytail: nur der erste Schlüsselteil; Gegenrichtung auf einen Verbundschlüssel erkennt das nicht.
+      const hasStandard =
+        studTarget?.attrs.some(
+          (a) =>
+            a.isFk &&
+            (fkRawNameMatches(a.name, sourcePk) ||
+              fkRawNameMatches(a.name, sourceEntityName) ||
+              (resolvedSourceFkName && fkRawNameMatches(a.name, resolvedSourceFkName))),
+        ) ||
+        (!!studTarget &&
+          !!solTarget &&
+          [...fkZuordnung(solTarget, studTarget.attrs, _studentRelations, solution).keys()].some(
+            (sf) => sf._fkVia === via,
+          ));
+      // Alternative Richtung: FS auf den Schlüssel von target in source. Erkannt, wenn source für jeden
+      // Schlüsselteil mehr passende Attribute hat, als die Musterlösung dort aus anderen Beziehungen erwartet
+      // (z. B. „Teamname-Kapitän“ neben „Teamname“ aus „spielt in“). Auch noch nicht als FS markierte Attribute
+      // zählen. Tabellenname und „verweist auf“ nur bei einem einspaltigen Schlüssel.
       const solSource = solution.find(
         (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
       );
-      const expectedInSource = (solSource?.attrs || []).filter(
-        (a) =>
-          a.isFk &&
-          (normAttr(a._fkBaseName || a.name) === normAttr(targetPk) ||
-            normAttr(a._fkTabelle) === normAttr(targetEntityName)),
-      ).length;
-      const altCandidates = (studSource?.attrs || []).filter(
-        (a) => !a.isPk && (fkRawNameMatches(a.name, targetPk) || fkRawNameMatches(a.name, targetEntityName)),
-      );
-      const hasAlt = altCandidates.length > expectedInSource;
-      const altAttr = hasAlt
-        ? altCandidates.find(
+      const tgtPks = info.targetPks?.length ? info.targetPks : [targetPk];
+      const einteilig = tgtPks.length === 1;
+      const teile = tgtPks.map((pk) => {
+        const erwartet = (solSource?.attrs || []).filter(
+          (a) =>
+            a.isFk &&
+            (normAttr(a._fkBaseName || a.name) === normAttr(pk) ||
+              (einteilig && normAttr(a._fkTabelle) === normAttr(targetEntityName))),
+        ).length;
+        const kandidaten = (studSource?.attrs || []).filter(
+          (a) =>
+            !a.isPk &&
+            (fkRawNameMatches(a.name, pk) ||
+              (einteilig &&
+                (fkRawNameMatches(a.name, targetEntityName) ||
+                  (a.isFk &&
+                    normalizeName(zielTabelle(a, _studentRelations)) === normalizeName(targetEntityName))))),
+        );
+        if (kandidaten.length <= erwartet) return { pk, alt: null };
+        const alt =
+          kandidaten.find(
             (a) => !(solSource?.attrs || []).some((s) => s.isFk && normAttr(s.name) === normAttr(a.name)),
-          ) || altCandidates[altCandidates.length - 1]
-        : null;
+          ) || kandidaten[kandidaten.length - 1];
+        return { pk, alt };
+      });
+      const hasAlt = teile.every((t) => t.alt);
 
       if (hasStandard && hasAlt) {
+        bothDirectionRels.push(sourceEntityName, targetEntityName);
         bothDirectionErrors.push(
           `@@REL:${relationshipName}@@Bei der 1:1-Beziehung „${relationshipName}“ wurde der Fremdschlüssel in <strong>beide</strong> Richtungen eingetragen. ` +
             `Wähle eine Richtung: entweder in „${sourceEntityName}“ oder in „${targetEntityName}“.`,
         );
       } else if (hasAlt && !hasStandard) {
-        // Speichere den erkannten Student-Attribut-Namen
-        if (altAttr) {
-          altDirectionAttrs[sourceEntityName] = altAttr.name;
-        }
         // Schüler hat alternative Richtung gewählt → Lösung anpassen
         const adjTarget = solution.find(
           (r) => normalizeRelationToken(r.name) === normalizeRelationToken(targetEntityName),
@@ -1278,25 +1503,25 @@
         const adjSource = solution.find(
           (r) => normalizeRelationToken(r.name) === normalizeRelationToken(sourceEntityName),
         );
-        if (adjTarget && adjSource && altAttr) {
-          // FK aus target entfernen (nutze abgebildeten Namen falls vorhanden)
-          const fkNameToRemove = resolvedSourceFkName || sourcePk;
-          adjTarget.attrs = adjTarget.attrs.filter(
-            (a) =>
-              !(a.isFk && (normAttr(a.name) === normAttr(fkNameToRemove) || normAttr(a.name) === normAttr(sourcePk))),
-          );
+        if (adjTarget && adjSource) {
+          // FS dieser Beziehung aus target entfernen (alle Teile eines Verbundschlüssels)
+          adjTarget.attrs = adjTarget.attrs.filter((a) => !(a.isFk && a._fkVia === via));
           // Beziehungsattribute aus target entfernen
           relAttrNames.forEach((raName) => {
             adjTarget.attrs = adjTarget.attrs.filter((a) => normAttr(a.name) !== normAttr(raName));
           });
-          // FK in source einfügen – nutze den tatsächlichen Student-Attribut-Namen
-          adjSource.attrs.push({
-            name: altAttr.name,
-            isPk: false,
-            isFk: true,
-            _fkBaseName: targetPk,
-            _fkTabelle: targetEntityName,
-          });
+          // FS in source einfügen – mit den tatsächlichen Namen des Schülers
+          teile.forEach(({ pk, alt }) =>
+            adjSource.attrs.push({
+              name: alt.name,
+              isPk: false,
+              isFk: true,
+              _fkBaseName: pk,
+              _fkTabelle: einteilig ? targetEntityName : '',
+              _fkZiel: targetEntityName,
+              _fkVia: via,
+            }),
+          );
           // Beziehungsattribute in source einfügen
           relAttrNames.forEach((raName) => {
             adjSource.attrs.push({ name: raName, isPk: false, isFk: false });
@@ -1305,7 +1530,24 @@
       }
     });
 
-    return { solution, bothDirectionErrors, altDirectionAttrs };
+    return { solution, bothDirectionErrors, bothDirectionRels };
+  }
+
+  // Prüfen; zugeklappt werden nur Relationen, an denen nichts mehr zu tun ist. Unfertige bleiben, wie sie
+  // sind. Alle Meldungen stehen im Kasten oben, nicht in den Karten (leere Felder sind in Lernpfaden gewollt).
+  function pruefenUndFertigeZuklappen() {
+    removeCompletelyEmptyRelations();
+    _studentRelations.forEach((rel) => {
+      removeEmptyAttrs(rel);
+      clearInlineError(rel);
+    });
+    const result = checkInput();
+    _studentRelations.forEach((rel) => {
+      if (validateRelationInline(rel) || !result.fertig?.has(rel)) return;
+      sortAttrsPrimaryFirst(rel.attrs);
+      rel.isEditing = false;
+    });
+    return result;
   }
 
   function kardinalitaetenHinweis() {
@@ -1331,7 +1573,7 @@
     }
 
     // Angepasste Lösung: berücksichtigt vom Schüler gewählte 1:1-Richtung
-    const { solution, bothDirectionErrors, altDirectionAttrs } = getAdjustedSolution();
+    const { solution, bothDirectionErrors, bothDirectionRels } = getAdjustedSolution();
 
     const missingRelations = [];
     const extraRelations = [];
@@ -1339,8 +1581,11 @@
     const extraAttrs = [];
     const pkErrors = [];
     const pkWarnings = [];
+    const fkFehlt = [];
     const fkWarnings = [];
     const fkOverWarnings = [...bothDirectionErrors];
+    const fkUnklar = [];
+    const namensTipps = []; // nur Hinweise, die Prüfung besteht trotzdem
     const missingNmRelations = [];
 
     const solutionNames = solution.map((r) => normalizeRelationToken(r.name));
@@ -1358,12 +1603,19 @@
         }
       }
     });
+    const gesehen = new Set();
     _studentRelations.forEach((rel) => {
       const normalizedName = normalizeRelationToken(rel.name);
-      if (!solutionNames.includes(normalizedName)) {
-        const displayName = String(rel.name || '').trim() || 'Unbenannte Relation';
+      const displayName = String(rel.name || '').trim();
+      if (!displayName) {
+        extraRelations.push('Eine Relation hat noch keinen Namen.');
+      } else if (!solutionNames.includes(normalizedName)) {
         extraRelations.push(`Relation <strong>${displayName}</strong> ist nicht Teil der erwarteten Lösung.`);
+      } else if (gesehen.has(normalizedName)) {
+        // Geprüft wird nur die erste Relation dieses Namens
+        extraRelations.push(`Relation <strong>${displayName}</strong> ist doppelt vorhanden.`);
       }
+      gesehen.add(normalizedName);
     });
 
     solution.forEach((solRel) => {
@@ -1376,43 +1628,53 @@
       // - Kann: alle Fremdschlüssel-Attribute aus der Lösung
       const solNonFkAttrs = solRel.attrs.filter((a) => !a.isFk);
       const solAttrs = solNonFkAttrs.map((a) => normAttr(a.name));
-      const solFkAttrs = solRel.attrs.filter((a) => a.isFk).map((a) => normAttr(a.name));
+      // Fremdschlüssel der Lösung ↔ Fremdschlüssel des Schülers (nach Name oder Rolle); die Selbstbeziehung
+      // aus einer n:m-Beziehung hat unten eigene Regeln
+      const paare = solRel._hasSelfRefFks
+        ? new Map()
+        : fkZuordnung(solRel, studRel.attrs, _studentRelations, solution);
+
       // Pflicht-Attribute müssen vorhanden sein (egal ob als Fremdschlüssel markiert oder nicht)
       solNonFkAttrs.forEach((solAttr) => {
         const sa = normAttr(solAttr.name);
         const exists = studRel.attrs.some((a) => normAttr(a.name) === sa);
         if (!exists) missingAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${(solAttr.name || '').trim()}</em> fehlt.`);
       });
-      // Überflüssig sind nur Attribute, die weder Pflicht noch Kann sind
-      // und auch nicht per Prä-/Postfix einem Lösungs-FK entsprechen
-      studRel.attrs
-        .filter((a) => !a.isFk)
-        .forEach((studAttr) => {
-          const sa = normAttr(studAttr.name);
-          if (!sa || solAttrs.includes(sa) || solFkAttrs.includes(sa)) return;
-          const rawName = studAttr.name || '';
-          const matchesFk = solRel.attrs.some((sf) => sf.isFk && fkMatches(rawName, sf));
-          if (!matchesFk)
-            extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${(rawName || '').trim()}</em> ist nicht erwartet.`);
-        });
-      // Selbstbeziehung: Prüfung mit Basis-PK und Prä-/Postfix-Logik (Trennzeichen - oder _)
+      // Überflüssig sind unmarkierte Attribute, die weder Pflicht sind noch (auch per Prä-/Postfix) für einen
+      // noch fehlenden Fremdschlüssel stehen; neben einem schon zugeordneten FS ist ein zweites überflüssig
+      unerwarteteAttribute(solRel, studRel.attrs, paare).forEach((a) =>
+        extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${a.name.trim()}</em> ist nicht erwartet.`),
+      );
+      doppelteAttribute(studRel.attrs).forEach((a) =>
+        extraAttrs.push(`@@REL:${solRel.name}@@Attribut <em>${a.name.trim()}</em> ist doppelt vorhanden.`),
+      );
+      // Selbstbeziehung aus einer n:m-Beziehung: zwei Attribute als PS und FS, benannt nach dem Basis-PS
+      // (mit Zusatz) oder nach ihrer Rolle
       if (solRel._hasSelfRefFks) {
         const basePk = solRel._selfRefBasePk || '';
-        const validSelfFkAttrs = studRel.attrs.filter(
-          (a) => a.isPk && a.isFk && selfRefFkRawNameMatchesBase(a.name, basePk),
-        );
-        if (validSelfFkAttrs.length < 2) {
+        const base = (a) => selfRefFkRawNameMatchesBase(a.name, basePk);
+        const passt = (a) => selbstFsPasst(a.name, solRel, solution);
+        const gueltig = selbstFsGueltig(solRel, studRel.attrs, solution);
+        if (gueltig.length < 2) {
           pkErrors.push(
-            `@@REL:${solRel.name}@@Markiere mindestens 2 Attribute als PS und FS, die auf „${basePk}“ basieren (z. B. ${basePk}-2 oder ${basePk}2).`,
+            `@@REL:${solRel.name}@@Markiere zwei Attribute als PS und FS, die auf „${basePk}“ verweisen (z. B. ${basePk}1 und ${basePk}2 oder mit Rollennamen).`,
           );
         }
-        // Überflüssige PS+FS-Attribute (nicht zum Basis-PK passend)
         studRel.attrs
-          .filter((a) => (a.isPk || a.isFk) && !selfRefFkRawNameMatchesBase(a.name, basePk))
+          .filter((a) => !gueltig.includes(a))
           .forEach((a) => {
-            pkWarnings.push(
-              `@@REL:${solRel.name}@@<em>${(a.name || '').trim()}</em> passt nicht zum erwarteten Basis-Primärschlüssel „${basePk}“.`,
-            );
+            const attr = `@@REL:${solRel.name}@@<em>${(a.name || '').trim()}</em>`;
+            // Nicht als FS markierte, die nicht passen, meldet schon „Attribut … ist nicht erwartet“
+            if (a.isFk) {
+              if (!passt(a)) pkWarnings.push(`${attr} passt nicht zum erwarteten Basis-Primärschlüssel „${basePk}“.`);
+              else if (gueltig.length >= 2)
+                pkWarnings.push(`${attr} ist überzählig: Die Selbstbeziehung braucht zwei Attribute als PS und FS.`);
+              else pkWarnings.push(`${attr} sollte als PS und FS markiert sein.`);
+            } else if (gueltig.length < 2 && passt(a) && (a.isPk || base(a))) {
+              pkWarnings.push(`${attr} sollte als PS und FS markiert sein.`);
+            } else if (a.isPk && solAttrs.includes(normAttr(a.name))) {
+              pkWarnings.push(`${attr} ist kein erwarteter Primärschlüssel (PS).`);
+            }
           });
         return;
       }
@@ -1420,17 +1682,24 @@
       // Primärschlüssel-Prüfung (ein PS, der zugleich FS ist, darf wie ein FS umbenannt sein)
       const solPkAttrs = solRel.attrs.filter((a) => a.isPk);
       const studPkAttrs = studRel.attrs.filter((a) => a.isPk);
-      const pkMatches = (studName, solAttr) =>
-        normAttr(studName) === normAttr(solAttr.name) || (solAttr.isFk && fkMatches(studName, solAttr));
+      const pkMatches = (studAttr, solAttr) =>
+        normAttr(studAttr.name) === normAttr(solAttr.name) ||
+        (solAttr.isFk && (fkMatches(studAttr.name, solAttr) || paare.get(solAttr) === studAttr));
+      // Unmarkiertes Attribut, das für einen noch fehlenden FS der Lösung steht (nicht ein erwartetes wie
+      // der eigene PS „Lizenznummer“ neben dem FS „Pilot-Lizenznummer“)
+      const unmarkiertFuer = (sf) =>
+        studRel.attrs.find((a) => !a.isFk && !solAttrs.includes(normAttr(a.name)) && fkMatches(a.name, sf));
       solPkAttrs.forEach((pkAttr) => {
-        if (!studPkAttrs.some((a) => pkMatches(a.name, pkAttr))) {
+        // Fehlt ein FS, der zum PS gehört, ganz, sagt das die Meldung „Fremdschlüssel … fehlt“
+        if (pkAttr.isFk && !paare.has(pkAttr) && !unmarkiertFuer(pkAttr)) return;
+        if (!studPkAttrs.some((a) => pkMatches(a, pkAttr))) {
           pkErrors.push(
             `@@REL:${solRel.name}@@<em>${(pkAttr.name || '').trim()}</em> sollte als Primärschlüssel (PS) markiert sein.`,
           );
         }
       });
       studPkAttrs.forEach((pkAttr) => {
-        if (!solPkAttrs.some((s) => pkMatches(pkAttr.name, s))) {
+        if (!solPkAttrs.some((s) => pkMatches(pkAttr, s))) {
           pkWarnings.push(
             `@@REL:${solRel.name}@@<em>${(pkAttr.name || '').trim()}</em> ist kein erwarteter Primärschlüssel (PS).`,
           );
@@ -1440,41 +1709,93 @@
       // (Prä-/Postfix mit Trennzeichen erlaubt, z. B. „Flughafencode-Start“ und „Flughafencode-Ziel“)
       const solFkRawAttrs = solRel.attrs.filter((a) => a.isFk);
       const studFkRawAttrs = studRel.attrs.filter((a) => !!a.isFk);
-      const assignedStudFks = new Set();
+      const assignedStudFks = new Set(paare.values());
+      // Übrige FS des Schülers, deren Rolle nur nicht eindeutig ist: kein Ziel gewählt, und es ist noch ein
+      // FS der Lösung frei, für den eine Rolle in Frage kommt (wie in fkZuordnung)
+      const rollenFrei = solFkRawAttrs.filter((sf) => !paare.has(sf) && sf._fkTabelle && !unmarkiertFuer(sf));
+      const unklar = studFkRawAttrs.filter(
+        (a) =>
+          !assignedStudFks.has(a) &&
+          !a.fkTarget &&
+          !solAttrs.includes(normAttr(a.name)) &&
+          rollenFrei.some((sf) => !zeigtWoandersHin(a.name, sf._fkTabelle, solRel.name, solution)),
+      );
       solFkRawAttrs.forEach((solFkAttr) => {
-        const match = studFkRawAttrs.find((sf) => !assignedStudFks.has(sf) && fkMatches(sf.name, solFkAttr));
-        if (match) assignedStudFks.add(match);
-        else {
-          // Prüfe ob ein nicht-markiertes Attribut per Prä-/Postfix dem FK entspricht
-          let unmatchedAttr = studRel.attrs.find((a) => !a.isFk && fkMatches(a.name, solFkAttr));
-          // Falls alternative Richtung erkannt wurde, nutze den gespeicherten Student-Attribut-Namen
-          if (!unmatchedAttr && altDirectionAttrs[solRel.name]) {
-            unmatchedAttr = { name: altDirectionAttrs[solRel.name] };
+        const match = paare.get(solFkAttr);
+        if (match) {
+          const name = stripForeignKeyMarker(match.name);
+          if (NICHTSSAGEND.includes(normAttr(name)) && solFkAttr._fkTabelle) {
+            const tabelle = solFkAttr._fkTabelle;
+            namensTipps.push(
+              `„${name}↑“ in „${solRel.name}“ ist richtig, verrät aber nicht, worauf er verweist. Deutlicher ist der Tabellenname: „${tabelle}↑“ oder „${tabelle}_${name}↑“.`,
+            );
           }
-          const displayName = unmatchedAttr ? unmatchedAttr.name : solFkAttr.name;
-          fkWarnings.push(
-            `@@REL:${solRel.name}@@<em>${displayName}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
+        } else {
+          const unmarkiert = unmarkiertFuer(solFkAttr);
+          if (unmarkiert) {
+            fkWarnings.push(
+              `@@REL:${solRel.name}@@<em>${unmarkiert.name.trim()}</em> sollte als Fremdschlüssel (FS) markiert sein.`,
+            );
+            return;
+          }
+          // Mit unklaren Rollen lässt sich nicht sagen, welcher dieser FS fehlt: dann nur die Anzahl (unten)
+          if (unklar.length && rollenFrei.includes(solFkAttr)) return;
+          const ziel = solFkAttr._fkZiel ? ` (verweist auf „${solFkAttr._fkZiel}“)` : '';
+          fkFehlt.push(
+            `@@REL:${solRel.name}@@Fremdschlüssel <em>${solFkAttr.name}</em>${ziel} fehlt` +
+              (solFkAttr.isPk ? ' – er gehört auch zum Primärschlüssel.' : '.'),
           );
         }
       });
+      const nochFehlend = rollenFrei.length - unklar.length;
+      if (unklar.length && nochFehlend > 0)
+        fkFehlt.push(
+          `@@REL:${solRel.name}@@Neben ${unklar.map((a) => `<em>${a.name.trim()}</em>`).join(' und ')} ${
+            nochFehlend === 1 ? 'fehlt noch ein Fremdschlüssel' : `fehlen noch ${nochFehlend} Fremdschlüssel`
+          }.`,
+        );
       // Überflüssige Fremdschlüssel-Markierungen
       studFkRawAttrs.forEach((studFkAttr) => {
-        if (!assignedStudFks.has(studFkAttr)) {
-          fkOverWarnings.push(
-            `@@REL:${solRel.name}@@<em>${(studFkAttr.name || '').trim()}</em> ist kein erwarteter Fremdschlüssel (FS).`,
+        if (assignedStudFks.has(studFkAttr)) return;
+        const name = (studFkAttr.name || '').trim();
+        if (unklar.includes(studFkAttr))
+          fkUnklar.push(
+            `@@REL:${solRel.name}@@Worauf verweist <em>${name}</em>? Wähle es bei „verweist auf“ (Pfeil neben FS) oder nimm Tabelle bzw. Primärschlüssel in den Namen.`,
           );
-        }
+        else
+          fkOverWarnings.push(`@@REL:${solRel.name}@@<em>${name}</em> ist kein erwarteter Fremdschlüssel (FS).`);
       });
     });
 
-    const hasErrors = missingRelations.length || missingNmRelations.length || missingAttrs.length || pkErrors.length;
+    const hasErrors =
+      missingRelations.length || missingNmRelations.length || missingAttrs.length || pkErrors.length || fkFehlt.length;
     const hasWarnings =
-      extraRelations.length || extraAttrs.length || pkWarnings.length || fkWarnings.length || fkOverWarnings.length;
+      extraRelations.length ||
+      extraAttrs.length ||
+      pkWarnings.length ||
+      fkWarnings.length ||
+      fkOverWarnings.length ||
+      fkUnklar.length;
+    const tippsHtml = namensTipps.map((t) => `<p class="feedback-tipp">💡 ${t}</p>`).join('');
+    // Fertig ist eine Relation der Lösung, zu der keine Meldung gehört (nur die erste gleichen Namens)
+    const offen = new Set(bothDirectionRels.map(normalizeRelationToken));
+    [missingAttrs, extraAttrs, pkErrors, pkWarnings, fkFehlt, fkWarnings, fkOverWarnings, fkUnklar]
+      .flat()
+      .forEach((m) => {
+        const treffer = m.match(/^@@REL:([^@]+)@@/);
+        if (treffer) offen.add(normalizeRelationToken(treffer[1]));
+      });
+    const fertig = new Set(
+      solution
+        .filter((r) => !offen.has(normalizeRelationToken(r.name)))
+        .map((r) => _studentRelations.find((x) => normalizeRelationToken(x.name) === normalizeRelationToken(r.name)))
+        .filter(Boolean),
+    );
     if (!hasErrors && !hasWarnings) {
-      showFeedback('success', '✅ Sehr gut! Deine Überführung ist vollständig und korrekt.');
-      return { passed: true };
+      showFeedback('success', '✅ Sehr gut! Deine Überführung ist vollständig und korrekt.' + tippsHtml);
+      return { passed: true, namensTipps, fertig };
     }
-    showFeedbackCategorized({
+    const meldungen = {
       missingRelations,
       missingNmRelations,
       extraRelations,
@@ -1482,10 +1803,13 @@
       extraAttrs,
       pkErrors,
       pkWarnings,
+      fkFehlt,
       fkWarnings,
       fkOverWarnings,
-    });
-    return { passed: false };
+      fkUnklar,
+    };
+    showFeedbackCategorized({ tippsHtml, ...meldungen });
+    return { passed: false, meldungen, namensTipps, fertig };
   }
 
   function buildAccordionItem(label, messages, isWarning) {
@@ -1569,16 +1893,21 @@
     extraAttrs,
     pkErrors,
     pkWarnings,
+    fkFehlt = [],
     fkWarnings,
     fkOverWarnings = [],
+    fkUnklar = [],
+    tippsHtml = '',
   }) {
     const area = document.getElementById('feedback-area');
     area.innerHTML = '';
     const hasRelationIssues = missingRelations.length || extraRelations.length;
     const hasAttrIssues = missingAttrs.length || extraAttrs.length;
     const hasPkIssues = pkErrors.length || pkWarnings.length;
-    const hasFkIssues = fkWarnings.length || fkOverWarnings.length || missingNmRelations.length;
-    const hasErrors = missingRelations.length || missingNmRelations.length || missingAttrs.length || pkErrors.length;
+    const hasFkIssues =
+      fkFehlt.length || fkWarnings.length || fkOverWarnings.length || fkUnklar.length || missingNmRelations.length;
+    const hasErrors =
+      missingRelations.length || missingNmRelations.length || missingAttrs.length || pkErrors.length || fkFehlt.length;
 
     const box = document.createElement('div');
     box.className = 'feedback-box ' + (hasErrors ? 'error' : 'success');
@@ -1632,12 +1961,15 @@
         detailsBody.appendChild(
           buildAccordionItemGrouped('Überflüssige Primärschlüssel-Markierungen', pkWarnings, true),
         );
+      if (fkFehlt.length) detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Fremdschlüssel', fkFehlt, false));
       if (fkWarnings.length)
         detailsBody.appendChild(buildAccordionItemGrouped('Fehlende Fremdschlüssel-Markierungen', fkWarnings, false));
       if (fkOverWarnings.length)
         detailsBody.appendChild(
           buildAccordionItemGrouped('Überflüssige Fremdschlüssel-Markierungen', fkOverWarnings, true),
         );
+      if (fkUnklar.length)
+        detailsBody.appendChild(buildAccordionItemGrouped('Fremdschlüssel ohne eindeutiges Ziel', fkUnklar, true));
       if (missingNmRelations.length)
         detailsBody.appendChild(
           buildAccordionItem('Fehlende Beziehungstabellen (aus n:m-Beziehungen)', missingNmRelations, false),
@@ -1645,6 +1977,7 @@
     }
 
     box.appendChild(detailsBody);
+    box.insertAdjacentHTML('beforeend', tippsHtml);
     area.appendChild(box);
     area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -1675,21 +2008,8 @@
     });
 
     document.getElementById('btn-check').addEventListener('click', () => {
-      removeCompletelyEmptyRelations();
-      _studentRelations.forEach((rel) => {
-        removeEmptyAttrs(rel);
-        const err = validateRelationInline(rel);
-        if (!err) {
-          sortAttrsPrimaryFirst(rel.attrs);
-          rel.isEditing = false;
-          clearInlineError(rel);
-        } else {
-          rel.inlineError = err;
-        }
-        // unfertige Karten bleiben offen
-      });
+      pruefenUndFertigeZuklappen();
       renderAndPersist();
-      checkInput();
     });
 
     document.getElementById('btn-show-solution').addEventListener('click', () => {
@@ -1913,6 +2233,11 @@
     fkRawNameMatches,
     selfRefFkRawNameMatchesBase,
     fkMatches,
+    fkZuordnung,
+    selbstFsPasst,
+    selbstFsGueltig,
+    unerwarteteAttribute,
+    doppelteAttribute,
     stripForeignKeyMarker,
     // Musterlösung, angepasst an die vom Schüler gewählte 1:1-Richtung (für die Checkliste)
     getCheckSolution: () => getAdjustedSolution().solution,
@@ -1969,17 +2294,11 @@
       if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(true);
     },
     checkAndGetResult: () => {
-      removeCompletelyEmptyRelations();
-      _studentRelations.forEach((rel) => {
-        removeEmptyAttrs(rel);
-        const err = validateRelationInline(rel);
-        if (!err) {
-          sortAttrsPrimaryFirst(rel.attrs);
-          rel.isEditing = false;
-        }
-      });
+      const result = pruefenUndFertigeZuklappen();
+      // ohne renderAndPersist: das löst die Aufgabenprüfung aus, die hierher zurückführt
+      persistStudentRelations();
       renderStudentForm();
-      return checkInput();
+      return result;
     },
     triggerCheck: () => {
       const btn = document.getElementById('btn-check');

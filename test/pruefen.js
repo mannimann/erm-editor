@@ -2,7 +2,8 @@
    1. Toleranter Namensvergleich: Beispiele aus dem Umbauplan
    2. Keine zwei Namen derselben Entitätsklasse fallen nach der Normalisierung zusammen
       (Musterlösungen und ER-Modelle in files/); jedes ER-Modell erfüllt seine ERM-Aufgabe
-   3. Relationenmodell-Prüfung: Musterlösung, umbenannte Fremdschlüssel, zweite 1:1-Richtung, SQL-Regeln
+   3. Relationenmodell-Prüfung: Musterlösung, umbenannte Fremdschlüssel, Rollennamen, zweite 1:1-Richtung,
+      SQL-Regeln
    4. SQL aus allen Musterlösungen der Relationenmodell-Aufgaben läuft in SQLite, die Verweise stimmen
    5. Eigene Szenarien: Musterlösung aus dem ER-Modell, Prüfen von außen, Link hin und zurück
    6. Prüfungsmodus: Link ohne Lösung, Abgabe von außen, Korrekturliste, Ablauf nach 2 Stunden */
@@ -264,6 +265,237 @@ pruefe('Relationenmodell: 1:1-Fremdschlüssel auch in der anderen Richtung', () 
   assert(check(rels), 'Fußball: Teamname-Kapitän in Spieler');
 });
 
+pruefe('Relationenmodell: Fremdschlüssel mit reinem Rollennamen', () => {
+  // Eindeutig ohne „verweist auf“: Selbstbeziehung, zwei Rollen auf dieselbe Tabelle
+  let rels = loesung('experten-2-flugbetrieb.json');
+  rel(rels, 'Flug')
+    .attrs.filter((a) => /flughafencode/i.test(a.name))
+    .forEach((a, i) => (a.name = ['Start', 'Ziel'][i]));
+  attr(rels, 'Pilot', 'Pilot-Lizenznummer').name = 'Ausbilder';
+  assert(check(rels), 'Flugbetrieb mit Start↑, Ziel↑ und Ausbilder↑');
+
+  // Zwei Rollen auf verschiedene Tabellen: erst mit „verweist auf“ eindeutig
+  rels = loesung('uebung-1-hotel.json');
+  const bucher = attr(rels, 'Buchung', 'Gastnummer');
+  bucher.name = 'Bucher';
+  attr(rels, 'Buchung', 'Zimmernummer').name = 'Unterkunft';
+  assert(!check(rels), 'Hotel: Bucher↑ und Unterkunft↑ ohne Ziel sind nicht eindeutig');
+  bucher.fkTarget = { rel: rel(rels, 'Gast').id, attr: attr(rels, 'Gast', 'Gastnummer').id };
+  assert(check(rels), 'Hotel: Bucher↑ verweist auf Gast');
+  bucher.fkTarget = { rel: rel(rels, 'Buchung').id, attr: attr(rels, 'Buchung', 'Buchungsnummer').id };
+  assert(!check(rels), 'Hotel: Bucher↑ mit falschem Ziel');
+
+  // Nennt der Name eine andere Tabelle, ist es kein Rollenname
+  rels = loesung('uebung-4-fussball.json');
+  attr(rels, 'Team', 'SpielerNr').name = 'SpielID';
+  assert(!check(rels), 'Fußball: SpielID↑ in Team ist falsch platziert');
+  attr(rels, 'Team', 'SpielID').fkTarget = {
+    rel: rel(rels, 'Spieler').id,
+    attr: attr(rels, 'Spieler', 'SpielerNr').id,
+  };
+  assert(check(rels), 'Fußball: mit gewähltem Ziel zählt SpielID↑ als Rolle');
+
+  // Steht der Fremdschlüssel unmarkiert da, nimmt kein anderer seinen Platz ein
+  rels = loesung('uebung-4-fussball.json');
+  attr(rels, 'Team', 'SpielerNr').isFk = false;
+  rel(rels, 'Team').attrs.push({ id: 'neu4', name: 'Quatsch', isPk: false, isFk: true });
+  assert(!check(rels), 'Fußball: SpielerNr unmarkiert, Quatsch↑ als Ersatz');
+
+  // Ein normales Attribut oder der eigene Primärschlüssel ist kein Rollenname
+  rels = loesung('uebung-1-hotel.json');
+  rel(rels, 'Buchung').attrs = rel(rels, 'Buchung').attrs.filter((a) => N(a.name) !== N('Zimmernummer'));
+  attr(rels, 'Buchung', 'Anreisedatum').isFk = true;
+  assert(!check(rels), 'Hotel: Anreisedatum↑ statt Zimmernummer↑');
+  attr(rels, 'Buchung', 'Anreisedatum').isFk = false;
+  attr(rels, 'Buchung', 'Buchungsnummer').isFk = true;
+  assert(!check(rels), 'Hotel: Buchungsnummer als PS und FS statt Zimmernummer↑');
+
+  // 1:1: Rollenname auf einer Seite, dazu Fremdschlüssel auf der anderen → beide Richtungen
+  rels = loesung('uebung-4-fussball.json');
+  attr(rels, 'Team', 'SpielerNr').name = 'Kapitän';
+  assert(check(rels), 'Fußball: Kapitän↑ in Team');
+  rel(rels, 'Spieler').attrs.push({ id: 'neu3', name: 'Teamname-Kapitän', isPk: false, isFk: true });
+  assert(!check(rels), 'Fußball: Kapitän↑ in Team und Teamname-Kapitän↑ in Spieler');
+  assert(
+    RelModel.getCheckSolution().find((r) => r.name === 'Team').attrs.some((a) => a.isFk && a.name === 'SpielerNr'),
+    'Rollenname zählt als Standard-Richtung, Lösung bleibt unverändert',
+  );
+});
+
+pruefe('Relationenmodell: Meldungen der Hinweisbox, Checkliste urteilt wie die Prüfung', () => {
+  const weg = (rels, r, a) => (rel(rels, r).attrs = rel(rels, r).attrs.filter((x) => N(x.name) !== N(a)));
+  const neu = (rels, r, name, isPk = false, isFk = true) => {
+    const a = { id: 'n' + rel(rels, r).attrs.length, name, isPk, isFk };
+    rel(rels, r).attrs.push(a);
+    return a;
+  };
+  const faelle = [];
+  // Prüft, merkt sich das Ergebnis für den Abgleich mit der Checkliste und liefert die Meldungen als Text
+  const pruefen = (titel, rels) => {
+    RelModel.setStudentRelations(kopie(rels));
+    const r = RelModel.checkAndGetResult();
+    const st = Lernpfad.getRelmodelChecklistStatus();
+    const alleOk =
+      ['relations', 'attributes', 'primaryKeys', 'foreignKeys'].every((k) => st[k].done === st[k].total) &&
+      st.extras.length === 0;
+    assert.strictEqual(alleOk, r.passed, `${titel}: Checkliste ${alleOk ? 'ok' : 'offen'}, Prüfung ${r.passed}`);
+    faelle.push(titel);
+    const m = r.meldungen || {};
+    const text = (k) => (m[k] || []).join(' | ').replace(/<[^>]+>/g, '');
+    return { passed: r.passed, text, m };
+  };
+
+  let r = loesung('uebung-1-hotel.json');
+  weg(r, 'Buchung', 'Gastnummer');
+  let e = pruefen('FS fehlt ganz', r);
+  assert(/Fremdschlüssel Gastnummer \(verweist auf „Gast“\) fehlt/.test(e.text('fkFehlt')), e.text('fkFehlt'));
+  assert(!e.text('fkWarnings'), 'nicht „sollte als FS markiert sein“');
+
+  r = loesung('uebung-1-hotel.json');
+  attr(r, 'Buchung', 'Gastnummer').isFk = false;
+  e = pruefen('FS nicht markiert', r);
+  assert(/Gastnummer sollte als Fremdschlüssel/.test(e.text('fkWarnings')), e.text('fkWarnings'));
+
+  r = loesung('uebung-1-hotel.json');
+  neu(r, 'Buchung', 'Gast', false, false);
+  e = pruefen('FS doppelt, zweiter unmarkiert', r);
+  assert(!e.passed && /Gast ist nicht erwartet/.test(e.text('extraAttrs')), e.text('extraAttrs'));
+
+  r = loesung('uebung-1-hotel.json');
+  neu(r, 'Buchung', 'Gast');
+  e = pruefen('FS doppelt, beide markiert', r);
+  assert(/^@@REL:Buchung@@Gast ist kein/.test(e.text('fkOverWarnings')), 'gemeldet wird „Gast“, nicht „Gastnummer“');
+
+  r = loesung('uebung-1-hotel.json');
+  r.push({ id: 'dup', name: 'Gast', attrs: [{ id: 'd1', name: 'Gastnummer', isPk: true, isFk: false }] });
+  e = pruefen('Relation doppelt', r);
+  assert(/Gast ist doppelt vorhanden/.test(e.text('extraRelations')), e.text('extraRelations'));
+
+  r = loesung('experten-2-flugbetrieb.json');
+  weg(r, 'Pilot', 'Pilot-Lizenznummer');
+  e = pruefen('Selbstbeziehung 1:n fehlt', r);
+  assert(/Pilot-Lizenznummer \(verweist auf „Pilot“\) fehlt/.test(e.text('fkFehlt')), e.text('fkFehlt'));
+  attr(r, 'Pilot', 'Lizenznummer').isFk = true;
+  e = pruefen('eigener PS als FS statt Selbstbezug', r);
+  assert(!e.passed, 'der eigene PS ist kein Fremdschlüssel');
+
+  r = loesung('experten-2-flugbetrieb.json');
+  attr(r, 'Pilot', 'Pilot-Lizenznummer').isFk = false;
+  e = pruefen('Selbstbeziehung 1:n unmarkiert', r);
+  assert(/^@@REL:Pilot@@Pilot-Lizenznummer sollte/.test(e.text('fkWarnings')), e.text('fkWarnings'));
+
+  r = loesung('experten-2-flugbetrieb.json');
+  rel(r, 'Flug').attrs = rel(r, 'Flug').attrs.filter((a) => !a.isFk);
+  neu(r, 'Flug', 'Kapitän');
+  e = pruefen('eine unklare Rolle, zwei FS fehlen', r);
+  assert(/fehlen noch 2 Fremdschlüssel/.test(e.text('fkFehlt')) && /Kapitän/.test(e.text('fkUnklar')));
+
+  r = loesung('uebung-4-fussball.json');
+  weg(r, 'bestreitet', 'Teamname');
+  e = pruefen('n:m: FS fehlt ganz', r);
+  assert(/gehört auch zum Primärschlüssel/.test(e.text('fkFehlt')) && !e.text('pkErrors'), e.text('pkErrors'));
+
+  // 1:1 mit Verbundschlüssel in der anderen Richtung: Klassenstufe und Parallelklasse des Sprechers in Schüler
+  r = loesung('schule-auffrischung.json');
+  weg(r, 'Klasse', 'SchülerNr');
+  neu(r, 'Schüler', 'Klassenstufe-Sprecher');
+  neu(r, 'Schüler', 'Parallelklasse-Sprecher');
+  assert(pruefen('1:1 Verbundschlüssel andere Richtung', r).passed, '1:1 Verbundschlüssel andere Richtung');
+
+  // Selbstbeziehung aus n:m: Rollennamen erlaubt, fremde Schlüssel nicht
+  r = loesung('schule-auffrischung.json');
+  const freunde = rel(r, 'ist befreundet mit').attrs;
+  freunde[0].name = 'SchülerNr';
+  freunde[1].name = 'Freund';
+  assert(pruefen('Selbstbeziehung n:m mit Rolle', r).passed, 'SchülerNr und Freund');
+  freunde[1].name = 'Lehrer-Kürzel';
+  assert(!pruefen('Selbstbeziehung n:m mit fremdem Schlüssel', r).passed, 'Lehrer-Kürzel ist keine Rolle');
+  freunde[1].name = 'SchülerNr2';
+  freunde[1].isFk = false;
+  e = pruefen('Selbstbeziehung n:m: zweiter nur PS', r);
+  assert(/SchülerNr2 sollte als PS und FS/.test(e.text('pkWarnings')), e.text('pkWarnings'));
+
+  freunde[1].isFk = true;
+  freunde.push({ id: 'x3', name: 'SchülerNr3', isPk: true, isFk: false });
+  e = pruefen('Selbstbeziehung n:m: drittes Attribut nur PS', r);
+  assert(/SchülerNr3 ist nicht erwartet/.test(e.text('extraAttrs')) && !e.text('pkWarnings'), e.text('pkWarnings'));
+
+  // Zusätzliche Markierungen: Prüfung und Checkliste bemängeln sie beide
+  r = loesung('uebung-1-hotel.json');
+  attr(r, 'Gast', 'Nachname').isPk = true;
+  assert(!pruefen('zusätzlicher PS', r).passed);
+  r = loesung('uebung-1-hotel.json');
+  attr(r, 'Buchung', 'Anreisedatum').isFk = true;
+  assert(!pruefen('zusätzlich Anreisedatum↑', r).passed);
+
+  // Was früher nur in der Karte stand, steht jetzt im Kasten (und in der Checkliste)
+  r = loesung('uebung-1-hotel.json');
+  neu(r, 'Gast', 'Vorname', false, false);
+  e = pruefen('Attribut doppelt', r);
+  assert(/Vorname ist doppelt vorhanden/.test(e.text('extraAttrs')), e.text('extraAttrs'));
+  r = loesung('uebung-1-hotel.json');
+  r.push({ id: 'u', name: '', attrs: [{ id: 'u1', name: 'Betrag', isPk: true, isFk: false }] });
+  e = pruefen('Relation ohne Namen', r);
+  assert(/noch keinen Namen/.test(e.text('extraRelations')), e.text('extraRelations'));
+
+  assert(faelle.length >= 19);
+});
+
+pruefe('Relationenmodell: „Überprüfen“ klappt nur fertige Relationen zu', () => {
+  const rels = loesung('uebung-1-hotel.json');
+  rels.forEach((r) => (r.isEditing = true));
+  rel(rels, 'Buchung').attrs = rel(rels, 'Buchung').attrs.filter((a) => N(a.name) !== N('Gastnummer'));
+  rels.push({ id: 'leer', name: 'Rechnung', attrs: [{ id: 'l1', name: 'Betrag', isPk: false, isFk: false }] });
+  RelModel.setStudentRelations(rels);
+  assert(!RelModel.checkAndGetResult().passed);
+  const offen = Object.fromEntries(RelModel.getStudentRelations().map((r) => [r.name, r.isEditing !== false]));
+  assert.deepStrictEqual(offen, { Gast: false, Zimmer: false, Buchung: true, Rechnung: true });
+  // Meldungen nur im Kasten oben, nicht in den Karten
+  assert(RelModel.getStudentRelations().every((r) => !r.inlineError), 'keine Fehler in den Karten');
+});
+
+pruefe('Relationenmodell: Hinweis bei nichtssagendem Fremdschlüsselnamen, Prüfung besteht trotzdem', () => {
+  context.AppState = {
+    state: {
+      nodes: [
+        { id: 'e1', type: 'entity', name: 'Band' },
+        { id: 'a1', type: 'attribute', name: 'name', isPrimaryKey: true },
+        { id: 'e2', type: 'entity', name: 'Auftritt' },
+        { id: 'a2', type: 'attribute', name: 'nr', isPrimaryKey: true },
+        { id: 'b1', type: 'relationship', name: 'spielt' },
+      ],
+      edges: [
+        { id: 'k1', fromId: 'e1', toId: 'a1', edgeType: 'attribute' },
+        { id: 'k2', fromId: 'e2', toId: 'a2', edgeType: 'attribute' },
+        { id: 'k3', fromId: 'b1', toId: 'e1', edgeType: 'relationship', chenFrom: '1', chenTo: '1' },
+        { id: 'k4', fromId: 'b1', toId: 'e2', edgeType: 'relationship', chenFrom: '1', chenTo: 'n' },
+      ],
+    },
+  };
+  RelModel.syncFromDiagram();
+  const rels = [
+    { id: 'r1', name: 'Band', attrs: [{ id: 'x1', name: 'name', isPk: true, isFk: false }] },
+    {
+      id: 'r2',
+      name: 'Auftritt',
+      attrs: [
+        { id: 'x2', name: 'nr', isPk: true, isFk: false },
+        { id: 'x3', name: 'name', isPk: false, isFk: true },
+      ],
+    },
+  ];
+  RelModel.setStudentRelations(kopie(rels));
+  let result = RelModel.checkAndGetResult();
+  assert(result.passed, 'name↑ besteht');
+  assert.strictEqual(result.namensTipps.length, 1, 'mit Hinweis');
+  assert(/ist richtig/.test(result.namensTipps[0]) && /band_name↑/i.test(result.namensTipps[0]), result.namensTipps[0]);
+
+  rels[1].attrs[1].name = 'Band';
+  RelModel.setStudentRelations(kopie(rels));
+  result = RelModel.checkAndGetResult();
+  assert(result.passed && result.namensTipps.length === 0, 'Band↑ ohne Hinweis');
+});
+
 pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Experten ohne', () => {
   assert(
     Lernpfad.getAlleAufgaben('rm-experten').every((q) => !q.sqlRegeln),
@@ -346,6 +578,14 @@ pruefe('Schritt-Lernpfade: das fertige Modell erfüllt jede Aufgabe', () => {
 
   RelModel.setStudentRelations(loesung('schule-grundlagen.json'));
   bestehen('rm-grundlagen', 1, 99);
+  // Fremdschlüssel auf Klasse nach dem Lehrbuch benannt: „Klasse_Bezeichnung“ bzw. „Klasse“
+  const lehrbuch = loesung('schule-grundlagen.json');
+  attr(lehrbuch, 'Schüler', 'Bezeichnung').name = 'Klasse_Bezeichnung';
+  attr(lehrbuch, 'unterrichtet', 'Bezeichnung').name = 'Klasse';
+  RelModel.setStudentRelations(lehrbuch);
+  bestehen('rm-grundlagen', 5, 99);
+  const mitLehrbuch = RelModel.checkAndGetResult();
+  assert(mitLehrbuch.passed && mitLehrbuch.namensTipps.length === 0, 'Lehrbuch-Namen ohne 💡-Hinweis');
 
   RelModel.setStudentRelations(loesung('schule-auffrischung.json'));
   bestehen('rm-auffrischung', 1, 99);

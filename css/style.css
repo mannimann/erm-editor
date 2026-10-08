@@ -1252,6 +1252,10 @@ body.is-resizing-drawer #relmodel-drawer {
 .feedback-box ul {
   margin: 6px 0 0 18px;
 }
+.feedback-tipp {
+  margin: 8px 0 0;
+  color: #334155;
+}
 .feedback-summary {
   font-weight: 600;
   margin-bottom: 8px;
@@ -1560,6 +1564,41 @@ body.is-resizing-drawer #relmodel-drawer {
 .btn-del-attr:hover {
   color: #dc2626;
   background: #fee2e2;
+}
+.btn-fk-ziel {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.btn-fk-ziel:hover,
+.btn-fk-ziel[aria-expanded='true'] {
+  background: #dbeafe;
+}
+.btn-fk-ziel.gewaehlt {
+  background: #2563eb;
+  color: #fff;
+}
+.fk-ziel {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-left: 8px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+.fk-ziel select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.8rem;
+  padding: 2px 4px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
 }
 
 .btn-add-attr {
