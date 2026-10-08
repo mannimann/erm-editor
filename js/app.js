@@ -301,15 +301,38 @@ function persistStateNow() {
   }
 }
 
+// Übung oder Prüfung erstellen (js/szenario.js): Die Musterlösung hat einen eigenen Speicherplatz, das freie
+// Modell bleibt und kommt beim Schließen zurück. null: das freie Modell (PERSIST_KEY) liegt auf der Zeichenfläche.
+let modellPlatz = null;
+
+function modellPlatzSetzen(key) {
+  flushPersist();
+  modellPlatz = key || null;
+  const geladen = modellPlatz ? loadErmSnapshot(modellPlatz) : loadPersistedState();
+  if (!geladen) applyErmPayload({ nodes: [], edges: [], nextId: 1, diagramTitle: '', snapToGrid: state.snapToGrid }, false);
+}
+
+function freiesModell() {
+  try {
+    return JSON.parse(localStorage.getItem(PERSIST_KEY));
+  } catch (_err) {
+    return null;
+  }
+}
+
 // Gespeichert wird getrennt: Das freie Modell (PERSIST_KEY) nur außerhalb von Aufgaben, in einer
 // ERM-Aufgabe ihr Arbeitsstand. So bleibt das eigene Modell beim Start einer Aufgabe erhalten.
 function persistTick() {
   verlaufMerken();
   const lernpfad = lernpfadVon();
-  if (!window.Lernpfad?.state?.lernpfadAktiv) {
+  if (!window.Lernpfad?.state?.lernpfadAktiv && modellPlatz) {
+    saveErmSnapshot(modellPlatz);
+    window.Szenario?.modellGeaendert?.();
+  } else if (!window.Lernpfad?.state?.lernpfadAktiv) {
     persistStateNow();
   } else if (lernpfad?.art === 'erm') {
     saveErmSnapshot(getArbeitsstandKey(lernpfad.id, window.Lernpfad.state.aktuelleAufgabe || 1));
+    window.Pruefung?.beruehrt?.();
     // Live-Checkliste aktualisieren, wenn eine Szenario-Aufgabe aktiv ist
     if (!lernpfad.schritt) updateExpertChecklist();
   }
@@ -662,12 +685,12 @@ function baueLernpfadMenu() {
         ),
       )
       .join('') +
-    (eigene ? gruppe('Eigene Szenarien', eigene, 'lernpfad-menu-eigene') : '') +
+    (eigene ? gruppe('Eigene Übungen', eigene, 'lernpfad-menu-eigene') : '') +
     `<div class="lernpfad-menu-lehrkraft">
       <span class="lernpfad-menu-lehrkraft-titel">Für Lehrkräfte</span>
       <button type="button" class="lernpfad-menu-aktion" data-menu-aktion="links">🔗 Links zu den Lernpfaden</button>
-      <button type="button" class="lernpfad-menu-aktion" data-szenario-aktion="oeffnen">📂 Szenario öffnen</button>
-      <button type="button" class="lernpfad-menu-aktion" data-szenario-aktion="erstellen">🛠 Szenario erstellen</button>
+      <button type="button" class="lernpfad-menu-aktion" data-menu-aktion="erstellen">🛠 Übung oder Prüfung erstellen</button>
+      <button type="button" class="lernpfad-menu-aktion" data-menu-aktion="korrektur">📝 Abgaben korrigieren</button>
     </div>`;
   window.App?.updateLernpfadDots?.();
 }
@@ -760,14 +783,16 @@ function initTabs() {
   const syncAufgabePanelRight = () => {
     const aufgabePanel = document.getElementById('aufgabe-panel');
     if (!aufgabePanel) return;
+    // Gemessen statt berechnet: folgt so auch der Animation beim Ein- und Ausblenden
+    const breite = relmodelDrawer.getBoundingClientRect().width + relmodelResizer.getBoundingClientRect().width;
+    // Leisten für Lehrkräfte (Erstellen, Korrektur): immer neben dem Relationenmodell
+    document.querySelectorAll('.lk-leiste').forEach((leiste) => (leiste.style.right = `${breite}px`));
     // Tablet: Aufgabenleiste volle Breite, das Relationenmodell endet darüber (syncAufgabePanelResizer)
     if (tabletMedia.matches) {
       aufgabePanel.style.right = '';
       syncAufgabePanelResizer();
       return;
     }
-    // Gemessen statt berechnet: folgt so auch der Animation beim Ein- und Ausblenden
-    const breite = relmodelDrawer.getBoundingClientRect().width + relmodelResizer.getBoundingClientRect().width;
     aufgabePanel.style.right = `${breite}px`;
     syncAufgabePanelResizer();
   };
@@ -844,6 +869,44 @@ function initTabs() {
     }
     syncAufgabePanelRight();
     syncAufgabePanelResizer();
+  });
+
+  // ---- Ziehgriff der Leisten für Lehrkräfte (Erstellen, Korrektur): obere Kante, Höhe wird gemerkt ----
+  const LK_HOEHE_KEY = 'erm-editor-lk-hoehe-v1';
+  const lkHoehen = (() => {
+    try {
+      return JSON.parse(localStorage.getItem(LK_HOEHE_KEY)) || {};
+    } catch (_e) {
+      return {};
+    }
+  })();
+  const lkHoeheSetzen = (leiste, hoehe) => {
+    leiste.style.height = `${Math.round(Math.max(120, Math.min(window.innerHeight * 0.8, hoehe)))}px`;
+    leiste.style.maxHeight = 'none';
+  };
+  document.querySelectorAll('.lk-leiste').forEach((leiste) => {
+    if (lkHoehen[leiste.id]) lkHoeheSetzen(leiste, lkHoehen[leiste.id]);
+  });
+  document.addEventListener('pointerdown', (e) => {
+    const leiste = e.target.closest?.('.lk-leiste');
+    // nur an der Kante (das ::before ragt 6 px über die Leiste)
+    if (!leiste || e.clientY - leiste.getBoundingClientRect().top > 4) return;
+    e.preventDefault();
+    leiste.classList.add('ziehen');
+    const bewegen = (ev) => lkHoeheSetzen(leiste, window.innerHeight - ev.clientY);
+    const ende = () => {
+      leiste.classList.remove('ziehen');
+      window.removeEventListener('pointermove', bewegen);
+      window.removeEventListener('pointerup', ende);
+      lkHoehen[leiste.id] = leiste.getBoundingClientRect().height;
+      try {
+        localStorage.setItem(LK_HOEHE_KEY, JSON.stringify(lkHoehen));
+      } catch (_err) {
+        // Höhe gilt dann nur bis zum Neuladen
+      }
+    };
+    window.addEventListener('pointermove', bewegen);
+    window.addEventListener('pointerup', ende);
   });
 
   // ---- Ziehgriff der Aufgabenleiste (vertikal, obere Kante) ----
@@ -1228,7 +1291,12 @@ function importJSON(file) {
     try {
       const data = JSON.parse(e.target.result);
       if (data?.format === window.Szenario?.FORMAT) {
-        window.Szenario.importieren(data);
+        window.Szenario.importieren(data, file.name);
+        return;
+      }
+      // Abgabe einer Prüfung: gehört in die Korrektur
+      if (data?.format === window.Pruefung?.ABGABE_FORMAT) {
+        window.Pruefung.korrekturOeffnen([{ name: file.name, daten: data }]);
         return;
       }
       if (!applyErmPayload(data, true)) throw new Error('Ungültiges Format');
@@ -1671,6 +1739,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const lernpfad = lernpfadVon(mode);
     if (!window.Lernpfad || !lernpfad) return false;
     closeLernpfadMenu();
+    // Übung/Prüfung erstellen: Entwurf sichern, das freie Modell zurückholen
+    window.Szenario?.panelSchliessen?.();
 
     // Offene Änderungen sichern: im freien Modus das eigene Modell, sonst den Stand der laufenden Aufgabe
     flushPersist();
@@ -1723,18 +1793,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Ein Listener für das ganze Menü: Lernpfad starten, eigenes Szenario entfernen, öffnen oder erstellen
   document.getElementById('lernpfade-menu').addEventListener('click', (e) => {
     const entfernen = e.target.closest('[data-szenario-entfernen]');
-    const aktion = e.target.closest('[data-szenario-aktion]');
     const lernpfad = e.target.closest('[data-lernpfad]');
     if (e.target.closest('[data-menu-aktion="links"]')) {
       closeLernpfadMenu();
       baueLinkListe();
       openModal('modal-links-backdrop');
+    } else if (e.target.closest('[data-menu-aktion="korrektur"]')) {
+      closeLernpfadMenu();
+      window.Pruefung?.korrekturOeffnen?.();
+    } else if (e.target.closest('[data-menu-aktion="erstellen"]')) {
+      closeLernpfadMenu();
+      window.Szenario?.panelOeffnen?.();
     } else if (entfernen) {
       window.Szenario?.entfernen?.(entfernen.dataset.szenarioEntfernen);
-    } else if (aktion) {
-      closeLernpfadMenu();
-      if (aktion.dataset.szenarioAktion === 'oeffnen') window.Szenario?.dateiWaehlen?.();
-      else window.Szenario?.dialogOeffnen?.();
     } else if (lernpfad) {
       e.preventDefault();
       startLernpfadFlow(lernpfad.dataset.lernpfad);
@@ -2139,6 +2210,7 @@ window.App = {
 
   onRelmodelStudentChanged() {
     window.SQLExport?.aktualisieren();
+    window.Pruefung?.beruehrt?.();
     const lernpfad = lernpfadVon();
     if (lernpfad?.art === 'rm' && !lernpfad.schritt && window.Lernpfad.state.lernpfadAktiv) {
       updateExpertChecklist();
@@ -2230,7 +2302,8 @@ window.App = {
     const lernpfad = lernpfadVon(mode);
     const isSchritt = !!lernpfad?.schritt;
     const isRelmodelSzenario = lernpfad?.art === 'rm' && !isSchritt;
-    const hasChecklist = !isSchritt;
+    // Prüfung und Korrektur: ohne Checkliste (die Korrekturliste steht in der Seitenleiste, js/pruefung.js)
+    const hasChecklist = !isSchritt && !lernpfad?.pruefung && !lernpfad?.korrektur;
 
     // Titel & Fortschritt (die Abschlussaufgabe eines Schritt-Lernpfads zählt nicht)
     const titleEl = panel.querySelector('#aufgabe-title');
@@ -2285,8 +2358,11 @@ window.App = {
         : rawTaskHtml;
       taskContent.innerHTML = taskHtml;
       taskSection.appendChild(taskContent);
-      // ERM-Szenarien: Wörter anklicken, die zum ER-Modell gehören, werden farbig markiert
-      if (aufgabe.masterlösung && !isSchritt) {
+      // ERM-Szenarien: Wörter anklicken, die zum ER-Modell gehören, werden farbig markiert.
+      // Prüfung und Korrektur: freie Markierungen ohne Prüfung. Beim Überführen ist der Text nur ein Hinweis.
+      if ((lernpfad?.pruefung || lernpfad?.korrektur) && lernpfad.art === 'erm') {
+        window.Pruefung?.textmarker?.(taskContent, taskHeader);
+      } else if (aufgabe.masterlösung && !isSchritt) {
         window.Lernpfad.textmarker(taskContent, aufgabe.masterlösung, `${mode}:${aufgabe.number}`, taskHeader);
       }
 
@@ -2355,13 +2431,24 @@ window.App = {
       const actions = document.createElement('div');
       actions.className = 'aufgabe-actions aufgabe-actions-visible';
 
-      const checkBtn = document.createElement('button');
-      checkBtn.id = 'btn-aufgabe-check-manual';
-      checkBtn.type = 'button';
-      checkBtn.className = 'aufgabe-btn aufgabe-btn-check';
-      checkBtn.textContent = aufgabe.abschluss ? 'Abschließen' : 'Überprüfen';
-
-      actions.appendChild(checkBtn);
+      const knopf = (text, klasse, aktion) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `aufgabe-btn ${klasse}`;
+        btn.textContent = text;
+        btn.addEventListener('click', aktion);
+        actions.appendChild(btn);
+      };
+      if (lernpfad?.pruefung) {
+        knopf('📤 Abgeben', 'aufgabe-btn-check', () => window.Pruefung.abgeben());
+      } else if (!lernpfad?.korrektur) {
+        const checkBtn = document.createElement('button');
+        checkBtn.id = 'btn-aufgabe-check-manual';
+        checkBtn.type = 'button';
+        checkBtn.className = 'aufgabe-btn aufgabe-btn-check';
+        checkBtn.textContent = aufgabe.abschluss ? 'Abschließen' : 'Überprüfen';
+        actions.appendChild(checkBtn);
+      }
 
       // Lehrkraft probiert ihr eigenes Szenario aus: zurück in den Dialog
       if (window.Szenario?.istProbe?.(mode)) {
@@ -2724,13 +2811,13 @@ window.App = {
     });
   },
 
+  // Bleibt stehen, bis man „OK“ klickt: Eine Fehlermeldung soll nicht verschwinden, bevor sie gelesen ist
   showAlertModal(message, title = 'Hinweis') {
     return this.showAppModal({
       title,
       message,
       mode: 'alert',
       confirmLabel: 'OK',
-      autoCloseMs: 3000,
     });
   },
 
@@ -2828,6 +2915,8 @@ window.AppState = {
   getUniqueEntityAttributeName,
   persistNow: persistStateNow,
   persistDebounced: persistStateDebounced,
+  modellPlatzSetzen,
+  freiesModell,
 };
 window.AppUtils = {
   normalizeEntityName,

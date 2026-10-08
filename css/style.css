@@ -3719,19 +3719,25 @@ body.sql-zieht {
   color: #fdba74;
 }
 
-/* Unten: Bereich für Lehrkräfte */
+/* Unten: Bereich für Lehrkräfte – drei gleich breite Knöpfe nebeneinander, einspaltig untereinander */
 .lernpfad-menu-lehrkraft {
   grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 4px;
-  padding: 10px 11px 6px;
+  padding: 10px 11px;
   border-top: 1px solid rgba(71, 85, 105, 0.7);
 }
 
+@media (max-width: 1000px) {
+  .lernpfad-menu-lehrkraft {
+    grid-template-columns: 1fr;
+  }
+}
+
 .lernpfad-menu-lehrkraft-titel {
+  grid-column: 1 / -1;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -3796,46 +3802,9 @@ body.sql-zieht {
   color: #fff;
 }
 
-.szenario-modal-card {
-  max-width: min(760px, 96vw);
-}
-
-.szenario-feld {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.szenario-feld small {
-  font-weight: 400;
-  color: #64748b;
-}
-
-.szenario-feld textarea {
-  resize: vertical;
-  font-family: inherit;
-  line-height: 1.45;
-}
-
-fieldset.szenario-feld {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 8px 12px;
-}
-
-fieldset.szenario-feld label {
-  font-weight: 400;
-}
-
 .szenario-bericht {
-  margin: 8px 0 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: #f8fafc;
-  font-size: 0.86rem;
+  margin: 6px 0 0;
+  font-size: 0.8rem;
 }
 
 .szenario-bericht p {
@@ -3843,24 +3812,15 @@ fieldset.szenario-feld label {
 }
 
 .szenario-bericht-ok {
-  color: #15803d;
+  color: #86efac;
 }
 
 .szenario-bericht-warnung {
-  color: #b45309;
+  color: #fcd34d;
 }
 
 .szenario-bericht-fehler {
-  color: #b91c1c;
-}
-
-.szenario-aktionen {
-  flex-wrap: wrap;
-}
-
-.szenario-aktionen button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  color: #fca5a5;
 }
 
 .szenario-link {
@@ -3870,8 +3830,12 @@ fieldset.szenario-feld label {
   margin-top: 10px;
 }
 
+.szenario-link[hidden] {
+  display: none;
+}
+
 .szenario-link small {
-  color: #64748b;
+  color: #94a3b8;
 }
 
 /* SQL-Code: Hervorhebung */
@@ -3993,7 +3957,8 @@ fieldset.szenario-feld label {
   }
 
   body.toolbar-collapsed #aufgabe-panel,
-  body.toolbar-collapsed .aufgabe-panel-resizer {
+  body.toolbar-collapsed .aufgabe-panel-resizer,
+  body.toolbar-collapsed .lk-leiste {
     left: 52px;
   }
 }
@@ -4134,5 +4099,810 @@ fieldset.szenario-feld label {
     text-align: center;
     font-size: 1.05rem;
     line-height: 1.5;
+  }
+}
+
+/* ===== Prüfungsmodus (js/pruefung.js) ===== */
+/* Was die Prüfung ausblendet (und sperrt), steht in js/pruefung.js (GESPERRT) */
+
+/* Überführen: ER-Modell als Bild statt als Daten (js/pruefung.js ermBildZeigen) */
+#pruefung-erm-bild {
+  position: absolute;
+  inset: 0 0 var(--aufgabe-hoehe, 0);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+  background: #fff;
+}
+
+#pruefung-erm-bild img {
+  max-width: 100%;
+  max-height: 100%;
+  cursor: zoom-in;
+}
+
+#pruefung-erm-bild.gross {
+  display: block;
+}
+
+#pruefung-erm-bild.gross img {
+  max-width: none;
+  max-height: none;
+  cursor: zoom-out;
+}
+
+#canvas-container:has(#pruefung-erm-bild) #viewport-controls {
+  display: none;
+}
+
+/* Auf einen Blick erkennbar: Kopfzeile in Rot */
+body.pruefung #app-header {
+  background: #991b1b;
+}
+
+body:is(.pruefung, .korrektur, .erstellen) #app-title {
+  width: auto;
+  flex: 0 1 auto;
+}
+
+/* Stiftauswahl des freien Textmarkers */
+.tm-stift {
+  font: inherit;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #e2e8f0;
+  cursor: pointer;
+}
+
+.tm-stift[aria-pressed='true'] {
+  border-color: #e2e8f0;
+  font-weight: 600;
+}
+
+/* ===== Leisten für Lehrkräfte: unten wie die Aufgabenleiste, Schritte als Reiter =====
+   Übung/Prüfung erstellen (js/szenario.js), Korrektur (js/pruefung.js); „right“ folgt per JS dem
+   Relationenmodell (syncAufgabePanelRight in js/app.js). */
+.lk-leiste {
+  position: fixed;
+  bottom: 0;
+  left: var(--toolbar-width);
+  right: 0;
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  max-height: 42vh;
+  container: lk / inline-size; /* Innen richtet sich alles nach der Breite der Leiste (@container lk) */
+  background: rgba(30, 41, 59, 0.98);
+  border-top: 3px solid #14b8a6;
+  color: #e2e8f0;
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.15);
+  font-family: var(--font-base);
+}
+
+#korrektur-leiste {
+  border-top-color: #8b5cf6;
+}
+
+/* Ziehgriff an der oberen Kante (js/app.js): Die Leiste wird so hoch, wie man sie zieht */
+.lk-leiste::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 12px;
+  cursor: row-resize;
+}
+
+/* Sichtbarer Griff wie bei der Aufgabenleiste (.aufgabe-panel-resizer::before): 1,5px über der Kante,
+   gerechnet ab der Innenkante unter dem 3px-Rand */
+.lk-leiste::after {
+  content: '';
+  position: absolute;
+  top: -8.5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  transition: background 0.15s ease;
+}
+
+.lk-leiste.ziehen::after {
+  background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+body.erstellen #erstellen-leiste,
+body.korrektur #korrektur-leiste {
+  display: flex;
+}
+
+/* Korrektur: Die Leiste ersetzt die Aufgabenleiste; der Aufgabentext steht im Reiter „Aufgabentext“ */
+body.korrektur #aufgabe-panel,
+body.korrektur .aufgabe-panel-resizer {
+  display: none !important;
+}
+
+/* Eigene Farbe der Kopfzeile: Hier entsteht eine Musterlösung bzw. wird korrigiert */
+body.erstellen #app-header {
+  background: #134e4a;
+}
+
+body.korrektur #app-header {
+  background: #4c1d95;
+}
+
+body.korrektur :is(.tab-dropdown, #btn-export-json, #btn-export-png, #btn-clear) {
+  display: none !important;
+}
+
+/* Dateien ins Fenster ziehen */
+body.korrektur-ziehen #korrektur-leiste {
+  outline: 3px dashed #a78bfa;
+  outline-offset: -6px;
+}
+
+.lk-leiste .rel-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Kopf: Titel, Reiter, Knöpfe in einer Zeile; in schmaler Leiste die Reiter darunter (@container lk unten) */
+.lk-kopf {
+  display: flex;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #334155;
+}
+
+.lk-kopf h3 {
+  flex: 0 1 auto;
+  min-width: 6em;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.95rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-kopf .lk-reiter {
+  flex: none;
+}
+
+.lk-kopf-knoepfe {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.lk-gespeichert {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.lk-reiter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lk-reiter [role='tab'] {
+  padding: 4px 11px;
+  border: 1px solid #475569;
+  border-radius: 999px;
+  background: transparent;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.lk-reiter [role='tab']:hover:not(:disabled) {
+  border-color: #94a3b8;
+  color: #fff;
+}
+
+.lk-reiter [role='tab'].fertig::after {
+  content: ' ✓';
+  color: #5eead4;
+}
+
+.lk-reiter [role='tab'][aria-selected='true'] {
+  border-color: #14b8a6;
+  background: #14b8a6;
+  color: #042f2e;
+  font-weight: 600;
+}
+
+.lk-reiter [role='tab'][aria-selected='true'].fertig::after {
+  color: inherit;
+}
+
+#korrektur-leiste .lk-reiter [role='tab'].fertig::after {
+  color: #c4b5fd;
+}
+
+#korrektur-leiste .lk-reiter [role='tab'][aria-selected='true'] {
+  border-color: #8b5cf6;
+  background: #8b5cf6;
+  color: #fff;
+}
+
+.lk-reiter [role='tab']:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.lk-seiten {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 14px;
+}
+
+.lk-seite[hidden] {
+  display: none;
+}
+
+.lk-fuss {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 6px 14px;
+  border-top: 1px solid #334155;
+}
+
+/* Übersicht: ohne Zurück/Weiter keine leere Fußzeile */
+.lk-fuss:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+.lk-fuss .rel-btn {
+  padding: 5px 12px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.lk-hinweis {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+
+/* Löschen: zurückhaltend, rot erst beim Zeigen */
+.lk-gefahr {
+  padding: 4px 10px;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: transparent;
+  color: #fca5a5;
+  font: inherit;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lk-gefahr:hover:not(:disabled) {
+  border-color: #f87171;
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.lk-gefahr:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+
+.lk-zeile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.88rem;
+}
+
+.lk-knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 8px;
+}
+
+.lk-knoepfe .rel-btn,
+.lk-folge .rel-btn {
+  padding: 6px 11px;
+  font-size: 0.82rem;
+}
+
+.lk-offen {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.12);
+  color: #cbd5e1;
+  font-size: 0.8rem;
+}
+
+/* ---- Erstellen ---- */
+/* Reiter 1: zwei Fragen nebeneinander, Antworten als Karten */
+.lk-seite[data-seite='1']:not([hidden]) {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.lk-gruppe h4 {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  color: #5eead4;
+}
+
+.lk-wahl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.lk-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.lk-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lk-option:has(input:checked) {
+  border-color: #5eead4;
+  background: rgba(94, 234, 212, 0.12);
+}
+
+.lk-option:has(input:focus-visible) {
+  outline: 2px solid #5eead4;
+  outline-offset: 2px;
+}
+
+.lk-option-titel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.lk-option-text {
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+
+.lk-haken {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.82rem;
+}
+
+/* Reiter 0: gespeicherte Prüfungen und Übungen nebeneinander */
+.lk-oben {
+  margin: 0 0 10px;
+}
+
+.lk-entwuerfe {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.lk-entwurf-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lk-entwurf-liste li {
+  display: flex;
+  gap: 4px;
+}
+
+.lk-entwurf {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+  padding: 5px 10px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  background: transparent;
+  color: #f1f5f9;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lk-entwurf:hover {
+  border-color: #94a3b8;
+}
+
+.lk-entwurf-liste li.aktiv .lk-entwurf {
+  border-color: #5eead4;
+  background: rgba(94, 234, 212, 0.12);
+}
+
+.lk-entwurf strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lk-entwurf small {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.lk-entwurf-liste .lk-leer {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* Reiter 2: Titel über dem Text; der Text wird so hoch wie die Leiste */
+.lk-seite[data-seite='2']:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.lk-text {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: auto 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.lk-text .prop-input {
+  padding-right: 7px;
+}
+
+.lk-text input.prop-input {
+  align-self: start;
+}
+
+.lk-text textarea.prop-input {
+  min-height: 5.5em;
+  resize: none;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
+/* Reiter 4, Prüfung: 1 → 2 nebeneinander, dann die übrigen Knöpfe */
+.lk-folge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 10px 28px;
+}
+
+.lk-folge-schritt {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 3px 8px;
+}
+
+.lk-folge-schritt .lk-hinweis {
+  grid-column: 2;
+}
+
+.lk-folge .lk-knoepfe {
+  margin-top: 0;
+}
+
+.lk-nr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #14b8a6;
+  color: #042f2e;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Nur bei einer Art oder Aufgabe */
+#erstellen-leiste[data-art='uebung'] [data-nur='pruefung'],
+#erstellen-leiste[data-art='pruefung'] [data-nur='uebung'],
+#erstellen-leiste:not([data-aufgabe='rm']) [data-nur='rm'],
+#erstellen-leiste[data-aufgabe='rm'] #szenario-kardinalitaeten-wrap {
+  display: none;
+}
+
+/* ---- Korrektur ---- */
+.korrektur-abgaben {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: 4px;
+}
+
+.korrektur-abgabe {
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: rgba(100, 116, 139, 0.15);
+  color: #e2e8f0;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.korrektur-abgabe.aktiv {
+  border-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.18);
+}
+
+.korrektur-abgabe:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.korrektur-meldungen,
+.korrektur-warnung {
+  margin: 0 0 8px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: rgba(251, 191, 36, 0.12);
+  color: #fcd34d;
+  font-size: 0.8rem;
+}
+
+.korrektur-meldungen p {
+  margin: 0 0 3px;
+}
+
+/* Abschnitte der Korrekturliste als Reiter links untereinander, der Inhalt rechts daneben in Spalten */
+/* Korrigieren: links die Abschnitte, rechts der Inhalt – beide scrollen für sich, die Seite selbst nicht */
+.lk-seiten.korrektur-seite {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.korrektur-liste {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 210px 1fr;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.korrektur-abschnitte {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 10px;
+  border-right: 1px solid #334155;
+}
+
+.korrektur-abschnitte [role='tab'] {
+  padding: 4px 8px;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #cbd5e1;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  text-align: left;
+  white-space: pre-line;
+  cursor: pointer;
+}
+
+.korrektur-abschnitte [role='tab']:hover {
+  background: rgba(148, 163, 184, 0.12);
+  color: #fff;
+}
+
+.korrektur-abschnitte [role='tab'][aria-selected='true'] {
+  border-left-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.22);
+  color: #fff;
+  font-weight: 600;
+}
+
+.korrektur-inhalt {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.korrektur-spalten {
+  columns: 3 240px;
+  column-gap: 26px;
+  margin-top: 6px;
+}
+
+.korrektur-zeile {
+  display: block;
+  width: 100%;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #fca5a5;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+  break-inside: avoid;
+}
+
+.korrektur-zeile.ok {
+  color: #86efac;
+}
+
+.korrektur-zeile:hover {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+.korrektur-reihe {
+  display: flex;
+  align-items: center;
+  break-inside: avoid;
+}
+
+.korrektur-weg {
+  border: none;
+  background: none;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+/* Abschnitt „Eigene Punkte & Anmerkung“ */
+.korrektur-neu {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-width: 640px;
+  margin: 8px 0 6px;
+}
+
+.korrektur-kommentar {
+  display: block;
+  max-width: 640px;
+}
+
+.korrektur-neu input,
+.korrektur-kommentar {
+  width: 100%;
+  padding-right: 7px;
+  font-size: 0.8rem;
+}
+
+.korrektur-kommentar {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.korrektur-wo {
+  flex: 1 1 120px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.korrektur-markiert {
+  margin: 0 0 6px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(139, 92, 246, 0.16);
+  color: #ddd6fe;
+  font-size: 0.8rem;
+}
+
+.korrektur-text {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.korrektur-text p {
+  margin: 0 0 6px;
+}
+
+/* Schmale Leiste (schmaler Bildschirm oder Relationenmodell offen): untereinander statt nebeneinander */
+@container lk (max-width: 920px) {
+  /* Titel und Knöpfe (Schließen, gespeichert, Löschen) bleiben oben, die Reiter rutschen darunter */
+  .lk-kopf {
+    flex-wrap: wrap;
+  }
+
+  .lk-kopf h3 {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .lk-kopf .lk-reiter {
+    order: 2;
+    flex: 1 1 100%;
+  }
+}
+
+@container lk (max-width: 760px) {
+  .lk-seite[data-seite='1']:not([hidden]),
+  .lk-entwuerfe {
+    grid-template-columns: 1fr;
+  }
+}
+
+@container lk (max-width: 640px) {
+  /* Zu wenig Platz für zwei Scrollbereiche: Abschnitte oben, alles scrollt zusammen */
+  .lk-seiten.korrektur-seite {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .korrektur-liste {
+    display: block;
+  }
+
+  .korrektur-inhalt {
+    overflow: visible;
+  }
+
+  .lk-fuss {
+    flex-wrap: wrap;
+  }
+
+  .korrektur-wo {
+    order: -1;
+    flex-basis: 100%;
+  }
+
+  .korrektur-abschnitte {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 0 6px;
+    border-right: none;
+    border-bottom: 1px solid #334155;
+  }
+
+  .korrektur-abschnitte [role='tab'] {
+    white-space: nowrap;
   }
 }

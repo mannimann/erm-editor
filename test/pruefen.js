@@ -4,7 +4,8 @@
       (Musterlösungen und ER-Modelle in files/); jedes ER-Modell erfüllt seine ERM-Aufgabe
    3. Relationenmodell-Prüfung: Musterlösung, umbenannte Fremdschlüssel, zweite 1:1-Richtung, SQL-Regeln
    4. SQL aus allen Musterlösungen der Relationenmodell-Aufgaben läuft in SQLite, die Verweise stimmen
-   5. Eigene Szenarien: Musterlösung aus dem ER-Modell, Prüfen von außen, Link hin und zurück */
+   5. Eigene Szenarien: Musterlösung aus dem ER-Modell, Prüfen von außen, Link hin und zurück
+   6. Prüfungsmodus: Link ohne Lösung, Abgabe von außen, Korrekturliste, Ablauf nach 2 Stunden */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -56,14 +57,18 @@ const context = {
     getItem: (k) => (storage.has(k) ? storage.get(k) : null),
     setItem: (k, v) => storage.set(k, String(v)),
     removeItem: (k) => storage.delete(k),
+    key: (i) => [...storage.keys()][i] ?? null,
+    get length() {
+      return storage.size;
+    },
   },
 };
 context.window = context;
 vm.createContext(context);
-for (const file of ['js/relmodel.js', 'js/sql.js', 'js/lernpfad.js', 'js/szenario.js']) {
+for (const file of ['js/relmodel.js', 'js/sql.js', 'js/lernpfad.js', 'js/szenario.js', 'js/pruefung.js']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, file), 'utf8'), context, { filename: file });
 }
-const { RelModel, SQLExport, Lernpfad, Szenario } = context;
+const { RelModel, SQLExport, Lernpfad, Szenario, Pruefung } = context;
 const N = RelModel.normalizeName;
 const kopie = (x) => JSON.parse(JSON.stringify(x));
 const ermLaden = (datei) => JSON.parse(fs.readFileSync(path.join(FILES, datei), 'utf8'));
@@ -747,6 +752,124 @@ pruefe('Eigene Szenarien: zwei Beziehungen „hat“ zwischen verschiedenen Enti
   Lernpfad.setEigeneSzenarien([]);
 });
 
+// ---- 6. Prüfungsmodus ----
+const alsPruefung = (datei, aufgabe = 'erm') => ({ ...alsSzenario(datei, aufgabe), pruefung: true });
+
+pruefe('Prüfung: Präparierte Abgabe-Datei wird geprüft (Format, spitze Klammern, Größe)', () => {
+  assert(Pruefung.pruefeAbgabe({ format: 'erm-editor-szenario', version: 1 }).fehler, 'falsches Format');
+  // Die normale Seite nimmt eine Abgabe nicht: kein Szenario, kein ER-Modell auf oberster Ebene
+  const abgabe = { format: Pruefung.ABGABE_FORMAT, version: 1, aufgabe: 'erm', erm: ermLaden('uebung-1-hotel.json') };
+  assert(Szenario.pruefeSzenario(abgabe).fehler && !Array.isArray(abgabe.nodes), 'Import der normalen Seite');
+  abgabe.erm.nodes[0].name = '<img src=x onerror=alert(1)>Gast';
+  abgabe.erm.nodes[0].onclick = 'alert(1)';
+  abgabe.markierungen = { 3: 'entitaet', 4: '<b>', x: 'attribut' };
+  abgabe.pruefungsId = 'abc"><script>';
+  const a = Pruefung.pruefeAbgabe(abgabe).abgabe;
+  assert(!/[<>]/.test(a.erm.nodes.map((n) => n.name).join()) && !('onclick' in a.erm.nodes[0]), 'ER-Modell bereinigt');
+  assert.strictEqual(JSON.stringify(a.markierungen), '{"3":"entitaet"}');
+  assert(/^[a-z0-9]*$/.test(a.pruefungsId), a.pruefungsId);
+  const rm = Pruefung.pruefeAbgabe({
+    format: Pruefung.ABGABE_FORMAT,
+    version: 1,
+    aufgabe: 'rm',
+    relationen: [{ name: 'Gast<script>', attrs: [{ name: '<i>Nr', isPk: 1, extra: 1 }] }],
+  }).abgabe;
+  assert.strictEqual(JSON.stringify(rm.relationen), '[{"name":"Gastscript","attrs":[{"name":"iNr","isPk":true,"isFk":false}]}]');
+  const zuViel = { format: Pruefung.ABGABE_FORMAT, version: 1, aufgabe: 'rm', relationen: Array(201).fill({}) };
+  assert(Pruefung.pruefeAbgabe(zuViel).fehler, 'zu viele Relationen');
+});
+
+pruefe('Prüfung: Korrekturliste ERM – Musterlösung alles ✓, leer alles ✗, Kardinalität eigene Zeile', () => {
+  const sz = Szenario.pruefeSzenario(alsPruefung('uebung-2-krankenhaus.json')).sz;
+  const alle = (p) => p.gruppen.flat();
+  context.AppState = { state: ermLaden('uebung-2-krankenhaus.json') };
+  let p = Pruefung.punkteBerechnen(sz);
+  assert(alle(p).length > 10 && alle(p).every((z) => z.ok), 'Musterlösung');
+  assert.strictEqual(p.zusaetzlich.length, 0, 'nichts zusätzlich');
+  assert(alle(p).some((z) => z.art === 'Kardinalitäten'), 'Kardinalitäten als eigene Zeilen');
+  // falsche Kardinalität: Beziehung ✓, Kardinalität ✗ mit dem, was gezeichnet ist
+  const state = ermLaden('uebung-2-krankenhaus.json');
+  const kante = state.edges.find((e) => e.edgeType === 'relationship');
+  kante.chenFrom = kante.chenTo = kante.chenTo === '1' ? 'n' : '1';
+  const extra = { id: 'x1', type: 'entity', name: 'Rechnung', x: 0, y: 0 };
+  state.nodes.push(extra);
+  context.AppState = { state };
+  p = Pruefung.punkteBerechnen(sz);
+  const falsch = alle(p).filter((z) => !z.ok);
+  assert(falsch.length >= 1 && falsch.every((z) => z.art === 'Kardinalitäten' && /gezeichnet/.test(z.fehlt)), 'nur Kardinalität');
+  assert(p.zusaetzlich.some((z) => /Rechnung/.test(z.text)), 'Rechnung zusätzlich');
+  let text = Pruefung.feedbackText(sz.titel, p);
+  assert(/^Feedback: /.test(text) && /Beziehungen \(\d+\/\d+\) · Kardinalitäten/.test(text), text);
+  // Zusätzliches kommt nur auf Wunsch der Lehrkraft ins Feedback
+  assert(/✗ „.*“: .* – gezeichnet/.test(text) && !/Zusätzlich im Modell/.test(text), text);
+  p.zusaetzlich.forEach((z) => (z.an = true));
+  text = Pruefung.feedbackText(sz.titel, p);
+  assert(/Zusätzlich im Modell\n• Entitätsklasse „Rechnung“/.test(text), text);
+  context.AppState = { state: { nodes: [], edges: [] } };
+  assert(alle(Pruefung.punkteBerechnen(sz)).every((z) => !z.ok), 'leere Abgabe');
+});
+
+pruefe('Prüfung: Korrekturliste Relationenmodell – Musterlösung alles ✓, leer alles ✗', () => {
+  for (const datei of ['uebung-1-hotel.json', 'experten-5-katastrophenschutz.json']) {
+    const sz = Szenario.pruefeSzenario(alsPruefung(datei, 'rm')).sz;
+    RelModel.setStudentRelations(loesung(datei));
+    const p = Pruefung.punkteBerechnen(sz);
+    const zeilen = p.gruppen.flat();
+    assert(zeilen.length > 10 && zeilen.every((z) => z.ok), `${datei}: ${zeilen.filter((z) => !z.ok).map((z) => z.text)}`);
+    assert.strictEqual(p.zusaetzlich.length, 0, `${datei}: nichts zusätzlich`);
+    RelModel.setStudentRelations([{ id: 'r1', name: 'Rechnung', attrs: [] }]);
+    const leer = Pruefung.punkteBerechnen(sz);
+    assert(leer.gruppen.flat().every((z) => !z.ok), `${datei}: leer`);
+    assert(leer.zusaetzlich.some((z) => /Rechnung/.test(z.text)), `${datei}: Rechnung zusätzlich`);
+  }
+});
+
+pruefe('Prüfung: Bild des ER-Modells aus dem Link wird geprüft und sicher gezeichnet', () => {
+  const link = (ermBild) => ({ ...alsPruefung('uebung-1-hotel.json', 'rm'), erm: undefined, ermId: 'abc', ermBild });
+  const gut = { v: [0, 0, 300, 120], k: [['a', 80, 60, 60, 26, 'Nr & <b>Name</b>', 1]], l: [1.4, 2, 3, 4], z: [5, 6, 'n'] };
+  const sz = Szenario.pruefeSzenario(link(gut)).sz;
+  assert(sz && !sz.erm, 'Link mit Bild lesbar');
+  assert.strictEqual(sz.ermBild.l[0], 1, 'Zahlen gerundet');
+  const svg = Pruefung.ermBildSvg(sz.ermBild);
+  assert(svg.startsWith('<svg') && svg.includes('Nr &amp; bName/b') && !/<b>|<script/.test(svg), svg);
+  for (const kaputt of [
+    { ...gut, k: [['x', 1, 2, 3, 4, 'a']] },
+    { ...gut, v: [0, 0, 1] },
+    { ...gut, l: ['1', 2, 3, 4] },
+    { ...gut, k: Array(401).fill(gut.k[0]) },
+    'kein Bild',
+  ])
+    assert(Szenario.pruefeSzenario(link(kaputt)).fehler, JSON.stringify(kaputt).slice(0, 60));
+});
+
+pruefe('Prüfung: Prüfbericht warnt, wenn das Szenario einer eingebauten Übung gleicht', () => {
+  const aehnlich = (e) => Szenario.bericht(e).some((z) => z.art === 'warnung' && /eingebauten Übung/.test(z.text));
+  assert(aehnlich(alsPruefung('uebung-1-hotel.json')), 'Hotel ist eingebaut');
+  assert(!aehnlich(alsSzenario('uebung-1-hotel.json')), 'ohne Prüfung keine Warnung');
+  const eigenes = {
+    nodes: [
+      { id: 'e1', type: 'entity', name: 'Raumschiff' },
+      { id: 'a1', type: 'attribute', name: 'Kennung', isPrimaryKey: true },
+    ],
+    edges: [{ id: 'k1', fromId: 'e1', toId: 'a1', edgeType: 'attribute' }],
+  };
+  assert(!aehnlich({ ...alsPruefung('uebung-1-hotel.json'), erm: eigenes }), 'eigenes Szenario');
+});
+
+pruefe('Prüfung: Arbeitsstand läuft nach 2 Stunden ohne Änderung ab', () => {
+  const jetzt = Date.now();
+  const stand = (pid, alter) => {
+    storage.set(`erm-editor-pruefung-${pid}`, JSON.stringify({ geaendert: jetzt - alter, markierungen: {} }));
+    storage.set(`erm-editor-arbeitsstand-v1:pruefung-${pid}:a1`, '{}');
+  };
+  stand('alt', Pruefung.ABLAUF_MS + 1000);
+  stand('frisch', Pruefung.ABLAUF_MS - 60000);
+  storage.set('erm-editor-pruefung-kaputt', 'kein json');
+  Pruefung.aufraeumen(jetzt);
+  assert(![...storage.keys()].some((k) => k.includes('pruefung-alt') || k.includes('kaputt')), 'alter Stand gelöscht');
+  assert(storage.has('erm-editor-arbeitsstand-v1:pruefung-frisch:a1'), 'frischer Stand bleibt');
+});
+
 async function pruefeAsync(name, fn) {
   try {
     await fn();
@@ -772,6 +895,33 @@ async function pruefeAsync(name, fn) {
     const bombe = await Szenario.packen({ format: 'erm-editor-szenario', text: 'a'.repeat(5000000) });
     await assert.rejects(Szenario.auspacken(bombe), /zu groß/);
     await assert.rejects(Szenario.auspacken('abc"><img'), /ungültig/);
+  });
+  await pruefeAsync('Prüfung: Link ohne ER-Modell (Überführen: nur als Bild), gleiche Prüfungs-ID wie die Datei', async () => {
+    const bild = { v: [0, 0, 300, 120], k: [['e', 80, 60, 140, 50, 'Bild', 0]], l: [150, 60, 200, 60], z: [160, 50, 'n'] };
+    for (const aufgabe of ['erm', 'rm']) {
+      const datei = Szenario.pruefeSzenario(alsPruefung('uebung-3-bibliothek.json', aufgabe)).sz;
+      const link = await Szenario.packen(Szenario.fuerLink(datei, bild));
+      const ausLink = await Szenario.auspacken(link);
+      const namen = datei.erm.nodes.map((n) => n.name).filter((n) => !datei.text.includes(n));
+      const roh = JSON.stringify(ausLink);
+      assert(!namen.some((n) => roh.includes(`"${n}"`)) && !('erm' in ausLink), `${aufgabe}: ohne ER-Modell`);
+      if (aufgabe === 'rm') {
+        assert.strictEqual(JSON.stringify(ausLink.ermBild), JSON.stringify(bild), 'Überführen: ER-Modell als Bild');
+        const ohneBild = { ...ausLink, ermBild: undefined };
+        assert(Szenario.pruefeSzenario(ohneBild).fehler, 'Überführen ohne Bild abgelehnt');
+        // erneut verpackt (Neuladen der Prüfung): Bild bleibt, ER-Modell kommt nicht dazu
+        const wieder = Szenario.fuerLink(Szenario.pruefeSzenario(ausLink).sz);
+        assert(JSON.stringify(wieder.ermBild) === JSON.stringify(bild) && !wieder.erm, 'neu verpackt');
+      }
+      const sz = Szenario.pruefeSzenario(ausLink).sz;
+      assert(sz && sz.pruefung, `${aufgabe}: Link lesbar`);
+      assert.strictEqual(Szenario.pruefungsId(sz), Szenario.pruefungsId(datei), `${aufgabe}: Prüfungs-ID`);
+      // Prüfungen landen nicht unter „Eigene Szenarien“
+      storage.set('erm-editor-eigene-szenarien-v1', JSON.stringify([Szenario.fuerLink(datei)]));
+      assert.strictEqual(Szenario.liste().length, 0, 'nicht in der Liste');
+      storage.delete('erm-editor-eigene-szenarien-v1');
+    }
+    assert(Szenario.pruefeSzenario({ ...alsSzenario('uebung-1-hotel.json'), erm: undefined }).fehler, 'ohne Prüfung braucht es ein ER-Modell');
   });
   console.log(fehler ? `\n${fehler} Prüfung(en) fehlgeschlagen` : '\nAlle Prüfungen bestanden');
   process.exit(fehler ? 1 : 0);

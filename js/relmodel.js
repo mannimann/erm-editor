@@ -1139,6 +1139,8 @@
   function renderSolution() {
     const container = document.getElementById('solution-display');
     container.innerHTML = '';
+    // Prüfung (js/pruefung.js): Die Lösung steht gar nicht erst in der Seite, auch nicht unsichtbar
+    if (document.body?.classList.contains('pruefung')) return;
 
     if (_solution.length === 0) {
       container.innerHTML = '<p style="color:#94a3b8;font-size:0.85rem">Noch kein ER-Diagramm vorhanden.</p>';
@@ -1717,19 +1719,7 @@
         closeModal();
         cancelBtn.removeEventListener('click', onCancel);
         confirmBtn.removeEventListener('click', onConfirm);
-        // Jetzt wirklich Lösung anzeigen
-        _solution = generateSolution(window.AppState.state);
-        renderSolution();
-        const solDisplay = document.getElementById('solution-display');
-        const showBtn = document.getElementById('btn-show-solution');
-        const hideBtn = document.getElementById('btn-hide-solution');
-        const previewBtn = document.getElementById('btn-preview-solution');
-        solDisplay.style.display = '';
-        if (showBtn) showBtn.style.display = 'none';
-        if (hideBtn) hideBtn.style.display = '';
-        if (previewBtn) previewBtn.style.display = '';
-        document.getElementById('btn-sql-solution').style.display = '';
-        solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        loesungAnzeigen();
       };
       cancelBtn.addEventListener('click', onCancel);
       confirmBtn.addEventListener('click', onConfirm);
@@ -1772,6 +1762,19 @@
       renderStudentForm();
       renderSolution();
     });
+  }
+
+  // Musterlösung aufklappen (nach der Sicherheitsabfrage; Lehrkraft beim Erstellen ohne Abfrage)
+  function loesungAnzeigen() {
+    _solution = generateSolution(window.AppState.state);
+    renderSolution();
+    const solDisplay = document.getElementById('solution-display');
+    solDisplay.style.display = '';
+    document.getElementById('btn-show-solution').style.display = 'none';
+    ['btn-hide-solution', 'btn-preview-solution', 'btn-sql-solution'].forEach(
+      (id) => (document.getElementById(id).style.display = ''),
+    );
+    solDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   // Musterlösung zuklappen (Knopf „Lösung ausblenden“, Wechsel der Aufgabe)
@@ -1924,6 +1927,7 @@
     syncFromDiagram,
     requestSyncFromDiagramDebounced,
     loesungAusblenden,
+    loesungAnzeigen,
     reset,
     generateSolution,
     hadPersistedData: () => _hadPersistedData,

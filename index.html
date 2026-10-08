@@ -353,6 +353,7 @@
           </div>
         </main>
       </aside>
+      <input type="file" id="korrektur-datei" accept=".json" multiple style="display: none" />
       <script>
         // Vor dem ersten Zeichnen: Seitenleiste wie vor dem Neuladen (gespeicherteAnsicht in js/app.js), sonst
         // springt sie, bis die Skripte laufen. Ein Link legt sie selbst fest.
@@ -368,64 +369,6 @@
           // ohne Speicher: Seitenleiste zu
         }
       </script>
-    </div>
-
-    <!-- ===== MODAL: Eigenes Szenario erstellen (js/szenario.js) ===== -->
-    <div
-      id="modal-szenario-backdrop"
-      class="info-modal-backdrop"
-      style="display: none"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-szenario-title"
-    >
-      <div class="info-modal-card szenario-modal-card">
-        <div class="info-modal-header">
-          <h3 id="modal-szenario-title">🛠 Eigenes Szenario erstellen</h3>
-          <button class="info-modal-close" id="btn-szenario-close" aria-label="Schließen">&times;</button>
-        </div>
-        <div class="info-modal-body">
-          <p class="table-preview-hint">
-            Für Lehrkräfte: Das ER-Modell, das gerade im Editor steht, ist die <strong>Musterlösung</strong>. Die
-            Schüler sehen nur deinen Text; der Editor prüft ihre Lösung gegen das Modell – Namen, Primärschlüssel und
-            auf Wunsch die Kardinalitäten. Beim Überführen ist das ER-Modell vorgegeben und der Editor prüft das
-            Relationenmodell.
-          </p>
-          <label class="szenario-feld"
-            >Titel <input id="szenario-titel" class="prop-input" type="text" maxlength="80" placeholder="z. B. Kino"
-          /></label>
-          <label class="szenario-feld"
-            >Aufgabentext
-            <textarea id="szenario-text" class="prop-input" rows="9" maxlength="8000"></textarea>
-            <small>Leerzeile = neuer Absatz · **Wort** = hervorgehoben · Zeile mit „- “ = Aufzählung</small>
-          </label>
-          <fieldset class="szenario-feld">
-            <legend>Aufgabe der Schüler</legend>
-            <label><input type="radio" name="szenario-aufgabe" value="erm" checked /> ER-Modell zeichnen</label>
-            <label
-              ><input type="radio" name="szenario-aufgabe" value="rm" /> Ins Relationenmodell überführen (das ER-Modell
-              ist vorgegeben)</label
-            >
-          </fieldset>
-          <label class="sql-erweitert"
-            ><input type="checkbox" id="szenario-kardinalitaeten" /> Kardinalitäten prüfen</label
-          >
-          <div id="szenario-bericht" class="szenario-bericht"></div>
-          <div class="sql-aktionen szenario-aktionen">
-            <button id="btn-szenario-laden" class="rel-btn" type="button" title="Gespeichertes Szenario bearbeiten">
-              📂 Szenario laden
-            </button>
-            <button id="btn-szenario-speichern" class="rel-btn" type="button">⬇ Als Datei speichern</button>
-            <button id="btn-szenario-link" class="rel-btn" type="button">🔗 Link erzeugen</button>
-            <button id="btn-szenario-testen" class="rel-btn primary" type="button">▶ Selbst ausprobieren</button>
-          </div>
-          <div id="szenario-link-wrap" class="szenario-link" hidden>
-            <input id="szenario-link" class="prop-input" type="text" readonly />
-            <small id="szenario-link-info"></small>
-          </div>
-          <input type="file" id="szenario-datei" accept=".json" style="display: none" />
-        </div>
-      </div>
     </div>
 
     <!-- ===== MODAL: Tabellenvorschau ===== -->
@@ -556,20 +499,26 @@
             Übertrage das ER-Diagramm manuell ins Relationenmodell. Trage für jede Relation den Namen und alle Attribute
             ein.
           </p>
-          <p>Wenn du fertig bist, klicke auf <strong>„Überprüfen“</strong>.</p>
+          <p class="nicht-in-pruefung">Wenn du fertig bist, klicke auf <strong>„Überprüfen“</strong>.</p>
           <h4>Zeichenlegende</h4>
           <ul>
             <li>
-              <strong>PS (Primärschlüssel)</strong> – mit der Checkbox <em>PS</em> markieren. In der Musterlösung
-              <u>unterstrichen</u> dargestellt.
+              <strong>PS (Primärschlüssel)</strong> – mit der Checkbox <em>PS</em> markieren.<span
+                class="nicht-in-pruefung"
+              >
+                In der Musterlösung <u>unterstrichen</u> dargestellt.</span
+              >
             </li>
             <li>
-              <strong>FS (Fremdschlüssel)</strong> – mit der Checkbox <em>FS</em> markieren. In der Musterlösung
-              <span style="color: #2563eb">blau</span> mit <code>↑</code> dargestellt (eine andere gängige
-              Darstellungsform ist eine
-              <span style="text-decoration: underline dashed">gestrichelte Unterstreichung</span>).
+              <strong>FS (Fremdschlüssel)</strong> – mit der Checkbox <em>FS</em> markieren.<span
+                class="nicht-in-pruefung"
+              >
+                In der Musterlösung <span style="color: #2563eb">blau</span> mit <code>↑</code> dargestellt (eine
+                andere gängige Darstellungsform ist eine
+                <span style="text-decoration: underline dashed">gestrichelte Unterstreichung</span>).</span
+              >
             </li>
-            <li>Ein Attribut kann gleichzeitig PS und FS sein (z.&nbsp;B. bei n:m-Beziehungen).</li>
+            <li>Ein Attribut kann gleichzeitig PS und FS sein.</li>
           </ul>
           <h4>Fremdschlüssel umbenennen</h4>
           <p>
@@ -578,8 +527,8 @@
             <code>Klasse-SchülerNr</code> oder <code>SchülerNr_2</code>). Ein Fremdschlüssel darf auch wie die Tabelle
             heißen, auf die er zeigt (z.&nbsp;B. <code>Klasse</code> statt <code>Bezeichnung</code>).
           </p>
-          <h4>SQL erzeugen</h4>
-          <p>
+          <h4 class="nicht-in-pruefung">SQL erzeugen</h4>
+          <p class="nicht-in-pruefung">
             „SQL erzeugen“ macht aus deinen Relationen SQL-Code (<code>CREATE TABLE</code>) für SQLite. Dort wählst du
             die Datentypen; den Code kannst du kopieren oder als <code>.sql</code>-Datei speichern.
           </p>
@@ -782,6 +731,139 @@
       <div id="aufgabe-feedback" class="aufgabe-feedback"></div>
     </div>
 
+    <!-- ===== LEISTEN FÜR LEHRKRÄFTE: unten wie die Aufgabenleiste, Schritte als Reiter ===== -->
+    <!-- Übung oder Prüfung erstellen (js/szenario.js); sichtbar mit body.erstellen -->
+    <div id="erstellen-leiste" class="lk-leiste" role="region" aria-label="Übung oder Prüfung erstellen">
+      <div class="lk-kopf">
+        <h3 id="erstellen-titel">🏋 Übung erstellen</h3>
+        <div class="lk-reiter" role="tablist">
+          <button type="button" role="tab" data-reiter="0">☰ Übersicht</button>
+          <button type="button" role="tab" data-reiter="1">1 · Art</button>
+          <button type="button" role="tab" data-reiter="2">2 · Text</button>
+          <button type="button" role="tab" data-reiter="3">3 · Musterlösung</button>
+          <button type="button" role="tab" data-reiter="4">4 · Weitergeben</button>
+        </div>
+        <div class="lk-kopf-knoepfe">
+          <span class="lk-gespeichert" title="Der Entwurf wird automatisch im Browser gespeichert">✓ gespeichert</span>
+          <button id="btn-erstellen-schliessen" class="aufgabe-close-btn" type="button" title="Schließen">✕</button>
+        </div>
+      </div>
+      <div class="lk-seiten">
+        <section class="lk-seite" data-seite="0">
+          <div class="lk-knoepfe lk-oben">
+            <button id="btn-szenario-neu" class="rel-btn primary" type="button">➕ Neu erstellen</button>
+            <button id="btn-szenario-laden" class="rel-btn" type="button" title="Eine gespeicherte Übung oder Lösungsdatei weiterbearbeiten">
+              ⬆ Datei laden
+            </button>
+          </div>
+          <div class="lk-entwuerfe">
+            <div class="lk-gruppe">
+              <h4>📝 Prüfungen</h4>
+              <ul id="entwuerfe-pruefung" class="lk-entwurf-liste"></ul>
+            </div>
+            <div class="lk-gruppe">
+              <h4>🏋 Übungen</h4>
+              <ul id="entwuerfe-uebung" class="lk-entwurf-liste"></ul>
+            </div>
+          </div>
+        </section>
+        <section class="lk-seite" data-seite="1">
+          <div class="lk-gruppe">
+            <h4>Was möchtest du erstellen?</h4>
+            <div class="lk-wahl">
+              <label class="lk-option"
+                ><input type="radio" name="szenario-art" value="uebung" checked />
+                <span class="lk-option-titel">🏋 Übung</span>
+                <span class="lk-option-text">Schüler überprüfen ihre Lösung und können sie ansehen.</span></label
+              >
+              <label class="lk-option"
+                ><input type="radio" name="szenario-art" value="pruefung" />
+                <span class="lk-option-titel">📝 Prüfung</span>
+                <span class="lk-option-text">Ohne Hilfen. Schüler geben eine Datei ab, du korrigierst sie hier.</span></label
+              >
+            </div>
+          </div>
+          <div class="lk-gruppe">
+            <h4>Was sollen die Schüler tun?</h4>
+            <div class="lk-wahl">
+              <label class="lk-option"
+                ><input type="radio" name="szenario-aufgabe" value="erm" checked />
+                <span class="lk-option-titel">ER-Modell zeichnen</span>
+                <span class="lk-option-text">aus deinem Aufgabentext</span></label
+              >
+              <label class="lk-option"
+                ><input type="radio" name="szenario-aufgabe" value="rm" />
+                <span class="lk-option-titel">Ins Relationenmodell überführen</span>
+                <span class="lk-option-text">dein ER-Modell ist vorgegeben</span></label
+              >
+            </div>
+            <label class="lk-haken" id="szenario-kardinalitaeten-wrap"
+              ><input type="checkbox" id="szenario-kardinalitaeten" checked /> Kardinalitäten gehören dazu</label
+            >
+          </div>
+        </section>
+        <section class="lk-seite" data-seite="2">
+          <div class="lk-text">
+            <input id="szenario-titel" class="prop-input" type="text" maxlength="80" placeholder="Titel, z. B. Kino" />
+            <textarea
+              id="szenario-text"
+              class="prop-input"
+              rows="4"
+              maxlength="8000"
+              placeholder="Aufgabentext für die Schüler"
+            ></textarea>
+          </div>
+          <p class="lk-hinweis">Leerzeile = neuer Absatz · **Wort** = fett · Zeile mit „- “ = Aufzählung</p>
+        </section>
+        <section class="lk-seite" data-seite="3">
+          <p class="lk-hinweis" id="szenario-modell-hinweis"></p>
+          <div id="szenario-bericht" class="szenario-bericht"></div>
+          <div class="lk-knoepfe">
+            <button id="btn-szenario-uebernehmen" class="rel-btn" type="button" hidden>📋 Mein Modell übernehmen</button>
+            <button id="btn-szenario-loesung" class="rel-btn" type="button" data-nur="rm">
+              🧾 Erwartete Relationen ansehen
+            </button>
+          </div>
+        </section>
+        <section class="lk-seite" data-seite="4">
+          <p id="szenario-offen" class="lk-offen" hidden></p>
+          <div class="lk-knoepfe" data-nur="uebung">
+            <button id="btn-szenario-link" class="rel-btn primary" type="button">🔗 Link kopieren</button>
+            <button id="btn-szenario-speichern" class="rel-btn" type="button">⬇ Als Datei speichern</button>
+            <button id="btn-szenario-testen" class="rel-btn" type="button">▶ Ausprobieren</button>
+          </div>
+          <div class="lk-folge" data-nur="pruefung">
+            <div class="lk-folge-schritt">
+              <span class="lk-nr">1</span>
+              <button id="btn-pruefung-datei" class="rel-btn primary" type="button">⬇ Lösungsdatei speichern</button>
+              <span id="pruefung-datei-info" class="lk-hinweis"></span>
+            </div>
+            <div class="lk-folge-schritt">
+              <span class="lk-nr">2</span>
+              <button id="btn-pruefung-link" class="rel-btn primary" type="button">🔗 Prüfungslink kopieren</button>
+              <span id="pruefung-link-info" class="lk-hinweis"></span>
+            </div>
+            <div class="lk-knoepfe">
+              <button id="btn-pruefung-ansehen" class="rel-btn" type="button">▶ Als Schüler ansehen</button>
+              <button id="btn-pruefung-korrigieren" class="rel-btn" type="button">📝 Abgaben korrigieren</button>
+            </div>
+          </div>
+          <div id="szenario-link-wrap" class="szenario-link" hidden>
+            <input id="szenario-link" class="prop-input" type="text" readonly aria-label="Link" />
+            <small id="szenario-link-info"></small>
+          </div>
+        </section>
+      </div>
+      <div class="lk-fuss">
+        <button id="btn-reiter-zurueck" class="rel-btn" type="button">← Zurück</button>
+        <button id="btn-reiter-weiter" class="rel-btn primary" type="button">Weiter →</button>
+      </div>
+      <input type="file" id="szenario-datei" accept=".json" style="display: none" />
+    </div>
+
+    <!-- Korrektur von Prüfungs-Abgaben (js/pruefung.js baut den Inhalt); sichtbar mit body.korrektur -->
+    <div id="korrektur-leiste" class="lk-leiste" role="region" aria-label="Abgaben korrigieren"></div>
+
     <!-- ===== ERFOLGS-MODAL (einzelne Aufgabe) ===== -->
     <div id="aufgabe-success-modal" style="display: none">
       <div class="aufgabe-success-card">
@@ -829,5 +911,6 @@
     <script src="js/sql.js"></script>
     <script src="js/lernpfad.js"></script>
     <script src="js/szenario.js"></script>
+    <script src="js/pruefung.js"></script>
   </body>
 </html>

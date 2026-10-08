@@ -276,53 +276,52 @@
       entities.items.push({ label: name, ok: found });
     }
 
+    // Je Beziehung: verbunden (zwischen den richtigen Entitätsklassen) und Kardinalität getrennt – die
+    // Korrekturliste der Prüfung (js/pruefung.js) zeigt beides als eigene Zeile
     const relationships = { total: 0, done: 0, items: [] };
     for (const rel of spec.relationships || []) {
       relationships.total++;
       const relNode = getRelationshipByName(rel.name, rel);
-      if (!relNode) {
-        relationships.items.push({ label: rel.name, ok: false });
-        continue;
-      }
       const fromEntity = getEntityByName(rel.from);
       const toEntity = getEntityByName(rel.to);
-      if (!fromEntity || !toEntity) {
-        relationships.items.push({ label: rel.name, ok: false });
-        continue;
-      }
       const [expectedFrom, expectedTo] = String(rel.cardinality || '')
         .split(':')
         .map((v) => normalizeCardinality(v));
-      let ok;
-      if (normalizeName(rel.from) === normalizeName(rel.to)) {
-        const edges =
-          S().edges?.filter(
-            (e) =>
-              e.edgeType === 'relationship' &&
-              ((e.fromId === relNode.id && e.toId === fromEntity.id) ||
-                (e.fromId === fromEntity.id && e.toId === relNode.id)),
-          ) || [];
-        if (edges.length < 2) {
-          ok = false;
+      let karten = null; // gezeichnete Kardinalitäten [von, nach], null: nicht verbunden
+      if (relNode && fromEntity && toEntity) {
+        if (normalizeName(rel.from) === normalizeName(rel.to)) {
+          const edges =
+            S().edges?.filter(
+              (e) =>
+                e.edgeType === 'relationship' &&
+                ((e.fromId === relNode.id && e.toId === fromEntity.id) ||
+                  (e.fromId === fromEntity.id && e.toId === relNode.id)),
+            ) || [];
+          if (edges.length >= 2)
+            karten = edges.slice(0, 2).map((e) => normalizeCardinality(e.fromId === relNode.id ? e.chenTo : e.chenFrom));
         } else {
-          const cards = edges.map((e) => {
-            if (e.fromId === relNode.id) return normalizeCardinality(e.chenTo);
-            return normalizeCardinality(e.chenFrom);
-          });
-          const sortedCards = [...cards].sort();
-          const sortedExpected = [expectedFrom, expectedTo].sort();
-          ok = !rel.cardinality || (sortedCards[0] === sortedExpected[0] && sortedCards[1] === sortedExpected[1]);
+          const fromCard = getCardinalityForEntityOnRelationship(relNode.id, fromEntity.id);
+          const toCard = getCardinalityForEntityOnRelationship(relNode.id, toEntity.id);
+          if (fromCard !== null && toCard !== null) karten = [fromCard, toCard];
         }
-      } else {
-        const fromCard = getCardinalityForEntityOnRelationship(relNode.id, fromEntity.id);
-        const toCard = getCardinalityForEntityOnRelationship(relNode.id, toEntity.id);
-        ok =
-          fromCard !== null &&
-          toCard !== null &&
-          (!rel.cardinality || (fromCard === expectedFrom && toCard === expectedTo));
       }
+      const verbunden = !!karten;
+      const selbst = normalizeName(rel.from) === normalizeName(rel.to);
+      const karteOk =
+        verbunden &&
+        (selbst
+          ? [...karten].sort().join() === [expectedFrom, expectedTo].sort().join()
+          : karten[0] === expectedFrom && karten[1] === expectedTo);
+      const ok = verbunden && (!rel.cardinality || karteOk);
       if (ok) relationships.done++;
-      relationships.items.push({ label: rel.cardinality ? `${rel.name} (${rel.cardinality})` : rel.name, ok });
+      relationships.items.push({
+        label: rel.cardinality ? `${rel.name} (${rel.cardinality})` : rel.name,
+        ok,
+        rel,
+        verbunden,
+        karteOk,
+        gezeichnet: verbunden ? karten.map((k) => k || '?').join(':') : '',
+      });
     }
 
     const attributes = { total: 0, done: 0, items: [] };
@@ -360,6 +359,37 @@
     }
 
     return { entities, relationships, attributes, primaryKeys };
+  }
+
+  // Elemente im Modell, die zu keinem Element der Musterlösung passen (Korrekturliste der Prüfung)
+  function zusaetzlicheErmElemente(spec) {
+    const erkannt = new Set();
+    const merke = (node) => node && erkannt.add(node.id);
+    for (const name of spec.entities || []) {
+      const entity = getEntityByName(name);
+      merke(entity);
+      if (entity) (spec.attributes?.[name] || []).forEach((a) => merke(getAttributeByName(entity.id, a)));
+    }
+    for (const rel of spec.relationships || []) {
+      const relNode = getRelationshipByName(rel.name, rel);
+      merke(relNode);
+      if (relNode) (rel.attributes || []).forEach((a) => merke(getAttributeByName(relNode.id, a)));
+    }
+    const besitzer = (attr) =>
+      getNodeName(
+        S()
+          .edges.filter((e) => e.edgeType === 'attribute' && [e.fromId, e.toId].includes(attr.id))
+          .map((e) => (e.fromId === attr.id ? e.toId : e.fromId))[0],
+      );
+    return (S().nodes || [])
+      .filter((n) => !erkannt.has(n.id) && String(n.name || '').trim())
+      .map((n) =>
+        n.type === 'entity'
+          ? `Entitätsklasse „${n.name.trim()}“ ist nicht Teil der Lösung.`
+          : n.type === 'relationship'
+            ? `Beziehung „${n.name.trim()}“ ist nicht Teil der Lösung.`
+            : `Attribut „${n.name.trim()}“${besitzer(n) ? ` bei „${besitzer(n)}“` : ''} ist nicht erwartet.`,
+      );
   }
 
   /**
@@ -556,6 +586,9 @@
       if (ok) cat.done++;
       cat.items.push({ label, ok });
     };
+    const extras = studentRels
+      .filter((r) => String(r.name || '').trim() && !solution.some((s) => normalizeName(s.name) === normalizeName(r.name)))
+      .map((r) => `Relation „${r.name.trim()}“ ist nicht Teil der Lösung.`);
 
     for (const solRel of solution) {
       // Fehlt die Relation, zählen ihre Attribute und Schlüssel als offen
@@ -602,9 +635,13 @@
         solRel.attrs.filter((a) => a.isFk),
         studRel.attrs.filter((a) => a.isFk),
       );
+      // Attribute, die zu keinem Attribut der Lösung passen (Korrekturliste der Prüfung)
+      studRel.attrs
+        .filter((a) => String(a.name || '').trim() && !solRel.attrs.some((s) => matches(a, s)))
+        .forEach((a) => extras.push(`Attribut „${a.name.trim()}“ in „${solRel.name}“ ist nicht erwartet.`));
     }
 
-    return { relations, attributes, primaryKeys, foreignKeys };
+    return { relations, attributes, primaryKeys, foreignKeys, extras };
   }
 
   // Nummern ergeben sich aus der Reihenfolge.
@@ -2073,7 +2110,9 @@
       sz.aufgabe === 'rm'
         ? {
             title: sz.titel,
-            szenario: `<p><strong>Überführe das ER-Modell „${esc(sz.titel)}“ in das Relationenmodell.</strong> Lege die Relationen in der rechten Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${text}`,
+            szenario: `<p><strong>Überführe das ER-Modell „${esc(sz.titel)}“ in das Relationenmodell.</strong> Lege die Relationen in der rechten Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt; eine Beziehungstabelle heißt wie die Beziehung.</p>${
+              String(sz.text || '').trim() ? `<p><strong>Hinweise:</strong></p>${text}` : ''
+            }`,
             erm: sz.erm,
             validator: () => window.RelModel?.checkAndGetResult?.() || { passed: false },
           }
@@ -2113,7 +2152,12 @@
     },
 
     getLernpfad: function (mode = this.state.lernpfadId) {
-      return LERNPFADE.find((r) => r.id === mode) || null;
+      return LERNPFADE.find((r) => r.id === mode) || (this._sonder?.id === mode ? this._sonder : null);
+    },
+
+    // Prüfung oder Korrektur (js/pruefung.js): ein Lernpfad, der in keinem Menü steht
+    setSonderLernpfad: function (lernpfad) {
+      this._sonder = lernpfad;
     },
 
     getLernpfade: function () {
@@ -2240,6 +2284,9 @@
     validateCurrentAufgabe: function (forceRecheck = false) {
       // Nichts tun wenn kein Aufgabe aktiv oder Panel verborgen
       if (!this.state.lernpfadId || !this.state.lernpfadAktiv) return { passed: false };
+      // Prüfung: keine Rückmeldung an Schüler; Korrektur: die Lehrkraft nutzt die Korrekturliste
+      const sonder = this.getLernpfad();
+      if (sonder?.pruefung || sonder?.korrektur) return { passed: false };
 
       const aufgabe = this.getCurrentAufgabe();
       if (!aufgabe) return { passed: false };
@@ -2490,8 +2537,8 @@
 
     getChecklistStatus: function () {
       const lernpfad = this.getLernpfad();
-      // SQL-Übung: Relationen sind vorgegeben, eine Checkliste würde nichts zeigen
-      if (!lernpfad || lernpfad.schritt || lernpfad.rmVorgabe) return null;
+      // SQL-Übung: Relationen sind vorgegeben, eine Checkliste würde nichts zeigen; Prüfung und Korrektur: keine
+      if (!lernpfad || lernpfad.schritt || lernpfad.rmVorgabe || lernpfad.pruefung || lernpfad.korrektur) return null;
       if (lernpfad.art === 'rm') return getRelmodelChecklistStatus();
       const aufgabe = this.getCurrentAufgabe();
       return aufgabe?.masterlösung ? getExpertChecklistStatus(aufgabe.masterlösung) : null;
@@ -2499,7 +2546,7 @@
 
     getHints: function () {
       const lernpfad = this.getLernpfad();
-      if (lernpfad?.art !== 'erm' || lernpfad.schritt) return [];
+      if (lernpfad?.art !== 'erm' || lernpfad.schritt || lernpfad.pruefung) return [];
       const aufgabe = this.getCurrentAufgabe();
       return aufgabe?.masterlösung ? getExpertHints(aufgabe.masterlösung) : [];
     },
@@ -2556,26 +2603,8 @@
   // genug zum Markieren, zu wenig, um einfach jedes Wort durchzuklicken (Szenarien: 94 bis 210 Wörter).
   const textmarkerKlicks = (anzahlElemente) => Math.max(20, anzahlElemente + 5);
 
-  // kopf: Überschrift „Szenario“, dort stehen Legende und Klickzähler
-  function textmarker(container, spec, standKey, kopf) {
-    const elemente = [
-      ...(spec.entities || []).map((name) => ({ art: 'entitaet', name })),
-      ...Object.values(spec.attributes || {})
-        .flat()
-        .map((name) => ({ art: 'attribut', name })),
-      ...(spec.relationships || []).flatMap((r) => [
-        { art: 'beziehung', name: r.name },
-        ...(r.attributes || []).map((name) => ({ art: 'attribut', name })),
-      ]),
-    ].map((e) => {
-      const norm = e.name.split(/\s+/).map(normalizeName);
-      // Einzelwörter auch gebeugt, Wortgruppen genau oder als Verbform (siehe verbformen)
-      const formen = new Set(norm.length === 1 ? wortformen(e.name) : []);
-      if (e.art === 'beziehung') verbformen(e.name).forEach((f) => formen.add(f));
-      return { ...e, key: `${e.art}:${normalizeName(e.name)}`, norm, formen };
-    });
-
-    // Wörter in <span> verpacken (auch über <strong>-Grenzen hinweg in Lesereihenfolge)
+  // Wörter in <span> verpacken (auch über <strong>-Grenzen hinweg in Lesereihenfolge); liefert [{ span, norm, luecke }]
+  function woerterVerpacken(container) {
     const woerter = [];
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
     const textknoten = [];
@@ -2606,6 +2635,29 @@
       });
       knoten.parentNode.replaceChild(frag, knoten);
     });
+    return woerter;
+  }
+
+  // kopf: Überschrift „Szenario“, dort stehen Legende und Klickzähler
+  function textmarker(container, spec, standKey, kopf) {
+    const elemente = [
+      ...(spec.entities || []).map((name) => ({ art: 'entitaet', name })),
+      ...Object.values(spec.attributes || {})
+        .flat()
+        .map((name) => ({ art: 'attribut', name })),
+      ...(spec.relationships || []).flatMap((r) => [
+        { art: 'beziehung', name: r.name },
+        ...(r.attributes || []).map((name) => ({ art: 'attribut', name })),
+      ]),
+    ].map((e) => {
+      const norm = e.name.split(/\s+/).map(normalizeName);
+      // Einzelwörter auch gebeugt, Wortgruppen genau oder als Verbform (siehe verbformen)
+      const formen = new Set(norm.length === 1 ? wortformen(e.name) : []);
+      if (e.art === 'beziehung') verbformen(e.name).forEach((f) => formen.add(f));
+      return { ...e, key: `${e.art}:${normalizeName(e.name)}`, norm, formen };
+    });
+
+    const woerter = woerterVerpacken(container);
 
     // Wie viele Wörter ab start passen zu Element e? Ganze Wortgruppe, sonst ein Wort (Form), sonst 0
     function treffer(e, start) {
@@ -2694,10 +2746,69 @@
     });
   }
 
+  // Prüfung: Textmarker ohne Prüfung. Die Legende ist die Stiftauswahl, ein Klick markiert das Wort in der Farbe
+  // des Stifts, ein zweiter Klick mit demselben Stift entfernt die Markierung. markierungen: { Wortnummer: Art }.
+  // Ohne onChange nur zum Ansehen (Korrektur).
+  function freierTextmarker(container, kopf, markierungen, onChange = null) {
+    const woerter = woerterVerpacken(container);
+    const arten = { entitaet: 'Entitätsklasse', attribut: 'Attribut', beziehung: 'Beziehung' };
+    let stift = 'entitaet';
+    const legende = document.createElement('span');
+    legende.className = 'tm-tipp';
+    legende.textContent = onChange ? ' Stift wählen, dann Wörter anklicken: ' : ' Markierungen des Schülers: ';
+    Object.entries(arten).forEach(([art, name]) => {
+      const knopf = document.createElement(onChange ? 'button' : 'span');
+      knopf.className = `tm-${art}${onChange ? ' tm-stift' : ''}`;
+      knopf.textContent = name;
+      if (onChange) {
+        knopf.type = 'button';
+        knopf.dataset.art = art;
+        knopf.setAttribute('aria-pressed', String(art === stift));
+      }
+      legende.append(knopf, ' ');
+    });
+    kopf.appendChild(legende);
+
+    function zeichnen() {
+      woerter.forEach((w, i) => {
+        const art = markierungen[i];
+        w.span.className = `tm-wort${art ? ' tm-' + art : ''}`;
+        if (w.luecke) w.luecke.className = `tm-luecke${art && markierungen[i + 1] === art ? ' tm-' + art : ''}`;
+      });
+    }
+    zeichnen();
+    if (!onChange) return;
+
+    legende.addEventListener('click', (event) => {
+      const knopf = event.target.closest('.tm-stift');
+      if (!knopf) return;
+      stift = knopf.dataset.art;
+      legende.querySelectorAll('.tm-stift').forEach((k) => k.setAttribute('aria-pressed', String(k === knopf)));
+    });
+    container.addEventListener('click', (event) => {
+      const span = event.target.closest('.tm-wort');
+      if (!span) return;
+      const i = Number(span.dataset.i);
+      if (markierungen[i] === stift) delete markierungen[i];
+      else markierungen[i] = stift;
+      zeichnen();
+      onChange(markierungen);
+    });
+  }
+
   // ---- Export ----
   window.Lernpfad = LernpfadManager;
   LernpfadManager.textmarker = textmarker;
-  Object.assign(LernpfadManager, { masterAusErm, nichtImText, textAlsHtml });
+  Object.assign(LernpfadManager, {
+    masterAusErm,
+    nichtImText,
+    textAlsHtml,
+    eigenerLernpfad,
+    freierTextmarker,
+    getExpertChecklistStatus,
+    getRelmodelChecklistStatus,
+    zusaetzlicheErmElemente,
+  });
   // Liefert eine Aufgaben-Definition nach Lernpfad und Nummer (für Tooltips/Labels)
   LernpfadManager.getAufgabeByNumber = function (mode, number) {
     const aufgaben = LernpfadManager.getAlleAufgaben(mode);
