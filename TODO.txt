@@ -1,0 +1,1 @@
+im Relationenmodell-Editor sind zwei Klick nötig, um den Fokus von einem Attribut zu einem anderen Attribut zu wechseln
