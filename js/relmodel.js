@@ -883,6 +883,7 @@
       rel.name = e.target.value;
       clearInlineError(rel);
       persistStudentRelations();
+      fkZieleAktualisieren();
       // Auch beim Tippen prüfen: Der Name allein kann eine Aufgabe lösen („Relationen anlegen“)
       notifyAufgabeChange();
     });
@@ -1171,20 +1172,12 @@
       persistStudentRelations();
       notifyAufgabeChange();
     });
-    let _suppressBlur = false;
-    inp.addEventListener('change', (e) => {
-      attr.name = e.target.value.trim();
-      clearInlineError(rel);
-      renderAndPersist();
-    });
-    inp.addEventListener('blur', (e) => {
-      if (_suppressBlur) {
-        _suppressBlur = false;
-        return;
-      }
-      attr.name = e.target.value.trim();
-      clearInlineError(rel);
-      renderAndPersist();
+    // Nur speichern, nicht neu rendern: sonst ersetzt der blur das gerade angeklickte Feld
+    // und der Fokuswechsel braucht einen zweiten Klick
+    inp.addEventListener('blur', () => {
+      attr.name = inp.value = inp.value.trim();
+      persistStudentRelations();
+      fkZieleAktualisieren();
     });
     inp.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
@@ -1196,12 +1189,9 @@
       const currentIndex = allInputs.indexOf(inp);
       const nextInput = allInputs[currentIndex + 1];
       if (nextInput) {
-        _suppressBlur = true;
-        persistStudentRelations();
         nextInput.focus();
         return;
       }
-      _suppressBlur = true;
       const newAttr = { id: newAttrId(), name: '', isPk: false, isFk: false };
       rel.attrs.push(newAttr);
       clearInlineError(rel);
@@ -1309,6 +1299,20 @@
     const text = a ? `verweist auf ${r.name}.${a.name}` : 'verweist auf …';
     btn.dataset.tooltip = text; // nicht title: das wandelt app.js nur einmal in data-tooltip um
     btn.setAttribute('aria-label', text);
+  }
+
+  // Nach Umbenennung ohne Neu-Rendern: Namen an Pfeilen und in offenen Auswahllisten nachziehen
+  function fkZieleAktualisieren() {
+    _studentRelations.forEach((r) =>
+      r.attrs.forEach((a) => {
+        const row = document.querySelector(`.relation-card[data-id="${r.id}"] .attr-row[data-id="${a.id}"]`);
+        const btn = row?.querySelector('.btn-fk-ziel');
+        if (btn) zielAmPfeil(btn, a);
+        document
+          .querySelectorAll(`.fk-ziel option[value="${r.id}|${a.id}"]`)
+          .forEach((o) => (o.textContent = `${r.name || '?'}.${a.name}`));
+      }),
+    );
   }
 
   function buildFkZielSelect(rel, attr, row) {
