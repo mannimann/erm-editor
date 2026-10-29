@@ -108,11 +108,12 @@
           aria-haspopup="true"
           aria-expanded="false"
         >
-          🗺️ Lernpfade <span class="tab-dropdown-chevron">&#x276F;</span>
+          🗺️ <span class="lernpfade-wort">Lernpfade</span> <span class="tab-dropdown-chevron">&#x276F;</span>
         </button>
         <!-- Einträge baut app.js aus den Lernpfaden (lernpfad.js) -->
         <div id="lernpfade-menu" class="tab-dropdown-menu" aria-label="Lernpfade" hidden></div>
       </div>
+      <span id="lernpfad-aktuell" class="lernpfad-aktuell" hidden></span>
       <div class="erm-title-wrap" title="Bezeichnung des Diagramma">
         <label class="erm-title-label" for="erm-title-input">Titel:</label>
         <input id="erm-title-input" class="erm-title-input" type="text" placeholder="Titel des ERM" />
@@ -599,8 +600,9 @@
         <div class="info-modal-body">
           <p>
             Ein Link öffnet den ERM-Editor und startet gleich den Lernpfad – z.&nbsp;B. für das Kursbuch, eine
-            Lernplattform oder ein Arbeitsblatt. Ab einer späteren Aufgabe startet der Link nur, wenn die Aufgabe schon
-            freigeschaltet ist (Übungen sind immer frei wählbar). Den Fortschritt speichert jeder Browser für sich.
+            Lernplattform oder ein Arbeitsblatt. Übungen lassen sich ab einer bestimmten Aufgabe verlinken. Lernpfade zur
+            Erarbeitung bauen aufeinander auf und starten bei der ersten offenen Aufgabe. Den Fortschritt speichert jeder
+            Browser für sich.
           </p>
           <div id="links-liste"></div>
         </div>

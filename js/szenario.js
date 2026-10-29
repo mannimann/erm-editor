@@ -659,6 +659,22 @@
     const { aktiv } = entwuerfe();
     if (aktiv) entwurfLaden(aktiv);
     else neuerEntwurf();
+    hoeheFestlegen();
+  }
+
+  // Die Leiste springt beim Reiterwechsel nicht: Beim Öffnen wird sie so hoch wie der höchste Reiter (bis
+  // max-height). Eine von Hand gezogene Höhe (js/app.js) gilt nur, bis die Leiste geschlossen wird.
+  function hoeheFestlegen() {
+    const leiste = feld('erstellen-leiste');
+    leiste.style.maxHeight = '';
+    const nr = reiter();
+    leiste.style.height = '';
+    const hoehen = [...leiste.querySelectorAll('.lk-seite')].map((s) => {
+      leiste.querySelectorAll('.lk-seite').forEach((x) => (x.hidden = x !== s));
+      return leiste.offsetHeight;
+    });
+    leiste.querySelectorAll('.lk-seite').forEach((s) => (s.hidden = Number(s.dataset.seite) !== nr));
+    leiste.style.height = `${Math.max(...hoehen)}px`;
   }
 
   function panelSchliessen() {

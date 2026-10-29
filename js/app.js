@@ -710,9 +710,13 @@ function baueLinkListe() {
           .map(
             (r) => `<div class="link-zeile" data-id="${r.id}">
           <span class="link-titel">${r.icon} ${escapeHtml(r.titel)}</span>
-          <label class="link-ab">ab Aufgabe
+          ${
+            r.schritt // Schritt-Lernpfade bauen aufeinander auf: immer von vorn bzw. dort, wo der Schüler steht
+              ? '<span class="link-ab"></span>'
+              : `<label class="link-ab">ab Aufgabe
             <select>${r.aufgaben.map((q) => `<option value="${q.number}">${q.number}</option>`).join('')}</select>
-          </label>
+          </label>`
+          }
           <input class="link-url" type="text" readonly value="${link(r.id, 1)}" aria-label="Link zu ${escapeHtml(r.titel)}" />
           <button class="rel-btn link-kopieren" type="button">📋 Kopieren</button>
         </div>`,
@@ -724,7 +728,7 @@ function baueLinkListe() {
     const url = zeile.querySelector('.link-url');
     zeile
       .querySelector('select')
-      .addEventListener('change', (e) => (url.value = link(zeile.dataset.id, +e.target.value)));
+      ?.addEventListener('change', (e) => (url.value = link(zeile.dataset.id, +e.target.value)));
     const btn = zeile.querySelector('.link-kopieren');
     btn.addEventListener('click', async () => {
       try {
@@ -871,22 +875,12 @@ function initTabs() {
     syncAufgabePanelResizer();
   });
 
-  // ---- Ziehgriff der Leisten für Lehrkräfte (Erstellen, Korrektur): obere Kante, Höhe wird gemerkt ----
-  const LK_HOEHE_KEY = 'erm-editor-lk-hoehe-v1';
-  const lkHoehen = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(LK_HOEHE_KEY)) || {};
-    } catch (_e) {
-      return {};
-    }
-  })();
+  // ---- Ziehgriff der Leisten für Lehrkräfte (Erstellen, Korrektur): obere Kante. Die gezogene Höhe gilt, bis die
+  // Leiste geschlossen wird (js/szenario.js, js/pruefung.js setzen sie beim Öffnen zurück).
   const lkHoeheSetzen = (leiste, hoehe) => {
     leiste.style.height = `${Math.round(Math.max(120, Math.min(window.innerHeight * 0.8, hoehe)))}px`;
     leiste.style.maxHeight = 'none';
   };
-  document.querySelectorAll('.lk-leiste').forEach((leiste) => {
-    if (lkHoehen[leiste.id]) lkHoeheSetzen(leiste, lkHoehen[leiste.id]);
-  });
   document.addEventListener('pointerdown', (e) => {
     const leiste = e.target.closest?.('.lk-leiste');
     // nur an der Kante (das ::before ragt 6 px über die Leiste)
@@ -898,12 +892,6 @@ function initTabs() {
       leiste.classList.remove('ziehen');
       window.removeEventListener('pointermove', bewegen);
       window.removeEventListener('pointerup', ende);
-      lkHoehen[leiste.id] = leiste.getBoundingClientRect().height;
-      try {
-        localStorage.setItem(LK_HOEHE_KEY, JSON.stringify(lkHoehen));
-      } catch (_err) {
-        // Höhe gilt dann nur bis zum Neuladen
-      }
     };
     window.addEventListener('pointermove', bewegen);
     window.addEventListener('pointerup', ende);
@@ -1057,6 +1045,13 @@ function initTabs() {
         status.className = `lernpfad-status${neu ? ' neu' : ''}`;
         status.textContent = fertig ? '✓' : neu ? 'neu' : `${erledigt} / ${gesamt}`;
       });
+
+      // Name des laufenden Lernpfads neben dem Knopf, nur zur Anzeige (Prüfung und Korrektur nennen sich schon in
+      // der Kopfzeile)
+      const lp = laufend && window.Lernpfad.getLernpfad(laufend);
+      const aktuell = document.getElementById('lernpfad-aktuell');
+      aktuell.hidden = !lp || !!lp.pruefung || !!lp.korrektur;
+      aktuell.textContent = aktuell.title = aktuell.hidden ? '' : lp.titel;
 
       // Haupt-Button-Dot verwalten
       const anyUnstarted = itemButtons.some(isNotStarted);
@@ -1764,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.AppTabs?.setDrawerState?.(false);
     }
 
-    window.Lernpfad.startLernpfad(mode);
+    window.Lernpfad.startLernpfad(mode, !wiederherstellen);
     ansichtMerken({ lernpfad: mode });
 
     if (lernpfad.art === 'rm' && lernpfad.schritt) {
@@ -1808,6 +1803,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.Szenario?.entfernen?.(entfernen.dataset.szenarioEntfernen);
     } else if (lernpfad) {
       e.preventDefault();
+      window.Pruefung?.korrekturBeenden?.(); // gespeichert bleibt die Korrektur, „📝 Abgaben korrigieren“ holt sie zurück
       startLernpfadFlow(lernpfad.dataset.lernpfad);
     }
   });
@@ -1877,32 +1873,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const qMode = window.Lernpfad.state?.lernpfadId || '';
       const isCompleted = window.Lernpfad.state.geloesteAufgaben.includes(aufgabeNum);
 
-      // Abschlussaufgabe eines Schritt-Lernpfads: erst, wenn alle Aufgaben gelöst sind
-      if (window.Lernpfad.getAufgabeByNumber(qMode, aufgabeNum)?.abschluss && !isCompleted) {
-        const allPreviousCompleted = window.Lernpfad.getAufgaben(qMode).every((q) =>
-          window.Lernpfad.state.geloesteAufgaben.includes(q.number),
-        );
-        if (!allPreviousCompleted) {
-          await window.App?.showAppModal?.({
-            title: 'Letzte Aufgabe gesperrt',
-            message:
-              'Du kannst die Abschlussaufgabe erst starten, wenn du alle vorherigen Aufgaben abgeschlossen hast.',
-            mode: 'alert',
-            confirmLabel: 'OK',
-          });
-          return false;
-        }
-      }
-
-      // Schritt-Lernpfade bauen aufeinander auf: nur freigeschaltete Aufgaben; Szenarien sind frei wählbar.
-      if (!isCompleted && lernpfadVon(qMode)?.schritt && !window.Lernpfad.state.freieAufgaben.includes(aufgabeNum)) {
-        await window.App?.showAppModal?.({
-          title: 'Aufgabe gesperrt',
-          message: 'Schließe zuerst die vorherigen Aufgaben ab, bevor du zu dieser Aufgabe springst.',
-          mode: 'alert',
-          confirmLabel: 'OK',
+      // Schritt-Lernpfade bauen aufeinander auf: Rückfrage bei jedem Wechsel zu einer offenen Aufgabe, vor der noch
+      // etwas offen ist (zum Ansehen springen geht, auch zum Abschluss). Szenarien sind frei wählbar.
+      const davorOffen = window.Lernpfad.getAufgaben(qMode).some(
+        (q) => q.number < aufgabeNum && !window.Lernpfad.state.geloesteAufgaben.includes(q.number),
+      );
+      if (!isCompleted && lernpfadVon(qMode)?.schritt && davorOffen) {
+        const springen = await window.App?.showAppModal?.({
+          title: 'Aufgaben überspringen?',
+          message:
+            'Die Aufgaben bauen aufeinander auf. Vor dieser Aufgabe ist noch etwas offen – in deinem Modell fehlt dann, was dort entstanden wäre, und die Aufgabe lässt sich eventuell nicht lösen. Ansehen kannst du sie trotzdem.',
+          mode: 'confirm',
+          confirmLabel: 'Trotzdem springen',
+          cancelLabel: 'Abbrechen',
         });
-        return false;
+        if (!springen) return false;
       }
 
       window.Lernpfad.jumpToAufgabe(aufgabeNum);
@@ -1948,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await switchAufgabeWithGuards(aufgabeNum);
     });
 
-    // Direktstart über einen Link: ?lernpfad=erm-grundlagen&aufgabe=3 (Aufgabe nur, wenn freigeschaltet).
+    // Direktstart über einen Link: ?lernpfad=erm-uebung&aufgabe=3 (Aufgabe nur bei Übungs-Lernpfaden).
     // setTimeout: erst nach den übrigen DOMContentLoaded-Handlern (z. B. relmodel.js) starten.
     const szenarioAusLink = async () => {
       const hash = window.location.hash;
@@ -1974,7 +1959,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (!(await startLernpfadFlow(lernpfad))) return;
       const aufgabeNum = parseInt(params.get('aufgabe'), 10);
-      if (aufgabeNum >= 1 && aufgabeNum <= window.Lernpfad.getMaxAufgaben()) await switchAufgabeWithGuards(aufgabeNum);
+      // „ab Aufgabe“ nur bei Übungs-Lernpfaden; Schritt-Lernpfade beginnen bei der ersten offenen Aufgabe
+      if (!lernpfadVon(lernpfad).schritt && aufgabeNum >= 1 && aufgabeNum <= window.Lernpfad.getMaxAufgaben())
+        await switchAufgabeWithGuards(aufgabeNum);
     }
 
     setTimeout(async () => {

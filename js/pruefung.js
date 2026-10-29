@@ -494,6 +494,7 @@
       window.Szenario?.panelSchliessen?.();
       if (L.state.lernpfadAktiv) L.hidePanel();
       korrektur = korrekturLaden();
+      hoeheZuruecksetzen();
       const titel = document.getElementById('app-title');
       korrektur.titelVorher = titel.innerHTML;
       document.body.classList.add('korrektur');
@@ -515,6 +516,7 @@
     kopienLoeschen(); // gespeichert bleibt die Korrektur selbst (KORREKTUR_KEY)
     document.getElementById('app-title').innerHTML = korrektur.titelVorher;
     korrektur = null;
+    hoeheZuruecksetzen();
     document.body.classList.remove('korrektur');
     window.dispatchEvent(new Event('resize'));
   }
@@ -613,8 +615,29 @@
     return b;
   };
 
-  // Leiste unten neu aufbauen: Kopf mit Reitern, darunter der Inhalt des Reiters
+  // Leiste unten neu aufbauen; ihre Höhe springt beim Reiterwechsel nicht
   function zeichnen() {
+    zeichnenInhalt();
+    hoeheAnpassen();
+  }
+
+  // Die Leiste wächst mit dem höchsten bisher gezeigten Reiter und schrumpft nicht. Von Hand gezogen (js/app.js setzt
+  // dann maxHeight = 'none') bleibt die gezogene Höhe – bis die Korrektur geschlossen wird.
+  function hoeheAnpassen() {
+    const leiste = document.getElementById('korrektur-leiste');
+    if (!korrektur || leiste.style.maxHeight === 'none') return;
+    leiste.style.height = '';
+    korrektur.hoehe = Math.max(korrektur.hoehe || 0, leiste.offsetHeight);
+    leiste.style.height = `${korrektur.hoehe}px`;
+  }
+
+  function hoeheZuruecksetzen() {
+    const leiste = document.getElementById('korrektur-leiste');
+    leiste.style.height = leiste.style.maxHeight = '';
+  }
+
+  // Kopf mit Reitern, darunter der Inhalt des Reiters
+  function zeichnenInhalt() {
     const leiste = document.getElementById('korrektur-leiste');
     if (!leiste) return;
     // Scrollstand behalten, solange Reiter und Abschnitt gleich bleiben (Korrigieren: nur rechts gescrollt)

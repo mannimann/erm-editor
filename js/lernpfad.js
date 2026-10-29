@@ -2277,7 +2277,8 @@
       localStorage.setItem(key, JSON.stringify(dataToSave));
     },
 
-    startLernpfad: function (mode) {
+    // fortsetzen: Schritt-Lernpfade öffnen bei der ersten offenen Aufgabe, auch wenn man zuletzt vorgesprungen war
+    startLernpfad: function (mode, fortsetzen = false) {
       this.state.lernpfadId = mode;
 
       // Lade gespeicherte Daten für diese Lernpfad
@@ -2299,6 +2300,11 @@
         this.state.aktuelleAufgabe = 1;
         this.state.geloesteAufgaben = [];
         this.state.freieAufgaben = [1];
+      }
+
+      if (fortsetzen && this.getLernpfad(mode)?.schritt) {
+        const offen = this.getAlleAufgaben(mode).find((q) => !this.state.geloesteAufgaben.includes(q.number));
+        if (offen) this.state.aktuelleAufgabe = offen.number;
       }
 
       this.state.lernpfadAktiv = true;
@@ -2363,6 +2369,16 @@
           if (aufgabe.abschluss) {
             // Abschlussaufgabe: nur bei manuellem Klick abschließen
             if (!forceRecheck) return { passed: false };
+            // Vorgesprungen: ansehen ja, abschließen erst mit allen Aufgaben
+            if (this.getAufgaben().some((q) => !this.state.geloesteAufgaben.includes(q.number))) {
+              window.App?.showAppModal?.({
+                title: 'Noch nicht fertig',
+                message: 'Abschließen kannst du den Lernpfad erst, wenn alle vorherigen Aufgaben gelöst sind.',
+                mode: 'alert',
+                confirmLabel: 'OK',
+              });
+              return { passed: false };
+            }
             // Bei der letzten Aufgabe: Zeige das Erfolgs-Modal. Erst nach Klick auf OK
             // wird die Aufgabe als abgeschlossen markiert, der Fullscreen-Konfetti
             // gestartet und die Aufgabenleiste geschlossen.
@@ -2541,6 +2557,7 @@
       if (window.AppState?.state) window.AppState.state.diagramLocked = false;
       this.persist();
       this.renderPanel();
+      window.App?.updateLernpfadDots?.(); // Titel des Lernpfads aus der Tab-Leiste nehmen
       // „?“ an offenen Kardinalitäten gibt es nur während einer Aufgabe
       window.Diagram?.renderAll?.();
       const modal = document.querySelector('.lernpfad-congratulations-modal');

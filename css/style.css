@@ -449,6 +449,40 @@ body.is-resizing-drawer {
   }
 }
 
+/* Name des laufenden Lernpfads rechts neben dem Knopf (nur Anzeige). Er endet vor dem mittigen Titelfeld
+   (halbe Breite des Felds samt „Titel:“ ≈ 150 px) und kürzt sich sonst mit „…“; der ganze Name steht im Tooltip. */
+.lernpfad-aktuell {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: calc(50% - 477px); /* 333 px bis hinter den Knopf, 144 px halbes Titelfeld bis „Titel:“ plus Abstand */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  align-self: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  cursor: default;
+}
+
+/* Mittelbreit (z. B. Tablet quer): nur 🗺️ im Knopf, der Platz gehört dem Namen. Schmal (≤ 1000 px) steht das
+   Titelfeld in der Reihe, der Name teilt sich den Platz mit ihm. */
+@media (max-width: 1150px) {
+  #tabs:has(#lernpfad-aktuell:not([hidden])) .lernpfade-wort {
+    display: none;
+  }
+
+  .lernpfad-aktuell {
+    max-width: calc(50% - 407px);
+  }
+}
+
+@media (max-width: 1000px) {
+  .lernpfad-aktuell {
+    max-width: none;
+  }
+}
+
 .tab-dropdown-chevron {
   display: inline-block;
   font-style: normal;
@@ -3792,7 +3826,7 @@ body.sql-zieht {
 
 .link-zeile {
   display: grid;
-  grid-template-columns: minmax(180px, 1.1fr) auto minmax(200px, 2fr) auto;
+  grid-template-columns: minmax(180px, 1.1fr) 7.5rem minmax(200px, 2fr) auto; /* feste Spalte „ab Aufgabe“: auch leer gleich breit */
   align-items: center;
   gap: 10px;
   padding: 6px 0;
@@ -4278,7 +4312,7 @@ body.korrektur #app-header {
   background: #4c1d95;
 }
 
-body.korrektur :is(.tab-dropdown, #btn-export-json, #btn-export-png, #btn-clear) {
+body.korrektur :is(#btn-export-json, #btn-export-png, #btn-clear) {
   display: none !important;
 }
 
