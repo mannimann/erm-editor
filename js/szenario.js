@@ -408,6 +408,7 @@
     if (d.aktiv === id) d.aktiv = null;
     entwuerfeSchreiben(d);
     localStorage.removeItem(modellKey(id));
+    localStorage.removeItem(`${modellKey(id)}:relmodel`);
   }
 
   // Einen Entwurf in Formular und Editor holen; der vorige fällt weg, wenn er leer ist

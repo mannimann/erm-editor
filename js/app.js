@@ -326,6 +326,12 @@ let modellPlatz = null;
 function modellPlatzSetzen(key) {
   flushPersist();
   modellPlatz = key || null;
+  // Das Relationenmodell wechselt mit: Jeder Entwurf hat sein eigenes, das freie kommt beim Schließen zurück.
+  // Vor dem ER-Modell, denn reset() leert die Lösung, die das Laden des ER-Modells neu berechnet.
+  window.RelModel?.setPersistKey?.(modellPlatz ? `${modellPlatz}:relmodel` : RELMODEL_PERSIST_KEY);
+  if (!window.RelModel?.loadFromStorage?.()) window.RelModel?.reset?.();
+  window.RelModel?.loesungAusblenden?.();
+  document.getElementById('feedback-area').innerHTML = '';
   const geladen = modellPlatz ? loadErmSnapshot(modellPlatz) : loadPersistedState();
   if (!geladen) applyErmPayload({ nodes: [], edges: [], nextId: 1, diagramTitle: '', snapToGrid: state.snapToGrid }, false);
 }
@@ -1072,40 +1078,16 @@ function initTabs() {
         status.textContent = fertig ? '✓' : neu ? 'neu' : `${erledigt} / ${gesamt}`;
       });
 
-      // Name des laufenden Lernpfads neben dem Knopf, nur zur Anzeige (Prüfung und Korrektur nennen sich schon in
+      // Name des laufenden Lernpfads im Knopf (Prüfung und Korrektur nennen sich schon in
       // der Kopfzeile)
       const lp = laufend && window.Lernpfad.getLernpfad(laufend);
       const aktuell = document.getElementById('lernpfad-aktuell');
       aktuell.hidden = !lp || !!lp.pruefung || !!lp.korrektur;
-      aktuell.textContent = aktuell.title = aktuell.hidden ? '' : lp.titel;
-
-      // Haupt-Button-Dot verwalten
-      const anyUnstarted = itemButtons.some(isNotStarted);
-      let btnDot = lernpfadeToggleBtn.querySelector('.lernpfad-dot');
-      if (anyUnstarted) {
-        if (!btnDot) {
-          btnDot = document.createElement('span');
-          btnDot.className = 'lernpfad-dot lernpfad-dot--pulse';
-          btnDot.setAttribute('aria-hidden', 'true');
-          lernpfadeToggleBtn.appendChild(btnDot);
-
-          // Nach 25 Sek. Pulse stoppen, Punkt bleibt statisch
-          const pulseTimer = setTimeout(() => {
-            if (btnDot) btnDot.classList.remove('lernpfad-dot--pulse');
-          }, 25000);
-
-          lernpfadeToggleBtn.addEventListener(
-            'click',
-            () => {
-              clearTimeout(pulseTimer);
-              if (btnDot) btnDot.classList.remove('lernpfad-dot--pulse');
-            },
-            { once: true },
-          );
-        }
-      } else {
-        if (btnDot) btnDot.remove();
-      }
+      aktuell.textContent = aktuell.hidden ? '' : lp.titel;
+      lernpfadeToggleBtn.querySelector('.lernpfade-wort').textContent = aktuell.hidden ? 'Lernpfade' : 'Lernpfad:';
+      // Nicht title: das wandelt app.js nur einmal in data-tooltip um
+      if (aktuell.hidden) delete lernpfadeToggleBtn.dataset.tooltip;
+      else lernpfadeToggleBtn.dataset.tooltip = lp.titel;
     }
 
     // Erster Stand; danach beim Öffnen des Menüs und beim Start eines Lernpfads

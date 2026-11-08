@@ -118,12 +118,13 @@
           aria-haspopup="true"
           aria-expanded="false"
         >
-          🗺️ <span class="lernpfade-wort">Lernpfade</span> <span class="tab-dropdown-chevron">&#x276F;</span>
+          🗺️ <span class="lernpfade-wort">Lernpfade</span>
+          <span id="lernpfad-aktuell" class="lernpfad-aktuell" hidden></span>
+          <span class="tab-dropdown-chevron">&#x276F;</span>
         </button>
         <!-- Einträge baut app.js aus den Lernpfaden (lernpfad.js) -->
         <div id="lernpfade-menu" class="tab-dropdown-menu" aria-label="Lernpfade" hidden></div>
       </div>
-      <span id="lernpfad-aktuell" class="lernpfad-aktuell" hidden></span>
       <div class="erm-title-wrap" title="Bezeichnung des Diagramms">
         <label class="erm-title-label" for="erm-title-input">Titel:</label>
         <input id="erm-title-input" class="erm-title-input" type="text" placeholder="Titel des ERM" />
@@ -782,12 +783,12 @@
           </div>
           <div class="lk-entwuerfe">
             <div class="lk-gruppe">
-              <h4>📝 Prüfungen</h4>
-              <ul id="entwuerfe-pruefung" class="lk-entwurf-liste"></ul>
-            </div>
-            <div class="lk-gruppe">
               <h4>🏋 Übungen</h4>
               <ul id="entwuerfe-uebung" class="lk-entwurf-liste"></ul>
+            </div>
+            <div class="lk-gruppe">
+              <h4>📝 Prüfungen</h4>
+              <ul id="entwuerfe-pruefung" class="lk-entwurf-liste"></ul>
             </div>
           </div>
         </section>
@@ -852,7 +853,7 @@
               style="width: 4em"
               disabled
             />
-            <span class="lk-hinweis">0 = frei markieren wie in der Prüfung</span>
+            <span class="lk-hinweis">0 = keine automatische Überprüfung, die Schüler markieren frei (wie in der Prüfung)</span>
           </div>
         </section>
         <section class="lk-seite" data-seite="3">
