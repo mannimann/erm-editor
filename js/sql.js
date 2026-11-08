@@ -76,6 +76,9 @@
     return TYPEN.includes(attr.sqlType) ? attr.sqlType : 'TEXT';
   }
 
+  // SQLite lässt NULL im Primärschlüssel zu; nur bei INTEGER PRIMARY KEY vergibt es selbst eine Nummer
+  const psBrauchtNotNull = (typ, einzigerPs) => !(einzigerPs && typ === 'INTEGER');
+
   /**
    * Erzeugt CREATE-TABLE-Code (SQLite) aus Relationen
    * [{ id?, name, attrs: [{ id?, name, isPk, isFk, sqlType?, notNull?, unique?, fkTarget? }] }].
@@ -95,6 +98,8 @@
         fehler.push('Eine Relation hat keinen Namen.');
         return;
       }
+      if (tabelle.startsWith('sqlite_'))
+        fehler.push(`„${rel.name}“: Tabellennamen mit „sqlite_“ am Anfang sind in SQLite nicht erlaubt.`);
       if (tabellen.has(tabelle))
         fehler.push(`„${tabellen.get(tabelle).name}“ und „${rel.name}“ ergeben beide die Tabelle ${tabelle}.`);
       else tabellen.set(tabelle, rel);
@@ -181,11 +186,12 @@
         const uniqueGruppe = (g) => erweitert && g.fks.every((fk) => fk.unique);
 
         const zeilen = rel.attrs.map((a) => {
-          let zeile = `${sqlName(a.name)} ${typVon(a, rels)}`;
+          const typ = typVon(a, rels);
+          let zeile = `${sqlName(a.name)} ${typ}`;
           const einzigerPs = a.isPk && pks.length === 1;
           const gruppe = inGruppe(a);
           if (einzigerPs) zeile += ' PRIMARY KEY';
-          if (erweitert && a.notNull && !a.isPk) zeile += ' NOT NULL';
+          if (a.isPk ? psBrauchtNotNull(typ, einzigerPs) : erweitert && a.notNull) zeile += ' NOT NULL';
           if (erweitert && a.unique && !einzigerPs && !(gruppe && uniqueGruppe(gruppe))) zeile += ' UNIQUE';
           const ziel = verweise.get(a);
           if (ziel && !gruppe) zeile += ` REFERENCES ${sqlName(ziel.rel.name)}(${sqlName(ziel.attr.name)})`;
@@ -363,7 +369,12 @@
 
           if (erweitert) {
             const nn = el('td');
-            if (a.isPk) nn.textContent = '–';
+            if (a.isPk && psBrauchtNotNull(typVon(a, rels), einPs)) {
+              const fest = haekchen(true, () => {});
+              fest.disabled = true;
+              fest.title = 'Primärschlüssel dürfen nicht leer sein.';
+              nn.appendChild(fest);
+            } else if (a.isPk) nn.textContent = '–';
             else nn.appendChild(haekchen(a.notNull, (notNull) => aendern(rel.id, a.id, { notNull })));
             zeile.appendChild(nn);
             const uq = el('td');

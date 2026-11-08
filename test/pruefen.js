@@ -715,13 +715,13 @@ pruefe('SQL: Beispiel aus dem Umbauplan (Schul-ERM, Stufe Einstieg)', () => {
     { name: 'unterrichtet', attrs: [a('Lehrer-Kürzel', true, true), a('Bezeichnung', true, true), a('Fach')] },
   ];
   const erwartet = `CREATE TABLE klasse (
-  bezeichnung TEXT PRIMARY KEY,
+  bezeichnung TEXT PRIMARY KEY NOT NULL,
   klassenraum TEXT,
   schuelernr INTEGER REFERENCES schueler(schuelernr)
 );
 
 CREATE TABLE lehrer (
-  lehrer_kuerzel TEXT PRIMARY KEY,
+  lehrer_kuerzel TEXT PRIMARY KEY NOT NULL,
   vorname TEXT,
   nachname TEXT
 );
@@ -734,8 +734,8 @@ CREATE TABLE schueler (
 );
 
 CREATE TABLE unterrichtet (
-  lehrer_kuerzel TEXT REFERENCES lehrer(lehrer_kuerzel),
-  bezeichnung TEXT REFERENCES klasse(bezeichnung),
+  lehrer_kuerzel TEXT NOT NULL REFERENCES lehrer(lehrer_kuerzel),
+  bezeichnung TEXT NOT NULL REFERENCES klasse(bezeichnung),
   fach TEXT,
   PRIMARY KEY (lehrer_kuerzel, bezeichnung)
 );`;
@@ -769,7 +769,7 @@ pruefe('SQL: Musterlösung aus dem Kapitel „Eigene Datenbank“ (Fremdschlüss
     },
   ];
   const erwartet = `CREATE TABLE mannschaft (
-  name TEXT PRIMARY KEY,
+  name TEXT PRIMARY KEY NOT NULL,
   gruendungsjahr INTEGER,
   stadion TEXT
 );
@@ -808,6 +808,20 @@ pruefe('SQL: reservierte Wörter und Ziffer am Namensanfang laufen in SQLite', (
   assert.strictEqual(f.length, 0, f.join('; '));
   assert(sql.includes('REFERENCES "order"("alter")'), sql);
   sqlite(sql);
+});
+
+pruefe('SQL: Primärschlüssel ohne NULL, Tabellennamen mit sqlite_ werden gemeldet', () => {
+  const pk = (name, sqlType) => ({ name, isPk: true, isFk: false, sqlType });
+  const { sql } = SQLExport.generateSQL([
+    { name: 'T', attrs: [pk('a', 'TEXT')] },
+    { name: 'V', attrs: [pk('a', 'INTEGER'), pk('b', 'INTEGER')] },
+    { name: 'N', attrs: [pk('a', 'INTEGER')] },
+  ]);
+  for (const einfuegen of ['t VALUES (NULL)', 'v VALUES (NULL, 1)'])
+    assert.throws(() => sqlite(`${sql}\nINSERT INTO ${einfuegen};`), /NOT NULL constraint failed/, einfuegen);
+  sqlite(`${sql}\nINSERT INTO n VALUES (NULL);`); // INTEGER PRIMARY KEY vergibt die Nummer selbst
+  const verboten = SQLExport.generateSQL([{ name: 'SQLite x', attrs: [pk('a', 'TEXT')] }]);
+  assert(!verboten.sql && verboten.fehler[0].includes('sqlite_'), verboten.fehler.join('; '));
 });
 
 pruefe('SQL: alle Musterlösungen laufen in SQLite, Verweise stimmen', () => {
