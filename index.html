@@ -98,7 +98,9 @@
         <div id="header-right">
           <button id="btn-import" class="header-btn" title="Diagramm aus JSON-Datei laden">⬆ Importieren</button>
           <button id="btn-export-json" class="header-btn" title="Diagramm als JSON speichern">⬇ JSON-Export</button>
-          <button id="btn-export-png" class="header-btn" title="Diagramm als PNG-Bild exportieren">📷 PNG-Export</button>
+          <button id="btn-export-png" class="header-btn" title="Diagramm als PNG-Bild exportieren">
+            📷 PNG-Export
+          </button>
           <button id="btn-clear" class="header-btn danger" title="Alles löschen">🗑 Neu</button>
           <input type="file" id="file-input" accept=".json" style="display: none" />
         </div>
@@ -168,7 +170,9 @@
           >
         </button>
 
-        <div class="toolbar-hint">Beziehung bearbeiten: Doppelklick oder Rechtsklick (Tablet: lange tippen) auf die Raute ◇</div>
+        <div class="toolbar-hint">
+          Beziehung bearbeiten: Doppelklick oder Rechtsklick (Tablet: lange tippen) auf die Raute ◇
+        </div>
 
         <hr class="tool-divider" />
 
@@ -265,8 +269,8 @@
               <p class="table-preview-hint">
                 Der Code ist für <strong>SQLite</strong>. Dort gibt es die Datentypen: <strong>INTEGER</strong> (ganze
                 Zahl), <strong>REAL</strong> (Kommazahl) und <strong>TEXT</strong>. Ein Datum speicherst du als TEXT
-                (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den Typ
-                seines Primärschlüssels.
+                (z.&nbsp;B. 2026-10-06), einen Wahrheitswert als INTEGER (0 oder 1). Ein Fremdschlüssel übernimmt den
+                Typ seines Primärschlüssels.
               </p>
               <label id="sql-erweitert-wrap" class="sql-erweitert">
                 <input type="checkbox" id="sql-erweitert" />
@@ -274,7 +278,12 @@
               </label>
               <div id="sql-spalten"></div>
             </div>
-            <div class="sql-trenner" role="separator" aria-orientation="vertical" title="Breite der Spalten ziehen"></div>
+            <div
+              class="sql-trenner"
+              role="separator"
+              aria-orientation="vertical"
+              title="Breite der Spalten ziehen"
+            ></div>
             <div class="sql-code">
               <h4>SQL-Code <small>(geänderte Zeilen leuchten kurz auf)</small></h4>
               <div id="sql-fehler"></div>
@@ -522,8 +531,8 @@
               <strong>FS (Fremdschlüssel)</strong> – mit der Checkbox <em>FS</em> markieren.<span
                 class="nicht-in-pruefung"
               >
-                In der Musterlösung <span style="color: #2563eb">blau</span> mit <code>↑</code> dargestellt (eine
-                andere gängige Darstellungsform ist eine
+                In der Musterlösung <span style="color: #2563eb">blau</span> mit <code>↑</code> dargestellt (eine andere
+                gängige Darstellungsform ist eine
                 <span style="text-decoration: underline dashed">gestrichelte Unterstreichung</span>).</span
               >
             </li>
@@ -608,9 +617,9 @@
         <div class="info-modal-body">
           <p>
             Ein Link öffnet den ERM-Editor und startet gleich den Lernpfad – z.&nbsp;B. für das Kursbuch, eine
-            Lernplattform oder ein Arbeitsblatt. Übungen lassen sich ab einer bestimmten Aufgabe verlinken. Lernpfade zur
-            Erarbeitung bauen aufeinander auf und starten bei der ersten offenen Aufgabe. Den Fortschritt speichert jeder
-            Browser für sich.
+            Lernplattform oder ein Arbeitsblatt. Übungen lassen sich ab einer bestimmten Aufgabe verlinken. Lernpfade
+            zur Erarbeitung bauen aufeinander auf und starten bei der ersten offenen Aufgabe. Den Fortschritt speichert
+            jeder Browser für sich.
           </p>
           <div id="links-liste"></div>
         </div>
@@ -671,7 +680,7 @@
         <div class="info-modal-body">
           <h4>Verantwortlicher</h4>
           <p>
-            Jakob Mann, Nordplatz 13, 04105 Leipzig<br />
+            Jakob Mann, Nordplatz 13, 04105 Leipzig (Dienstanschrift)<br />
             Kontakt: <a id="datenschutz-email-link" href="#" rel="nofollow"></a>
           </p>
           <h4>Hosting / Server-Logfiles</h4>
@@ -762,7 +771,12 @@
         <section class="lk-seite" data-seite="0">
           <div class="lk-knoepfe lk-oben">
             <button id="btn-szenario-neu" class="rel-btn primary" type="button">➕ Neu erstellen</button>
-            <button id="btn-szenario-laden" class="rel-btn" type="button" title="Eine gespeicherte Übung oder Lösungsdatei weiterbearbeiten">
+            <button
+              id="btn-szenario-laden"
+              class="rel-btn"
+              type="button"
+              title="Eine gespeicherte Übung oder Lösungsdatei weiterbearbeiten"
+            >
               ⬆ Datei laden
             </button>
           </div>
@@ -789,7 +803,9 @@
               <label class="lk-option"
                 ><input type="radio" name="szenario-art" value="pruefung" />
                 <span class="lk-option-titel">📝 Prüfung</span>
-                <span class="lk-option-text">Ohne Hilfen. Schüler geben eine Datei ab, du korrigierst sie hier.</span></label
+                <span class="lk-option-text"
+                  >Ohne Hilfen. Schüler geben eine Datei ab, du korrigierst sie hier.</span
+                ></label
               >
             </div>
           </div>
@@ -829,7 +845,9 @@
           <p class="lk-hinweis" id="szenario-modell-hinweis"></p>
           <div id="szenario-bericht" class="szenario-bericht"></div>
           <div class="lk-knoepfe">
-            <button id="btn-szenario-uebernehmen" class="rel-btn" type="button" hidden>📋 Mein Modell übernehmen</button>
+            <button id="btn-szenario-uebernehmen" class="rel-btn" type="button" hidden>
+              📋 Mein Modell übernehmen
+            </button>
             <button id="btn-szenario-loesung" class="rel-btn" type="button" data-nur="rm">
               🧾 Erwartete Relationen ansehen
             </button>
