@@ -82,9 +82,17 @@
             id="btn-auto-layout"
             class="header-btn header-layout-btn"
             type="button"
-            title="Diagramm automatisch anordnen"
+            title="Diagramm automatisch anordnen. Jeder Klick ordnet neu, Strg+Z macht es rückgängig."
           >
             🧭 Auto-Layout
+          </button>
+          <button
+            id="btn-attribute-layout"
+            class="header-btn header-layout-btn"
+            type="button"
+            title="Nur die Attribute neu anordnen, alles andere bleibt stehen. Strg+Z macht es rückgängig."
+          >
+            🧩 Attribute <span class="header-layout-btn-zusatz">neu anordnen</span>
           </button>
         </div>
         <div id="header-right">
@@ -114,7 +122,7 @@
         <div id="lernpfade-menu" class="tab-dropdown-menu" aria-label="Lernpfade" hidden></div>
       </div>
       <span id="lernpfad-aktuell" class="lernpfad-aktuell" hidden></span>
-      <div class="erm-title-wrap" title="Bezeichnung des Diagramma">
+      <div class="erm-title-wrap" title="Bezeichnung des Diagramms">
         <label class="erm-title-label" for="erm-title-input">Titel:</label>
         <input id="erm-title-input" class="erm-title-input" type="text" placeholder="Titel des ERM" />
       </div>
@@ -668,15 +676,17 @@
           </p>
           <h4>Hosting / Server-Logfiles</h4>
           <p>
-            Beim Aufruf dieser Website verarbeitet der Hosting-Anbieter automatisch technische Daten (u.&nbsp;a.
-            IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Datei, verwendeter Browser) in Server-Logfiles. Dies
-            ist technisch erforderlich, um die Website bereitzustellen. Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1
-            lit.&nbsp;f DSGVO (berechtigtes Interesse an einem sicheren und funktionsfähigen Betrieb).
+            Diese Website liegt bei GitHub Pages, einem Dienst der GitHub, Inc., 88 Colin P. Kelly Jr. Street, San
+            Francisco, CA 94107, USA. Beim Aufruf verarbeitet GitHub automatisch technische Daten (u.&nbsp;a.
+            IP-Adresse, Datum und Uhrzeit des Zugriffs, aufgerufene Datei, verwendeter Browser) in Server-Logfiles;
+            dabei können Daten in die USA übertragen werden. Dies ist technisch erforderlich, um die Website
+            bereitzustellen. Rechtsgrundlage: Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;f DSGVO (berechtigtes Interesse an einem
+            sicheren und funktionsfähigen Betrieb).
           </p>
           <h4>Keine Cookies, kein Tracking</h4>
           <p>
-            Diese Website setzt keine Cookies und keine Analyse- oder Tracking-Dienste ein. Es werden keine Daten an
-            Dritte übertragen.
+            Diese Website setzt keine Cookies und keine Analyse- oder Tracking-Dienste ein. Außer an den oben genannten
+            Hosting-Anbieter werden keine Daten an Dritte übertragen.
           </p>
           <h4>Lokale Speicherung im Browser</h4>
           <p>
@@ -729,8 +739,6 @@
       </div>
 
       <div id="aufgabe-content" class="aufgabe-content"></div>
-
-      <div id="aufgabe-feedback" class="aufgabe-feedback"></div>
     </div>
 
     <!-- ===== LEISTEN FÜR LEHRKRÄFTE: unten wie die Aufgabenleiste, Schritte als Reiter ===== -->
@@ -877,9 +885,6 @@
         <button class="aufgabe-success-ok-btn" type="button">OK</button>
       </div>
     </div>
-
-    <!-- ===== GLÜCKWUNSCH-POPUP ===== -->
-    <div id="lernpfad-congratulations-modal" class="lernpfad-congratulations-modal" style="display: none"></div>
 
     <!-- ===== APP-DIALOG (ersetzt alert/confirm) ===== -->
     <div id="app-modal-backdrop" class="app-modal-backdrop" style="display: none" role="dialog" aria-modal="true">

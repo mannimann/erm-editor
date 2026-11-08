@@ -2500,31 +2500,6 @@
       return true;
     },
 
-    resetAllProgress: function () {
-      // Lösche alle Aufgaben-Speicherungen für alle Lernpfade (auch die aus der Zeit vor dem Umbau 2026)
-      [
-        'erm-editor-lernpfad-grundlagen-v1',
-        'erm-editor-lernpfad-experten-v1',
-        'erm-editor-lernpfad-experten-v2',
-        'erm-editor-lernpfad-experten-v3',
-        'erm-editor-lernpfad-experten-v4',
-        'erm-editor-lernpfad-relmodel-grundlagen-v1',
-        'erm-editor-lernpfad-relmodel-experten-v1',
-        'erm-editor-lernpfad-sql-uebung-v1',
-        ...LERNPFADE.map((r) => this.getStorageKey(r.id)),
-      ].forEach((key) => localStorage.removeItem(key));
-
-      this.state = {
-        lernpfadId: null,
-        aktuelleAufgabe: 1,
-        geloesteAufgaben: [],
-        freieAufgaben: [1],
-        lernpfadAktiv: false,
-      };
-      this.hidePanel();
-      if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
-    },
-
     resetLernpfadProgress: function () {
       const lernpfad = this.getLernpfad();
       if (!lernpfad) return;
@@ -2532,17 +2507,15 @@
       // Lösche alle Arbeitsstände dieser Lernpfad
       const numbers = lernpfad.schritt ? [1] : lernpfad.aufgaben.map((q) => q.number);
       numbers.forEach((n) => localStorage.removeItem(this.getWorkKey(lernpfad.id, n)));
+      [...textmarkerStand.keys()]
+        .filter((k) => k.startsWith(`${lernpfad.id}:`))
+        .forEach((k) => textmarkerStand.delete(k));
 
       this.state.aktuelleAufgabe = 1;
       this.state.geloesteAufgaben = [];
       this.state.freieAufgaben = [1];
       this.state.lernpfadAktiv = true;
       this.persist();
-
-      const modal = document.querySelector('.lernpfad-congratulations-modal');
-      if (modal) {
-        modal.classList.remove('visible');
-      }
 
       this.renderPanel();
       if (window.App?.updateLernpfadDots) window.App.updateLernpfadDots();
@@ -2560,10 +2533,6 @@
       window.App?.updateLernpfadDots?.(); // Titel des Lernpfads aus der Tab-Leiste nehmen
       // „?“ an offenen Kardinalitäten gibt es nur während einer Aufgabe
       window.Diagram?.renderAll?.();
-      const modal = document.querySelector('.lernpfad-congratulations-modal');
-      if (modal) {
-        modal.classList.remove('visible');
-      }
     },
 
     renderPanel: function () {

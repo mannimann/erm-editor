@@ -1564,7 +1564,7 @@
     // _solution = generateSolution(window.AppState.state);
 
     if (_fehlendeKardinalitaeten.length) {
-      showFeedback('error', kardinalitaetenHinweis());
+      showFeedback('error', meldungHtml(kardinalitaetenHinweis()));
       return { passed: false };
     }
 
@@ -1780,7 +1780,7 @@
       fkWarnings.length ||
       fkOverWarnings.length ||
       fkUnklar.length;
-    const tippsHtml = namensTipps.map((t) => `<p class="feedback-tipp">💡 ${t}</p>`).join('');
+    const tippsHtml = namensTipps.map((t) => `<p class="feedback-tipp">💡 ${meldungHtml(t)}</p>`).join('');
     // Fertig ist eine Relation der Lösung, zu der keine Meldung gehört (nur die erste gleichen Namens)
     const offen = new Set(bothDirectionRels.map(normalizeRelationToken));
     [missingAttrs, extraAttrs, pkErrors, pkWarnings, fkFehlt, fkWarnings, fkOverWarnings, fkUnklar]
@@ -1816,20 +1816,29 @@
     return { passed: false, meldungen, namensTipps, fertig };
   }
 
+  // Meldungen enthalten Namen aus Eingaben und importierten Dateien: Nur <em> und <strong> bleiben Auszeichnung
+  function meldungHtml(text) {
+    return String(text)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/&lt;(\/?(?:em|strong))&gt;/g, '<$1>');
+  }
+
   function buildAccordionItem(label, messages, isWarning) {
     const wrapper = document.createElement('div');
     wrapper.className = 'feedback-group';
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'feedback-group-toggle' + (isWarning ? ' warning' : '');
-    toggle.innerHTML = `<span class="feedback-group-label">${label}</span><span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
+    toggle.innerHTML = `<span class="feedback-group-label">${meldungHtml(label)}</span><span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
     const body = document.createElement('div');
     body.className = 'feedback-group-body';
     body.hidden = true;
     const ul = document.createElement('ul');
     messages.forEach((m) => {
       const li = document.createElement('li');
-      li.innerHTML = m;
+      li.innerHTML = meldungHtml(m);
       ul.appendChild(li);
     });
     body.appendChild(ul);
@@ -1866,13 +1875,12 @@
 
   function buildAccordionItemGrouped(label, messages, isWarning) {
     const groups = groupByRelation(messages);
-    buildAccordionItem(label, messages, isWarning);
     const wrapper = document.createElement('div');
     wrapper.className = 'feedback-group';
     const toggle = document.createElement('button');
     toggle.type = 'button';
     toggle.className = 'feedback-group-toggle' + (isWarning ? ' warning' : '');
-    toggle.innerHTML = `<span class="feedback-group-label">${label}</span><span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
+    toggle.innerHTML = `<span class="feedback-group-label">${meldungHtml(label)}</span><span class="feedback-group-action">Anzeigen <span class="feedback-group-chevron">&#x276F;</span></span>`;
     const body = document.createElement('div');
     body.className = 'feedback-group-body feedback-group-body--nested';
     body.hidden = true;
@@ -2133,7 +2141,15 @@
       try {
         const data = JSON.parse(e.target.result);
         if (!Array.isArray(data.studentRelations)) throw new Error('Ungültiges Format');
-        _studentRelations = data.studentRelations;
+        // Datei von außen: Namen immer als Text, Einträge ohne Inhalt fallen weg
+        const istObjekt = (x) => x && typeof x === 'object';
+        _studentRelations = data.studentRelations.filter(istObjekt).map((rel) => ({
+          ...rel,
+          name: String(rel.name ?? ''),
+          attrs: (Array.isArray(rel.attrs) ? rel.attrs : [])
+            .filter(istObjekt)
+            .map((a) => ({ ...a, name: String(a.name ?? '') })),
+        }));
         if (typeof data.nextId === 'number' && data.nextId > _nextId) _nextId = data.nextId;
         ensureStudentIds();
         persistStudentRelations();
@@ -2267,7 +2283,6 @@
       persistStudentRelations();
       renderStudentForm();
     },
-    getPersistKey: () => _persistKey,
     setPersistKey: (key) => {
       _persistKey = key || RELMODEL_PERSIST_KEY;
     },
@@ -2284,16 +2299,6 @@
       renderStudentForm();
       return true;
     },
-    clearStorage: (key) => {
-      const storageKey = key || _persistKey;
-      try {
-        localStorage.removeItem(storageKey);
-      } catch (_e) {}
-    },
-    isDrawerOpen: () => {
-      const drawer = document.getElementById('relmodel-drawer');
-      return drawer ? !drawer.classList.contains('collapsed') : false;
-    },
     openDrawer: () => {
       if (window.AppTabs?.setDrawerState) window.AppTabs.setDrawerState(true);
     },
@@ -2308,8 +2313,5 @@
       const btn = document.getElementById('btn-check');
       if (btn) btn.click();
     },
-    exportJSON: exportRelmodelJSON,
-    importJSON: importRelmodelJSON,
-    exportPNG: exportRelmodelPNG,
   };
 })();

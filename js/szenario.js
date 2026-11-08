@@ -660,6 +660,7 @@
     if (aktiv) entwurfLaden(aktiv);
     else neuerEntwurf();
     hoeheFestlegen();
+    window.Diagram.centerView(); // erst jetzt steht die Höhe der Leiste fest
   }
 
   // Die Leiste springt beim Reiterwechsel nicht: Beim Öffnen wird sie so hoch wie der höchste Reiter (bis

@@ -446,18 +446,14 @@
   function korrekturSpeichern() {
     if (!korrektur) return;
     const { szenarioDaten, abgaben, index } = korrektur;
-    try {
-      localStorage.setItem(
-        KORREKTUR_KEY,
-        JSON.stringify({
-          szenario: szenarioDaten,
-          index,
-          abgaben: abgaben.map(({ datei, daten, punkte, szId, kopiert }) => ({ datei, daten, punkte, szId, kopiert })),
-        }),
-      );
-    } catch (_e) {
-      korrektur.meldungen.push('Der Speicher des Browsers ist voll – die Korrektur gilt nur bis zum Neuladen.');
-    }
+    localStorage.setItem(
+      KORREKTUR_KEY,
+      JSON.stringify({
+        szenario: szenarioDaten,
+        index,
+        abgaben: abgaben.map(({ datei, daten, punkte, szId, kopiert }) => ({ datei, daten, punkte, szId, kopiert })),
+      }),
+    );
   }
 
   // Kopien der gerade angezeigten Abgabe (Arbeitsstand des Korrektur-Lernpfads)
@@ -600,6 +596,7 @@
     document.getElementById('app-title').textContent = `Korrektur: ${sz.titel}`;
     if (korrektur.reiter < 3) korrektur.reiter = 3;
     zeichnen();
+    window.Diagram.centerView(true); // die ganze Abgabe über der Leiste
   }
 
   const el = (tag, klasse, inhalt) => {

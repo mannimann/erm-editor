@@ -3,6 +3,46 @@
    ============================================================ */
 'use strict';
 
+// ---- Browser-Speicher: gesperrt (Cookies blockiert) oder voll darf die App nicht aufhalten ----
+let speicherWarnungGezeigt = false;
+function speicherWarnen() {
+  if (speicherWarnungGezeigt) return;
+  speicherWarnungGezeigt = true;
+  window.App?.showTopToast?.(
+    'Der Browser kann gerade nichts speichern: Beim Schließen geht deine Arbeit verloren.',
+    9000,
+  );
+}
+
+try {
+  window.localStorage.getItem('erm-editor-test');
+} catch (_e) {
+  // Gesperrt: Ersatz im Arbeitsspeicher, gilt bis zum Neuladen
+  const daten = new Map();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (k) => (daten.has(k) ? daten.get(k) : null),
+      setItem: (k, v) => daten.set(k, String(v)),
+      removeItem: (k) => daten.delete(k),
+      key: (i) => [...daten.keys()][i] ?? null,
+      get length() {
+        return daten.size;
+      },
+    },
+  });
+  window.addEventListener('DOMContentLoaded', speicherWarnen);
+}
+
+const setItemOriginal = Storage.prototype.setItem;
+Storage.prototype.setItem = function (key, value) {
+  try {
+    setItemOriginal.call(this, key, value);
+  } catch (_e) {
+    speicherWarnen();
+  }
+};
+
 // ---- Globaler App-Zustand ----
 const state = {
   snapToGrid: true,
@@ -111,19 +151,6 @@ function getUniqueOwnerAttributeName(ownerId, baseName, excludeAttributeId = nul
   return `${cleanedBase} ${index}`;
 }
 
-function getOwningEntityForAttribute(attributeId) {
-  const owner = getOwningNodeForAttribute(attributeId);
-  return owner?.type === 'entity' ? owner : null;
-}
-
-function isEntityAttributeNameTaken(entityId, name, excludeAttributeId = null) {
-  return isOwnerAttributeNameTaken(entityId, name, excludeAttributeId);
-}
-
-function getUniqueEntityAttributeName(entityId, baseName, excludeAttributeId = null) {
-  return getUniqueOwnerAttributeName(entityId, baseName, excludeAttributeId);
-}
-
 function getExportBaseName() {
   const rawTitle = String(state.diagramTitle || '').trim();
   const safe = (rawTitle || 'neues-erm')
@@ -228,15 +255,6 @@ async function loadStartModel(lernpfad) {
 function relationenmodellNeu(lernpfad) {
   window.RelModel?.reset?.();
   if (lernpfad?.rmVorgabe) window.RelModel?.setStudentRelations?.(window.RelModel.loesungAlsRelationen());
-}
-
-function hasStorageEntry(storageKey) {
-  if (!storageKey) return false;
-  try {
-    return localStorage.getItem(storageKey) !== null;
-  } catch (_err) {
-    return false;
-  }
 }
 
 function applyErmPayload(data, shouldPersist = true) {
@@ -473,6 +491,14 @@ function loadPersistedState() {
     return false;
   }
 }
+
+// Zweiter Tab: Das freie Modell folgt dem Tab, der zuletzt gespeichert hat, statt dessen Stand zu überschreiben.
+// ponytail: nur das freie Modell; bei einer Aufgabe in zwei Tabs gewinnt der letzte Stand.
+window.addEventListener('storage', (e) => {
+  if (window.Lernpfad?.state?.lernpfadAktiv || modellPlatz || !e.newValue) return;
+  if (e.key === PERSIST_KEY) loadPersistedState();
+  if (e.key === RELMODEL_PERSIST_KEY) window.RelModel?.loadFromStorage?.();
+});
 
 // „ (n)“ hinter einem Namen im Eigenschaften-Panel; noch offen: „ (?)“ während einer Aufgabe, sonst nichts
 function cardinalitySuffix(raw) {
@@ -1127,6 +1153,7 @@ function selectNode(id) {
 
 function clearSelection() {
   _selectedNodeId = null;
+  window.Diagram?.auswahlVergessen?.();
   document.getElementById('prop-empty').style.display = '';
   document.getElementById('prop-node').style.display = 'none';
   document.getElementById('prop-related-row').style.display = 'none';
@@ -1166,7 +1193,6 @@ function initPropertiesPanel() {
     const node = getNodeById(_selectedNodeId);
     if (!node) return;
 
-    e.target.setCustomValidity('');
     node.name = e.target.value;
     if (window.Diagram) window.Diagram.renderAll();
     if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
@@ -1184,32 +1210,29 @@ function initPropertiesPanel() {
       const requestedName = raw || 'Entitätsklasse';
       if (isEntityNameTaken(requestedName, node.id)) {
         const uniqueName = getUniqueEntityName(requestedName, node.id);
-        e.target.setCustomValidity('Der Name der Entitätsklasse ist bereits vergeben. Name wurde angepasst.');
-        e.target.reportValidity();
+        window.App.showTopToast('Der Name der Entitätsklasse ist bereits vergeben. Name wurde angepasst.', 4000);
         node.name = uniqueName;
         e.target.value = uniqueName;
       } else {
         node.name = requestedName;
         e.target.value = requestedName;
       }
-      e.target.setCustomValidity('');
     } else if (node.type === 'attribute') {
       const owningNode = getOwningNodeForAttribute(node.id);
       const requestedName = raw || node.name || 'Attribut';
       if (owningNode && isOwnerAttributeNameTaken(owningNode.id, requestedName, node.id)) {
         const uniqueName = getUniqueOwnerAttributeName(owningNode.id, requestedName, node.id);
         const ownerLabel = owningNode.type === 'relationship' ? 'Beziehung' : 'Entitätsklasse';
-        e.target.setCustomValidity(
+        window.App.showTopToast(
           `Der Attributname ist in dieser ${ownerLabel} bereits vergeben. Name wurde angepasst.`,
+          4000,
         );
-        e.target.reportValidity();
         node.name = uniqueName;
         e.target.value = uniqueName;
       } else {
         node.name = requestedName;
         e.target.value = requestedName;
       }
-      e.target.setCustomValidity('');
     } else {
       node.name = raw || node.name;
     }
@@ -1230,7 +1253,6 @@ function initPropertiesPanel() {
 
       node.name = propNameValueBeforeEdit;
       e.currentTarget.value = propNameValueBeforeEdit;
-      e.currentTarget.setCustomValidity('');
       if (window.Diagram) window.Diagram.renderAll();
       if (window.RelModel?.requestSyncFromDiagramDebounced) window.RelModel.requestSyncFromDiagramDebounced();
       persistStateDebounced();
@@ -1294,7 +1316,10 @@ function importJSON(file) {
         window.Pruefung.korrekturOeffnen([{ name: file.name, daten: data }]);
         return;
       }
-      if (!applyErmPayload(data, true)) throw new Error('Ungültiges Format');
+      // Datei von außen: nur bekannte Felder, Lage immer als Zahl
+      const erm = window.Szenario.pruefeErm(data);
+      if (!erm) throw new Error('Ungültiges Format');
+      applyErmPayload({ ...data, ...erm }, true);
     } catch (err) {
       window.App?.showAlertModal?.(`Fehler beim Importieren: ${err.message}`, 'Import fehlgeschlagen');
     }
@@ -1321,79 +1346,21 @@ function exportPNG() {
 
   const nodeGroups = svgEl.querySelectorAll('.node');
   nodeGroups.forEach((g) => {
-    if (!g) return;
     const transform = g.getAttribute('transform') || '';
     const m = /translate\(\s*([\-0-9\.]+)[,\s]+([\-0-9\.]+)\s*\)/.exec(transform);
     const tx = m ? parseFloat(m[1]) : 0;
     const ty = m ? parseFloat(m[2]) : 0;
 
-    // Prefer the invisible hit rect (contains padding) if present
+    // The invisible hit rect (contains padding), every node has one (diagram.js: renderNode)
     const hitRect = Array.from(g.querySelectorAll('rect')).find((r) => r.getAttribute('fill') === 'transparent');
-    if (hitRect) {
-      const x = parseFloat(hitRect.getAttribute('x') || '0') + tx;
-      const y = parseFloat(hitRect.getAttribute('y') || '0') + ty;
-      const w = parseFloat(hitRect.getAttribute('width') || '0');
-      const h = parseFloat(hitRect.getAttribute('height') || '0');
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
-      return;
-    }
-
-    // Fallback: inspect shape types
-    const rect = g.querySelector('rect');
-    if (rect) {
-      const x = parseFloat(rect.getAttribute('x') || '0') + tx;
-      const y = parseFloat(rect.getAttribute('y') || '0') + ty;
-      const w = parseFloat(rect.getAttribute('width') || '0');
-      const h = parseFloat(rect.getAttribute('height') || '0');
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
-      return;
-    }
-
-    const ellipse = g.querySelector('ellipse');
-    if (ellipse) {
-      const rx = parseFloat(ellipse.getAttribute('rx') || '0');
-      const ry = parseFloat(ellipse.getAttribute('ry') || '0');
-      const x = tx - rx;
-      const y = ty - ry;
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, tx + rx);
-      maxY = Math.max(maxY, ty + ry);
-      return;
-    }
-
-    const poly = g.querySelector('polygon');
-    if (poly) {
-      const pts = (poly.getAttribute('points') || '')
-        .trim()
-        .split(/\s+/)
-        .map((p) => p.split(',').map((n) => parseFloat(n)));
-      if (pts.length) {
-        let lx = Infinity,
-          ly = Infinity,
-          hx = -Infinity,
-          hy = -Infinity;
-        pts.forEach((p) => {
-          const px = p[0];
-          const py = p[1];
-          lx = Math.min(lx, px);
-          ly = Math.min(ly, py);
-          hx = Math.max(hx, px);
-          hy = Math.max(hy, py);
-        });
-        minX = Math.min(minX, tx + lx);
-        minY = Math.min(minY, ty + ly);
-        maxX = Math.max(maxX, tx + hx);
-        maxY = Math.max(maxY, ty + hy);
-      }
-      return;
-    }
+    const x = parseFloat(hitRect.getAttribute('x') || '0') + tx;
+    const y = parseFloat(hitRect.getAttribute('y') || '0') + ty;
+    const w = parseFloat(hitRect.getAttribute('width') || '0');
+    const h = parseFloat(hitRect.getAttribute('height') || '0');
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + w);
+    maxY = Math.max(maxY, y + h);
   });
 
   const cropX = minX - margin;
@@ -1458,7 +1425,7 @@ function exportPNG() {
   const img = new Image();
   img.onload = () => {
     const canvas = document.createElement('canvas');
-    const scale = window.devicePixelRatio || 2;
+    const scale = Math.max(2, window.devicePixelRatio || 1); // scharf auch von einfachen Bildschirmen
     canvas.width = cropW * scale;
     canvas.height = cropH * scale;
     const ctx = canvas.getContext('2d');
@@ -2026,7 +1993,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function positionTooltipFor(target, preferredPos) {
       const content = tooltip.querySelector('.tooltip-content');
-      const arrow = tooltip.querySelector('.tooltip-arrow');
       const text = String(target.getAttribute('data-tooltip') || '').trim();
       if (!text) return;
       content.textContent = text;
@@ -2314,7 +2280,8 @@ window.App = {
           steg.className = `aufgabe-steg${completedSet.has(i - 1) ? ' erledigt' : ''}`;
           circlesContainer.appendChild(steg);
         }
-        const circle = document.createElement('div');
+        const circle = document.createElement('button');
+        circle.type = 'button';
         circle.className = 'aufgabe-circle';
         circle.setAttribute('data-aufgabe-number', i);
         circle.textContent = i;
@@ -2459,13 +2426,6 @@ window.App = {
 
       content.appendChild(actions);
     }
-
-    // Untere Feedback-Leiste ist deaktiviert.
-    const feedback = document.getElementById('aufgabe-feedback');
-    if (feedback) {
-      feedback.textContent = '';
-      feedback.className = 'aufgabe-feedback';
-    }
   },
 
   // Alle Szenarien eines Übungs-Lernpfads gelöst
@@ -2477,17 +2437,6 @@ window.App = {
       mode: 'alert',
       confirmLabel: 'Super!',
     });
-  },
-
-  showAufgabeFeedback(message, type = 'progress') {
-    const feedback = document.getElementById('aufgabe-feedback');
-    if (feedback) {
-      // Leiste bleibt bewusst leer/unsichtbar.
-      void message;
-      void type;
-      feedback.textContent = '';
-      feedback.className = `aufgabe-feedback ${type}`;
-    }
   },
 
   showAufgabeSuccessModal(aufgabeNumber, onComplete) {
@@ -2836,55 +2785,6 @@ window.App = {
       cancelLabel: 'Abbrechen',
     });
   },
-
-  showCongratulationsModal(title, message, buttons = []) {
-    const modal = document.querySelector('.lernpfad-congratulations-modal');
-    if (modal) {
-      if (this._congratsTimer) {
-        clearTimeout(this._congratsTimer);
-        this._congratsTimer = null;
-      }
-
-      const content = modal.querySelector('.lernpfad-congratulations-content');
-      if (content) {
-        const h2 = content.querySelector('h2');
-        const p = content.querySelector('p');
-        const btnContainer = content.querySelector('.lernpfad-congratulations-buttons');
-
-        if (h2) h2.textContent = title;
-        if (p) p.textContent = message;
-
-        if (btnContainer) {
-          btnContainer.innerHTML = '';
-          buttons.forEach((btn) => {
-            const button = document.createElement('button');
-            button.className = btn.addClass || 'aufgabe-btn-next';
-            button.textContent = btn.label;
-            button.onclick = btn.onClick;
-            btnContainer.appendChild(button);
-          });
-        }
-      }
-
-      modal.classList.add('visible');
-      this.spawnAufgabeConfetti(content || modal);
-      this._congratsTimer = setTimeout(() => {
-        modal.classList.remove('visible');
-        this._congratsTimer = null;
-      }, 3000);
-    }
-  },
-
-  hideCongratulationsModal() {
-    const modal = document.querySelector('.lernpfad-congratulations-modal');
-    if (this._congratsTimer) {
-      clearTimeout(this._congratsTimer);
-      this._congratsTimer = null;
-    }
-    if (modal) {
-      modal.classList.remove('visible');
-    }
-  },
 };
 
 // ---- Globale Exports ----
@@ -2893,21 +2793,11 @@ window.AppState = {
   applyErmPayload,
   genId,
   getNodeById,
-  isEntityNameTaken,
-  getOwningNodeForAttribute,
-  isOwnerAttributeNameTaken,
-  getUniqueOwnerAttributeName,
-  getOwningEntityForAttribute,
-  isEntityAttributeNameTaken,
-  getUniqueEntityAttributeName,
-  persistNow: persistStateNow,
   persistDebounced: persistStateDebounced,
   modellPlatzSetzen,
   freiesModell,
 };
 window.AppUtils = {
-  normalizeEntityName,
-  normalizeAttributeName,
   isEntityNameTaken,
   getUniqueEntityName,
   getOwningNodeForAttribute,

@@ -7,14 +7,23 @@
   const TYPEN = ['INTEGER', 'REAL', 'TEXT'];
   const R = () => window.RelModel;
 
+  // Wörter, die SQLite nicht als Tabellen- oder Spaltennamen annimmt (geprüft mit sqlite3 3.51)
+  const RESERVIERT = new Set(
+    `add all alter and as autoincrement between case check collate commit constraint create default deferrable delete
+    distinct drop else escape except exists foreign from group having if in index insert intersect into is isnull join
+    limit not nothing notnull null on or order primary references returning select set table then to transaction union
+    unique update using values when where`.split(/\s+/),
+  );
+
   // SQL-Name: klein, ä → ae, ö → oe, ü → ue, ß → ss, alles außer a–z und 0–9 → _
   // („Lehrer-Kürzel“ → lehrer_kuerzel, „ist befreundet mit“ → ist_befreundet_mit).
-  // ponytail: SQL-Schlüsselwörter als Namen (z. B. „Index“) werden nicht abgefangen.
+  // Reservierte Wörter („Alter“ → "alter") und Namen mit Ziffer am Anfang brauchen Anführungszeichen.
   function sqlName(name) {
-    return R()
+    const sql = R()
       .foldName(R().stripForeignKeyMarker(name))
       .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '');
+    return RESERVIERT.has(sql) || /^\d/.test(sql) ? `"${sql}"` : sql;
   }
 
   function hatName(x) {

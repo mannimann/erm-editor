@@ -6,7 +6,9 @@
       SQL-Regeln
    4. SQL aus allen Musterlösungen der Relationenmodell-Aufgaben läuft in SQLite, die Verweise stimmen
    5. Eigene Szenarien: Musterlösung aus dem ER-Modell, Prüfen von außen, Link hin und zurück
-   6. Prüfungsmodus: Link ohne Lösung, Abgabe von außen, Korrekturliste, Ablauf nach 2 Stunden */
+   6. Prüfungsmodus: Link ohne Lösung, Abgabe von außen, Korrekturliste, Ablauf nach 2 Stunden
+   7. Auto-Layout: keine Überlappung in allen ER-Modellen und bei langen Namen
+   8. Browser-Speicher gesperrt oder voll */
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -673,6 +675,29 @@ pruefe('Relationenmodell: fehlende Kardinalitäten ergeben keine falsche 1:1-Lö
   assert(!RelModel.checkAndGetResult().passed, 'Prüfung meldet fehlende Kardinalitäten');
 });
 
+pruefe('Feedback: HTML in Namen bleibt Text, <em> und <strong> bleiben Auszeichnung', () => {
+  context.AppState = { state: ermLaden('schule-grundlagen.json') };
+  RelModel.syncFromDiagram();
+  const rels = RelModel.loesungAlsRelationen();
+  rels[0].attrs.push({ id: 'x', name: '<img src=x onerror=y>', isPk: false, isFk: false });
+  RelModel.setStudentRelations(rels);
+  const erzeugt = [];
+  const original = context.document.createElement;
+  context.document.createElement = () => {
+    const el = fakeElement();
+    erzeugt.push(el);
+    return el;
+  };
+  RelModel.checkAndGetResult();
+  context.document.createElement = original;
+  const html = erzeugt
+    .map((el) => el.innerHTML)
+    .filter((h) => typeof h === 'string')
+    .join('\n');
+  assert(html.includes('<em>&lt;img src=x onerror=y&gt;</em>'), html);
+  assert(!html.includes('<img'), 'HTML aus dem Namen');
+});
+
 // ---- 4. SQL ----
 function sqlite(script) {
   return execFileSync('sqlite3', ['-batch', '-bail', ':memory:'], { input: script, stdio: 'pipe' }).toString();
@@ -772,6 +797,17 @@ pruefe('SQL: Namen, Kollisionen, fehlender Primärschlüssel', () => {
     { name: 'Gast', attrs: [{ name: 'E-Mail', isPk: true }, { name: 'E_Mail' }] },
   ]);
   assert(!doppelt.sql && doppelt.fehler.length === 1, doppelt.fehler.join('; '));
+});
+
+pruefe('SQL: reservierte Wörter und Ziffer am Namensanfang laufen in SQLite', () => {
+  const a = (name, isPk = false) => ({ name, isPk, isFk: false, sqlType: 'TEXT' });
+  const { sql, fehler: f } = SQLExport.generateSQL([
+    { name: 'Order', attrs: [a('Alter', true), a('Index'), a('2. Vorname')] },
+    { name: 'Table', attrs: [a('Check', true), { name: 'Alter', isPk: false, isFk: true }] },
+  ]);
+  assert.strictEqual(f.length, 0, f.join('; '));
+  assert(sql.includes('REFERENCES "order"("alter")'), sql);
+  sqlite(sql);
 });
 
 pruefe('SQL: alle Musterlösungen laufen in SQLite, Verweise stimmen', () => {
@@ -1108,6 +1144,99 @@ pruefe('Prüfung: Arbeitsstand läuft nach 2 Stunden ohne Änderung ab', () => {
   Pruefung.aufraeumen(jetzt);
   assert(![...storage.keys()].some((k) => k.includes('pruefung-alt') || k.includes('kaputt')), 'alter Stand gelöscht');
   assert(storage.has('erm-editor-arbeitsstand-v1:pruefung-frisch:a1'), 'frischer Stand bleibt');
+});
+
+// ---- 7. Auto-Layout ----
+function diagrammFuer(state) {
+  const fenster = {
+    console,
+    setTimeout,
+    clearTimeout,
+    performance,
+    ResizeObserver: class {
+      observe() {}
+    },
+    document: { ...context.document, createElementNS: () => fakeElement() },
+    AppState: { state, getNodeById: (id) => state.nodes.find((n) => n.id === id) || null },
+    AppUtils: {},
+  };
+  fenster.window = fenster;
+  vm.createContext(fenster);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/diagram.js'), 'utf8'), fenster, { filename: 'js/diagram.js' });
+  return fenster.Diagram;
+}
+
+function keineUeberlappung(wo, state, diagramm) {
+  const kaesten = state.nodes.map(diagramm.getNodeBounds);
+  kaesten.forEach((a, i) =>
+    kaesten.slice(i + 1).forEach((b, j) => {
+      const frei = a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y;
+      assert(frei, `${wo}: „${state.nodes[i].name}“ überlappt „${state.nodes[i + 1 + j].name}“`);
+    }),
+  );
+}
+
+pruefe('Attribute neu anordnen: Entitätsklassen und Beziehungen bleiben stehen, nichts überlappt', () => {
+  for (const datei of fs.readdirSync(FILES).filter((f) => f.endsWith('.json'))) {
+    const state = ermLaden(datei);
+    const diagramm = diagrammFuer(state);
+    const fest = () => JSON.stringify(state.nodes.filter((n) => n.type !== 'attribute').map((n) => [n.x, n.y]));
+    const vorher = fest();
+    diagramm.autoLayout(true);
+    assert.strictEqual(fest(), vorher, datei);
+    keineUeberlappung(datei, state, diagramm);
+  }
+});
+
+pruefe('Auto-Layout: keine Überlappung, auch bei langen Namen; Raster-Einstellung bleibt', () => {
+  const langeNamen = { nodes: [], edges: [] };
+  ['Kunde', 'Bestellung', 'Artikelstammdatensatz'].forEach((name, i) => {
+    langeNamen.nodes.push({ id: `e${i}`, type: 'entity', x: 0, y: 0, name });
+    ['Mitgliedschaftsbeginn', 'Telefonnummer privat und mobil', 'Sozialversicherungsnummer'].forEach((attr, j) => {
+      langeNamen.nodes.push({ id: `a${i}${j}`, type: 'attribute', x: 0, y: 0, name: attr });
+      langeNamen.edges.push({ id: `k${i}${j}`, fromId: `e${i}`, toId: `a${i}${j}`, edgeType: 'attribute' });
+    });
+  });
+  const dateien = fs.readdirSync(FILES).filter((f) => f.endsWith('.json'));
+  for (const [wo, state] of [...dateien.map((f) => [f, ermLaden(f)]), ['lange Namen', langeNamen]]) {
+    state.snapToGrid = false;
+    const diagramm = diagrammFuer(state);
+    diagramm.autoLayout();
+    assert.strictEqual(state.snapToGrid, false, `${wo}: Raster-Einstellung`);
+    keineUeberlappung(wo, state, diagramm);
+  }
+});
+
+// ---- 8. Browser-Speicher ----
+pruefe('Speicher gesperrt oder voll: app.js läuft weiter, setItem wirft nicht', () => {
+  class Storage {
+    setItem() {
+      throw new Error('QuotaExceededError');
+    }
+  }
+  const fenster = {
+    console,
+    setTimeout,
+    clearTimeout,
+    URLSearchParams,
+    Storage,
+    matchMedia: () => fakeElement(),
+    location: { search: '', hash: '', pathname: '/' },
+    addEventListener() {},
+    document: context.document,
+  };
+  fenster.window = fenster;
+  Object.defineProperty(fenster, 'localStorage', {
+    configurable: true,
+    get() {
+      throw new Error('SecurityError');
+    },
+  });
+  vm.createContext(fenster);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/app.js'), 'utf8'), fenster, { filename: 'js/app.js' });
+  fenster.localStorage.setItem('a', 1);
+  assert.strictEqual(fenster.localStorage.getItem('a'), '1');
+  new fenster.Storage().setItem('a', 1); // voll: wirft nicht
 });
 
 async function pruefeAsync(name, fn) {
