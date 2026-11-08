@@ -104,6 +104,9 @@
       return { fehler: 'Zum Überführen braucht jede Beziehung des ER-Modells Kardinalitäten.' };
     if (bild) Object.assign(sz, { ermBild: bild, ermId: d.ermId });
     if (d.pruefung) sz.pruefung = true;
+    // Von Hand festgelegte Klicks beim Markieren (0 = frei markieren). Prüfungen und Überführen haben keinen Zähler.
+    if (typeof d.klicks === 'number' && Number.isFinite(d.klicks) && aufgabe === 'erm' && !d.pruefung)
+      sz.klicks = Math.min(999, Math.max(0, Math.round(d.klicks)));
     sz.id = hash(JSON.stringify(sz));
     return { sz };
   }
@@ -125,7 +128,7 @@
   // ---- Datei und Link: Link = JSON, gepackt (deflate) und base64url – alles steht hinter dem #, ----
   // ---- der nicht an den Server geht. ----
   function fuerDatei(sz) {
-    const { titel, text, aufgabe, kardinalitaeten, erm, pruefung, ermBild, ermId } = sz;
+    const { titel, text, aufgabe, kardinalitaeten, erm, pruefung, ermBild, ermId, klicks } = sz;
     return {
       format: FORMAT,
       version: 1,
@@ -136,6 +139,7 @@
       erm,
       ...(pruefung && { pruefung }),
       ...(ermBild && { ermBild, ermId }),
+      ...(klicks != null && { klicks }),
     };
   }
 
@@ -288,10 +292,23 @@
       aufgabe: wahl('szenario-aufgabe') || 'erm',
       kardinalitaeten: feld('szenario-kardinalitaeten').checked,
       pruefung: wahl('szenario-art') === 'pruefung',
+      klicks:
+        feld('szenario-klicks-auto').checked || !feld('szenario-klicks').value.trim()
+          ? undefined
+          : Number(feld('szenario-klicks').value),
     };
   }
 
-  function formularFuellen({ titel = '', text = '', aufgabe = 'erm', kardinalitaeten = true, pruefung = false }) {
+  function formularFuellen({
+    titel = '',
+    text = '',
+    aufgabe = 'erm',
+    kardinalitaeten = true,
+    pruefung = false,
+    klicks,
+  }) {
+    feld('szenario-klicks-auto').checked = klicks == null;
+    feld('szenario-klicks').value = klicks ?? '';
     feld('szenario-titel').value = titel;
     feld('szenario-text').value = text;
     const waehle = (name, wert) => {
@@ -593,6 +610,10 @@
 
     // Schritt 2: Beim Überführen ist das ER-Modell die Aufgabe, der Text nur ein freiwilliger Hinweis
     panel.querySelector('[data-reiter="2"]').textContent = f.aufgabe === 'rm' ? '2 · Hinweise' : '2 · Text';
+    // Automatisch: Die Zahl folgt dem Modell; ohne Haken trägt die Lehrkraft sie selbst ein
+    const klicksFeld = feld('szenario-klicks');
+    klicksFeld.disabled = feld('szenario-klicks-auto').checked;
+    if (klicksFeld.disabled) klicksFeld.value = window.Lernpfad.autoKlicks(window.Lernpfad.masterAusErm(e.erm, e.kardinalitaeten));
     feld('szenario-text').placeholder =
       f.aufgabe === 'rm'
         ? 'Freiwillig: Hinweise für die Schüler, z. B. „Achte auf die Fremdschlüssel.“ Die Aufgabe ist das ER-Modell.'
@@ -631,7 +652,7 @@
       ? '✓ Gespeichert. Nur für dich – nicht an Schüler weitergeben.'
       : 'Nur für dich: Damit korrigierst du die Abgaben.';
     feld('pruefung-link-info').textContent = gesichert
-      ? 'Für die Schüler, z. B. im ONYX-Aufgabentext.'
+      ? 'Für die Schüler, z. B. im LernSax-Aufgabentext.'
       : 'Wird frei, sobald die Lösungsdatei gespeichert ist.';
     // Ein angezeigter Link passt nur zum Stand, aus dem er entstand
     if (letzterLink && letzterLink.id !== sz?.id) feld('szenario-link-wrap').hidden = true;
@@ -707,8 +728,8 @@
         'Das ist ein Prüfungslink, keine Lösungsdatei. Lade die Lösungsdatei, die du beim Erstellen gespeichert hast.',
         'Datei nicht geladen',
       );
-    const { titel, text, aufgabe, kardinalitaeten, pruefung } = sz;
-    neuerEntwurf({ titel, text, aufgabe, kardinalitaeten, pruefung });
+    const { titel, text, aufgabe, kardinalitaeten, pruefung, klicks } = sz;
+    neuerEntwurf({ titel, text, aufgabe, kardinalitaeten, pruefung, klicks });
     window.AppState.applyErmPayload(JSON.parse(JSON.stringify(sz.erm)));
     // Die geladene Lösungsdatei ist schon gespeichert: Der Prüfungslink ist gleich frei
     entwurfMerken({ gesichert: sz.pruefung ? pruefeSzenario(entwurf()).sz?.id : null });

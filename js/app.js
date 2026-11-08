@@ -2317,7 +2317,13 @@ window.App = {
       if ((lernpfad?.pruefung || lernpfad?.korrektur) && lernpfad.art === 'erm') {
         window.Pruefung?.textmarker?.(taskContent, taskHeader);
       } else if (aufgabe.masterlösung && !isSchritt) {
-        window.Lernpfad.textmarker(taskContent, aufgabe.masterlösung, `${mode}:${aufgabe.number}`, taskHeader);
+        window.Lernpfad.textmarker(
+          taskContent,
+          aufgabe.masterlösung,
+          `${mode}:${aufgabe.number}`,
+          taskHeader,
+          aufgabe.klicks,
+        );
       }
 
       // Experten (ERM + Relmodel): Wrapper für Side-by-Side-Layout
@@ -2649,6 +2655,8 @@ window.App = {
     autoCloseMs = 0,
     extraLabel = '',
     extraVariant = 'secondary',
+    eingabe = '', // Platzhalter eines Eingabefelds; „OK“ liefert dann seinen Text
+    wert = '',
     buttonOrder = ['extra', 'cancel', 'confirm'],
     onExtra = null,
   }) {
@@ -2688,6 +2696,17 @@ window.App = {
     cancelBtn.style.order = String(orderMap.cancel >= 0 ? orderMap.cancel : 1);
     extraBtn.style.order = String(orderMap.extra >= 0 ? orderMap.extra : 0);
 
+    const inputEl = document.getElementById('app-modal-input');
+    inputEl.style.display = eingabe ? '' : 'none';
+    inputEl.placeholder = eingabe;
+    inputEl.value = wert;
+    const leer = () => !!eingabe && !inputEl.value.trim();
+    confirmBtn.disabled = leer();
+    inputEl.oninput = () => (confirmBtn.disabled = leer());
+    inputEl.onkeydown = (event) => {
+      if (event.key === 'Enter' && !leer()) confirmBtn.click();
+    };
+
     backdrop.style.display = 'flex';
     backdrop.dataset.mode = mode;
 
@@ -2704,7 +2723,7 @@ window.App = {
 
       this._dialogState = { close, resolver: resolve, timer: null };
 
-      confirmBtn.onclick = () => close(true);
+      confirmBtn.onclick = () => close(eingabe ? inputEl.value.trim() : true);
       cancelBtn.onclick = () => close(false);
       extraBtn.onclick = () => {
         if (typeof onExtra === 'function') {
@@ -2722,7 +2741,7 @@ window.App = {
         this._dialogState.timer = setTimeout(() => close(true), autoCloseMs);
       }
 
-      confirmBtn.focus();
+      (eingabe ? inputEl : confirmBtn).focus();
     });
   },
 

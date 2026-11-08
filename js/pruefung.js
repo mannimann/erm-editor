@@ -1,5 +1,5 @@
 /* ============================================================
-   pruefung.js  –  Prüfungsmodus (Leistungskontrolle, z. B. mit ONYX/OPAL) und Korrektur
+   pruefung.js  –  Prüfungsmodus (Leistungskontrolle, z. B. mit LernSax) und Korrektur
    Ein Szenario mit „pruefung: true“ (js/szenario.js) öffnet die Aufgabe ohne Lösung, Prüfung und Hinweise.
    Die Schüler geben eine Datei ab (.erm-abgabe.json); die Lehrkraft öffnet sie mit ihrer Szenario-Datei und
    bekommt eine Korrekturliste, die sie als Text in die Korrektur kopiert. Plan: .plan/pruefungsmodus.md
@@ -247,6 +247,7 @@
       version: 1,
       pruefungsId: pid,
       titel: sz.titel,
+      name: pruefung.name,
       aufgabe: sz.aufgabe,
       abgegeben: new Date().toISOString(),
       ...(sz.aufgabe === 'erm'
@@ -273,11 +274,21 @@
 
   async function abgeben() {
     if (!pruefung) return;
-    const dateiname = `${pruefung.sz.titel.replace(/[\\/:*?"<>|]/g, '-')}.erm-abgabe.json`;
+    const name = await window.App.showAppModal({
+      title: 'Abgeben',
+      message: 'Trage deinen Namen ein. Er steht in der Abgabe und im Dateinamen.',
+      mode: 'confirm',
+      eingabe: 'Vor- und Nachname',
+      wert: pruefung.name || '',
+      confirmLabel: '⬇ Datei speichern',
+    });
+    if (!name) return;
+    pruefung.name = name; // nur bis zum Neuladen: Der Name bleibt nicht auf geteilten Geräten liegen
+    const dateiname = `${pruefung.sz.titel} - ${name}.erm-abgabe.json`.replace(/[\\/:*?"<>|]/g, '-');
     herunterladen(abgabeDaten(), dateiname);
     const loeschen = await window.App.showAppModal({
       title: 'Abgabe gespeichert',
-      message: `Lade die Datei „${dateiname}“ jetzt hoch (z. B. in ONYX). Danach kannst du deinen Arbeitsstand auf diesem Gerät löschen, damit ihn niemand nach dir sieht. Du kannst auch weiterarbeiten und später erneut abgeben.`,
+      message: `Lade die Datei „${dateiname}“ jetzt hoch (z. B. in LernSax). Danach kannst du deinen Arbeitsstand auf diesem Gerät löschen, damit ihn niemand nach dir sieht. Du kannst auch weiterarbeiten und später erneut abgeben.`,
       mode: 'confirm',
       confirmLabel: 'Arbeitsstand löschen',
       cancelLabel: 'Weiterarbeiten',
@@ -309,6 +320,7 @@
         .replace(/[^a-z0-9]/g, '')
         .slice(0, 16),
       titel: text(d.titel, 80),
+      name: text(d.name, 80),
       aufgabe,
       abgegeben: text(d.abgegeben, 40),
       markierungen,
@@ -710,7 +722,7 @@
         abgaben.forEach((a, i) => {
           const ok = passt(a);
           const b = knopf(
-            `${i + 1}. ${a.datei}${a.abgabe.abgegeben ? ` · ${datum(a.abgabe.abgegeben)}` : ''}${a.kopiert ? ' · 📋 kopiert' : ''}`,
+            `${i + 1}. ${a.abgabe.name || a.datei}${a.abgabe.abgegeben ? ` · ${datum(a.abgabe.abgegeben)}` : ''}${a.kopiert ? ' · 📋 kopiert' : ''}`,
             `korrektur-abgabe${i === index ? ' aktiv' : ''}`,
             () => zeigen(i),
           );
@@ -758,7 +770,7 @@
     const wo = el(
       'span',
       'korrektur-wo',
-      `${index + 1} von ${abgaben.length}: ${aktuell.datei}${
+      `${index + 1} von ${abgaben.length}: ${aktuell.abgabe.name || aktuell.datei}${
         aktuell.abgabe.abgegeben ? ` · abgegeben ${datum(aktuell.abgabe.abgegeben)}` : ''
       }`,
     );
@@ -915,7 +927,7 @@
     const t = feedbackText(korrektur.sz.titel, a.punkte);
     try {
       await navigator.clipboard.writeText(t);
-      window.App.showTopToast('Feedback kopiert – jetzt in die Korrektur (z. B. ONYX) einfügen.');
+      window.App.showTopToast('Feedback kopiert – jetzt in die Korrektur (z. B. LernSax) einfügen.');
     } catch (_e) {
       window.App.showAppModal({ title: 'Feedback', message: t, mode: 'alert', confirmLabel: 'Schließen' });
     }

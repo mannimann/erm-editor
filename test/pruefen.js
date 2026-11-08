@@ -1028,6 +1028,37 @@ pruefe('Eigene Szenarien: zwei Beziehungen „hat“ zwischen verschiedenen Enti
   Lernpfad.setEigeneSzenarien([]);
 });
 
+pruefe('Eigene Szenarien: von Hand festgelegte Klicks bleiben erhalten und werden begrenzt', () => {
+  const d = { format: Szenario.FORMAT, version: 1, titel: 'T', text: 'x', aufgabe: 'erm', erm: ermLaden('uebung-1-hotel.json') };
+  const k = (klicks, weiteres = {}) => Szenario.pruefeSzenario({ ...d, klicks, ...weiteres }).sz.klicks;
+  assert.strictEqual(k(30), 30);
+  assert.strictEqual(k(0), 0);
+  assert.strictEqual(k(5000), 999);
+  assert.strictEqual(k(-2), 0);
+  assert.strictEqual(k('abc'), undefined);
+  assert.strictEqual(k(NaN), undefined);
+  assert.strictEqual(k(3, { pruefung: true }), undefined);
+  assert.strictEqual(k(3, { aufgabe: 'rm', kardinalitaeten: true }), undefined);
+  assert.strictEqual(Szenario.pruefeSzenario(d).sz.klicks, undefined, 'ohne Angabe: automatisch');
+  assert.strictEqual(Szenario.fuerLink(Szenario.pruefeSzenario({ ...d, klicks: 3 }).sz).klicks, 3);
+});
+
+pruefe('Textmarker: Zahlen, Schreibweisen, Kardinalitäten und Großschreibung', () => {
+  const fehlt = (name, text) =>
+    Lernpfad.nichtImText({ entities: [name], attributes: {}, relationships: [] }, text).length === 1;
+  assert(!fehlt('Attribut', 'Das Attribut und mehr'), 'genauer Name');
+  assert(fehlt('Attribut', 'nur Attribut 2 und Attribut 3.'), 'fremde Zahl');
+  assert(!fehlt('Attribut 2', 'hier Attribut 2 und mehr'), 'Name mit Zahl');
+  assert(!fehlt('Attribut1', 'hier Attribut 1 steht'), 'Modell zusammen, Text getrennt');
+  assert(!fehlt('Attribut 1', 'hier Attribut1 steht'), 'Modell getrennt, Text zusammen');
+  assert(!fehlt('Lehrer-Kürzel', 'das Lehrer Kürzel'), 'Bindestrich');
+  for (const karte of ['1 : n Behandlung', '1:n Behandlung', '1 zu n Behandlung', '1 zu 1 Behandlung'])
+    assert(!fehlt('Patient', `Patient ${karte}`), `Kardinalität: ${karte}`);
+  assert(fehlt('Patient 1', 'Patient 1 : n Behandlung'), 'die 1 der Kardinalität gehört nicht zum Namen');
+  assert(fehlt('Spiel', 'Teams spielen gern'), 'Verb ist kein Nomen');
+  assert(!fehlt('Spiel', 'Teams an Spielen'), 'gebeugtes Nomen');
+});
+
 // ---- 6. Prüfungsmodus ----
 const alsPruefung = (datei, aufgabe = 'erm') => ({ ...alsSzenario(datei, aufgabe), pruefung: true });
 

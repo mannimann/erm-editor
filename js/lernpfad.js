@@ -2135,20 +2135,12 @@
 
   // Namen der Musterlösung, die im Text nicht vorkommen (Prüfbericht beim Erstellen)
   function nichtImText(spec, text) {
-    const woerter = (String(text || '').match(/[\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*/gu) || []).map(normalizeName);
-    const kommtVor = (name) => {
-      const teile = name.split(/\s+/).map(normalizeName);
-      const formen = new Set(teile.length === 1 ? wortformen(name) : []);
-      if (istBeziehung.has(name)) verbformen(name).forEach((f) => formen.add(f));
-      return woerter.some((w, i) => formen.has(w) || teile.every((t, k) => woerter[i + k] === t));
-    };
-    const istBeziehung = new Set(spec.relationships.map((r) => r.name));
-    const namen = [
-      ...spec.entities,
-      ...Object.values(spec.attributes).flat(),
-      ...spec.relationships.flatMap((r) => [r.name, ...(r.attributes || [])]),
-    ];
-    return [...new Set(namen)].filter((n) => n && !kommtVor(n));
+    const woerter = woerterAusText(String(text || '').replace(/\*\*/g, ''));
+    const elemente = textmarkerElemente(spec);
+    const gefunden = (e) => woerter.some((_, i) => treffer(e, i, woerter));
+    return [...new Set(elemente.map((e) => e.name))].filter(
+      (n) => n && !elemente.filter((e) => e.name === n).some(gefunden),
+    );
   }
 
   // Ein geprüftes Szenario (js/szenario.js) wird ein Übungs-Lernpfad mit einer Aufgabe
@@ -2169,6 +2161,7 @@
             szenario: text,
             masterlösung: masterAusErm(sz.erm, sz.kardinalitaeten),
             kardinalitaeten: sz.kardinalitaeten ? undefined : false,
+            klicks: sz.klicks,
             validator: function () {
               return validateExpertAufgabe(this.masterlösung);
             },
@@ -2633,9 +2626,47 @@
   // `${Lernpfad}:${Aufgabe}` → { markiert: Set, klicks } – bleibt beim Neuzeichnen des Panels erhalten
   const textmarkerStand = new Map();
 
-  // Klicks je Szenario: so viele, wie das ER-Modell Elemente hat, plus 5 für Fehlgriffe, mindestens 20 –
-  // genug zum Markieren, zu wenig, um einfach jedes Wort durchzuklicken (Szenarien: 94 bis 210 Wörter).
-  const textmarkerKlicks = (anzahlElemente) => Math.max(20, anzahlElemente + 5);
+  // Klicks je Szenario: so viele, wie das ER-Modell Elemente hat, plus Reserve für Fehlgriffe, die mit dem Modell
+  // wächst (ein Viertel, mindestens 5) – genug zum Markieren, zu wenig, um einfach jedes Wort durchzuklicken.
+  const textmarkerKlicks = (anzahlElemente) => anzahlElemente + Math.max(5, Math.ceil(anzahlElemente / 4));
+
+  const WORT = /([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)/u;
+  const GROSS = /^\p{Lu}/u;
+
+  // Wörter eines Textes ohne Seite: { norm, gross, nach (Zeichen bis zum nächsten Wort) }
+  function woerterAusText(text) {
+    const teile = text.split(WORT);
+    const woerter = [];
+    for (let i = 1; i < teile.length; i += 2)
+      woerter.push({ norm: normalizeName(teile[i]), gross: GROSS.test(teile[i]), nach: teile[i + 1] });
+    return woerter;
+  }
+
+  // Zahl bei i gehört zu einer Kardinalität („1 : n“, „1:n“, „1 zu n“), nicht zum Wort davor
+  const istKardinalitaet = (woerter, i) => /:/.test(woerter[i].nach || '') || woerter[i + 1]?.norm === 'zu';
+  const istZahl = (w) => /^\d+$/.test(w?.norm || '');
+  // Direkt hinter Wort i steht eine Zahl, die zum Namen gehört („Attribut 2“)
+  const zahlFolgt = (woerter, i) =>
+    /^\s+$/.test(woerter[i].nach || '') && istZahl(woerter[i + 1]) && !istKardinalitaet(woerter, i + 1);
+
+  // Wie viele Wörter ab start passen zu Element e? Ganzer Name in gleicher Zerlegung („Attribut1“ = „Attribut 1“,
+  // „Lehrer-Kürzel“ = „Lehrer Kürzel“), sonst ein gebeugtes Wort oder eine Verbform, sonst 0
+  function treffer(e, start, woerter) {
+    if (start < 0 || start >= woerter.length) return 0;
+    let zusammen = '';
+    for (let n = 1; n <= e.teile && start + n <= woerter.length; n++) {
+      const ende = start + n - 1;
+      zusammen += woerter[ende].norm;
+      if (zusammen === e.kurz) {
+        if (/\d$/.test(e.kurz)) return istZahl(woerter[ende]) && istKardinalitaet(woerter, ende) ? 0 : n;
+        return e.art !== 'beziehung' && zahlFolgt(woerter, ende) ? 0 : n;
+      }
+      if (!/^[\s_-]+$/.test(woerter[ende].nach || '')) break;
+    }
+    const w = woerter[start];
+    if (e.verben.has(w.norm)) return 1;
+    return e.formen.has(w.norm) && (!e.gross || w.gross) && !zahlFolgt(woerter, start) ? 1 : 0;
+  }
 
   // Wörter in <span> verpacken (auch über <strong>-Grenzen hinweg in Lesereihenfolge); liefert [{ span, norm, luecke }]
   function woerterVerpacken(container) {
@@ -2645,11 +2676,12 @@
     while (walker.nextNode()) textknoten.push(walker.currentNode);
     textknoten.forEach((knoten) => {
       const text = knoten.nodeValue;
-      const teile = text.split(/([\p{L}\p{N}]+(?:-[\p{L}\p{N}]+)*)/u);
+      const teile = text.split(WORT);
       if (teile.length < 2) return;
       const frag = document.createDocumentFragment();
       teile.forEach((teil, i) => {
         if (i % 2 === 0) {
+          if (i > 0) woerter[woerter.length - 1].nach = teil;
           // Leerzeichen zwischen zwei Wörtern: eigenes <span>, damit Wortgruppen durchgehend markiert sind
           if (/^\s+$/.test(teil) && i > 0 && i < teile.length - 1) {
             const luecke = document.createElement('span');
@@ -2664,7 +2696,7 @@
         span.className = 'tm-wort';
         span.textContent = teil;
         span.dataset.i = woerter.length;
-        woerter.push({ span, norm: normalizeName(teil) });
+        woerter.push({ span, norm: normalizeName(teil), gross: GROSS.test(teil) });
         frag.appendChild(span);
       });
       knoten.parentNode.replaceChild(frag, knoten);
@@ -2673,8 +2705,8 @@
   }
 
   // kopf: Überschrift „Szenario“, dort stehen Legende und Klickzähler
-  function textmarker(container, spec, standKey, kopf) {
-    const elemente = [
+  function textmarkerElemente(spec) {
+    return [
       ...(spec.entities || []).map((name) => ({ art: 'entitaet', name })),
       ...Object.values(spec.attributes || {})
         .flat()
@@ -2685,20 +2717,28 @@
       ]),
     ].map((e) => {
       const norm = e.name.split(/\s+/).map(normalizeName);
-      // Einzelwörter auch gebeugt, Wortgruppen genau oder als Verbform (siehe verbformen)
+      // Einzelwörter auch gebeugt (Nomen nur großgeschrieben), Beziehungen auch als Verbform (siehe verbformen)
       const formen = new Set(norm.length === 1 ? wortformen(e.name) : []);
-      if (e.art === 'beziehung') verbformen(e.name).forEach((f) => formen.add(f));
-      return { ...e, key: `${e.art}:${normalizeName(e.name)}`, norm, formen };
+      const verben = new Set(e.art === 'beziehung' ? verbformen(e.name) : []);
+      const kurz = normalizeName(e.name);
+      const teile = e.name.split(/[\s_-]+|(?<=\p{L})(?=\p{N})|(?<=\p{N})(?=\p{L})/u).filter(Boolean).length;
+      return { ...e, key: `${e.art}:${kurz}`, kurz, teile, gross: GROSS.test(e.name.trim()), formen, verben };
     });
+  }
 
-    const woerter = woerterVerpacken(container);
+  // Automatische Klickzahl (auch für die Anzeige beim Erstellen einer Übung)
+  const autoKlicks = (spec) => textmarkerKlicks(new Set(textmarkerElemente(spec).map((e) => e.key)).size);
 
-    // Wie viele Wörter ab start passen zu Element e? Ganze Wortgruppe, sonst ein Wort (Form), sonst 0
-    function treffer(e, start) {
-      if (start < 0 || start >= woerter.length) return 0;
-      if (e.norm.length > 1 && e.norm.every((n, k) => woerter[start + k]?.norm === n)) return e.norm.length;
-      return e.formen.has(woerter[start].norm) ? 1 : 0;
+  // klicks: von der Lehrkraft festgelegt; 0 = freie Markierungen wie in der Prüfung
+  function textmarker(container, spec, standKey, kopf, klicks) {
+    if (klicks === 0) {
+      const frei = textmarkerStand.get(standKey)?.frei || {};
+      textmarkerStand.set(standKey, { frei });
+      freierTextmarker(container, kopf, frei, () => {});
+      return;
     }
+    const elemente = textmarkerElemente(spec);
+    const woerter = woerterVerpacken(container);
 
     // Bestes Element für ein Wort: längste Wortgruppe zuerst („ist Exemplar von“ vor „Exemplar“),
     // dann der genaue Name („Spieler“ vor „Spiel“ + er)
@@ -2706,10 +2746,10 @@
       let bestes = null;
       let rang = -1;
       elemente.forEach((e) => {
-        for (let k = 0; k < e.norm.length; k++) {
-          const n = treffer(e, i - k);
+        for (let k = 0; k < e.teile; k++) {
+          const n = treffer(e, i - k, woerter);
           if (n <= k) continue; // reicht nicht bis zum Wort i
-          const r = n * 2 + (n === 1 && woerter[i - k].norm === e.norm[0] ? 1 : 0);
+          const r = n * 2 + (n === 1 && woerter[i - k].norm === e.kurz ? 1 : 0);
           if (r > rang) [bestes, rang] = [e, r];
         }
       });
@@ -2719,7 +2759,7 @@
     const stand = textmarkerStand.get(standKey) || { markiert: new Set(), klicks: 0 };
     textmarkerStand.set(standKey, stand);
     const { markiert } = stand;
-    const erlaubt = textmarkerKlicks(new Set(elemente.map((e) => e.key)).size);
+    const erlaubt = klicks ?? autoKlicks(spec);
 
     kopf.insertAdjacentHTML(
       'beforeend',
@@ -2741,7 +2781,7 @@
         .filter((e) => markiert.has(e.key))
         .forEach((e) => {
           for (let i = 0; i < woerter.length; i++) {
-            const n = treffer(e, i);
+            const n = treffer(e, i, woerter);
             if (n && elementBei(i) === e)
               for (let k = 0; k < n; k++) {
                 woerter[i + k].span.classList.add('tm-' + e.art);
@@ -2839,6 +2879,7 @@
     textAlsHtml,
     eigenerLernpfad,
     freierTextmarker,
+    autoKlicks,
     getExpertChecklistStatus,
     getRelmodelChecklistStatus,
     zusaetzlicheErmElemente,

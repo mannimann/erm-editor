@@ -840,6 +840,20 @@
             ></textarea>
           </div>
           <p class="lk-hinweis">Leerzeile = neuer Absatz · **Wort** = fett · Zeile mit „- “ = Aufzählung</p>
+          <div class="lk-haken" id="szenario-klicks-wrap" data-nur="uebung">
+            <label><input type="checkbox" id="szenario-klicks-auto" checked /> Klicks beim Markieren automatisch</label>
+            <input
+              id="szenario-klicks"
+              class="prop-input"
+              type="text"
+              inputmode="numeric"
+              maxlength="3"
+              aria-label="Anzahl der Klicks"
+              style="width: 4em"
+              disabled
+            />
+            <span class="lk-hinweis">0 = frei markieren wie in der Prüfung</span>
+          </div>
         </section>
         <section class="lk-seite" data-seite="3">
           <p class="lk-hinweis" id="szenario-modell-hinweis"></p>
@@ -912,6 +926,7 @@
         </div>
         <div class="app-modal-body">
           <p id="app-modal-message"></p>
+          <input id="app-modal-input" class="prop-input" type="text" maxlength="80" style="display: none; width: 100%" />
         </div>
         <div class="app-modal-actions">
           <button

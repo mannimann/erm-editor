@@ -4064,6 +4064,7 @@ body:is(.pruefung, .korrektur, .erstellen) #app-title {
 .tm-stift {
   font: inherit;
   padding: 0 6px;
+  margin: 0 4px;
   border: 1px solid transparent;
   border-radius: 3px;
   color: #e2e8f0;
@@ -4071,7 +4072,8 @@ body:is(.pruefung, .korrektur, .erstellen) #app-title {
 }
 
 .tm-stift[aria-pressed='true'] {
-  border-color: #e2e8f0;
+  outline: 1px solid #e2e8f0;
+  outline-offset: 3px;
   font-weight: 600;
 }
 
@@ -4550,6 +4552,7 @@ body.korrektur-ziehen #korrektur-leiste {
 #erstellen-leiste[data-art='uebung'] [data-nur='pruefung'],
 #erstellen-leiste[data-art='pruefung'] [data-nur='uebung'],
 #erstellen-leiste:not([data-aufgabe='rm']) [data-nur='rm'],
+#erstellen-leiste[data-aufgabe='rm'] #szenario-klicks-wrap,
 #erstellen-leiste[data-aufgabe='rm'] #szenario-kardinalitaeten-wrap {
   display: none;
 }
