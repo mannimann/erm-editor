@@ -213,6 +213,22 @@
       "y": 540,
       "name": "Raum",
       "isPrimaryKey": false
+    },
+    {
+      "id": "s67",
+      "type": "attribute",
+      "x": 190,
+      "y": 240,
+      "name": "Note",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s69",
+      "type": "relationship",
+      "x": 120,
+      "y": -30,
+      "name": "setzt voraus",
+      "isPrimaryKey": false
     }
   ],
   "edges": [
@@ -423,7 +439,29 @@
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "m"
+    },
+    {
+      "id": "s68",
+      "fromId": "s11",
+      "toId": "s67",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s70",
+      "fromId": "s69",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
+    },
+    {
+      "id": "s71",
+      "fromId": "s69",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "m"
     }
   ],
-  "nextId": 67
+  "nextId": 72
 }

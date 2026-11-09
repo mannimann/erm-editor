@@ -169,6 +169,14 @@
       "y": 380,
       "name": "Telefonnummer",
       "isPrimaryKey": false
+    },
+    {
+      "id": "s48",
+      "type": "attribute",
+      "x": 380,
+      "y": 450,
+      "name": "Schicht",
+      "isPrimaryKey": false
     }
   ],
   "edges": [
@@ -319,7 +327,13 @@
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "m"
+    },
+    {
+      "id": "s49",
+      "fromId": "s7",
+      "toId": "s48",
+      "edgeType": "attribute"
     }
   ],
-  "nextId": 48
+  "nextId": 50
 }

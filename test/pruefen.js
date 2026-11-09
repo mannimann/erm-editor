@@ -154,9 +154,11 @@ for (const id of ['erm-uebung', 'erm-experten'])
 const rmSzenarien = ['rm-uebung', 'rm-experten'].flatMap((id) =>
   Lernpfad.getAlleAufgaben(id).filter((q) => q.jsonFile),
 );
+// Die Fußball-Variante der Stufe Einstieg lässt „Spiel“ absichtlich weg und passt nicht zur ERM-Aufgabe
+const rmSzenarienMitErm = rmSzenarien.filter((q) => q.jsonFile !== 'uebung-4-fussball-rm.json');
 
 pruefe('Jedes ER-Modell erfüllt die Musterlösung seiner ERM-Aufgabe', () => {
-  for (const q of rmSzenarien) {
+  for (const q of rmSzenarienMitErm) {
     context.AppState = { state: ermLaden(q.jsonFile) };
     const result = ermSzenarien.get(q.title).validator();
     assert(result.passed, `${q.jsonFile}: ${result.error}`);
@@ -198,7 +200,7 @@ function check(rels) {
 }
 
 pruefe('Relationenmodell: jede Musterlösung besteht die eigene Prüfung', () => {
-  const dateien = [...rmSzenarien.map((q) => q.jsonFile), 'schule-grundlagen.json', 'schule-auffrischung.json'];
+  const dateien = [...rmSzenarien.map((q) => q.jsonFile), 'schule-rm-grundlagen.json', 'schule-auffrischung.json'];
   for (const datei of dateien) assert(check(loesung(datei)), datei);
 });
 
@@ -243,9 +245,8 @@ pruefe('Relationenmodell: Fremdschlüssel nach der Zieltabelle benannt (z. B. �
   // NOT NULL-Regeln finden auch so benannte Fremdschlüssel
   const fahrschule = Lernpfad.getAlleAufgaben('sql-uebung').find((q) => q.title === 'Fahrschule');
   rels = loesung(fahrschule.jsonFile);
-  attr(rels, 'Fahrstunde', 'Kundennummer').name = 'Fahrschüler';
-  attr(rels, 'Fahrstunde', 'Personalnummer').name = 'Fahrlehrer';
-  rel(rels, 'Fahrstunde')
+  attr(rels, 'Fahrlehrer', 'Kennzeichen').name = 'Fahrzeug';
+  rel(rels, 'Fahrlehrer')
     .attrs.filter((a) => a.isFk)
     .forEach((a) => (a.notNull = true));
   RelModel.setStudentRelations(rels);
@@ -508,7 +509,7 @@ pruefe('SQL-Übung: NOT NULL und UNIQUE nach den Regeln, Relationenmodell-Expert
   RelModel.setStudentRelations(rels);
   const ohne = fahrschule.validator();
   assert(!ohne.passed && /NOT NULL/.test(ohne.message), 'ohne NOT NULL darf die Aufgabe nicht bestehen');
-  rel(rels, 'Fahrstunde')
+  rel(rels, 'Fahrlehrer')
     .attrs.filter((a) => a.isFk)
     .forEach((a) => (a.notNull = true));
   RelModel.setStudentRelations(rels);
@@ -567,25 +568,33 @@ pruefe('Schritt-Lernpfade: das fertige Modell erfüllt jede Aufgabe', () => {
   context.AppState = { state: fertig };
   bestehen('erm-kardinalitaeten', 1, 99);
 
-  // ERM-Auffrischung: bis Aufgabe 5 mit „Bezeichnung“, ab Aufgabe 6 mit dem Verbundschlüssel
+  // ERM-Auffrischung: bis Aufgabe 4 mit „Bezeichnung“, ab Aufgabe 5 mit dem Verbundschlüssel
   const vorher = ermLaden('schule-auffrischung.json');
   const parallel = vorher.nodes.find((n) => n.name === 'Parallelklasse');
   vorher.nodes = vorher.nodes.filter((n) => n !== parallel);
   vorher.edges = vorher.edges.filter((e) => ![e.fromId, e.toId].includes(parallel.id));
   vorher.nodes.find((n) => n.name === 'Klassenstufe').name = 'Bezeichnung';
   context.AppState = { state: vorher };
-  bestehen('erm-auffrischung', 1, 5);
+  bestehen('erm-auffrischung', 1, 4);
   context.AppState = { state: ermLaden('schule-auffrischung.json') };
-  bestehen('erm-auffrischung', 6, 99);
+  bestehen('erm-auffrischung', 5, 99);
 
-  RelModel.setStudentRelations(loesung('schule-grundlagen.json'));
+  RelModel.setStudentRelations(loesung('schule-rm-grundlagen.json'));
   bestehen('rm-grundlagen', 1, 99);
   // Fremdschlüssel auf Klasse nach dem Lehrbuch benannt: „Klasse_Bezeichnung“ bzw. „Klasse“
-  const lehrbuch = loesung('schule-grundlagen.json');
+  const lehrbuch = loesung('schule-rm-grundlagen.json');
   attr(lehrbuch, 'Schüler', 'Bezeichnung').name = 'Klasse_Bezeichnung';
-  attr(lehrbuch, 'unterrichtet', 'Bezeichnung').name = 'Klasse';
   RelModel.setStudentRelations(lehrbuch);
   bestehen('rm-grundlagen', 5, 99);
+  // 1:1 „ist Klassenleiter von“: Der Fremdschlüssel darf auf beiden Seiten stehen
+  const andereSeite = loesung('schule-rm-grundlagen.json');
+  rel(andereSeite, 'Klasse').attrs = rel(andereSeite, 'Klasse').attrs.filter((a) => a.name !== 'Lehrer-Kürzel');
+  RelModel.setStudentRelations(andereSeite);
+  const klassenleiter = Lernpfad.getAlleAufgaben('rm-grundlagen')[6];
+  assert(!klassenleiter.validator().passed, 'ohne Fremdschlüssel nicht bestanden');
+  rel(andereSeite, 'Lehrer').attrs.push({ id: 'x', name: 'Bezeichnung', isPk: false, isFk: true });
+  assert(klassenleiter.validator().passed, 'Fremdschlüssel in „Lehrer“ gilt auch');
+  RelModel.setStudentRelations(lehrbuch);
   const mitLehrbuch = RelModel.checkAndGetResult();
   assert(mitLehrbuch.passed && mitLehrbuch.namensTipps.length === 0, 'Lehrbuch-Namen ohne 💡-Hinweis');
 
@@ -656,10 +665,10 @@ pruefe('Lernpfade: Schritt-Lernpfade enden mit Abschluss, Übungs-Lernpfade ohne
   assert(Lernpfad.isLernpfadDone('erm-uebung'), 'ERM-Übung mit fünf gelösten Szenarien ist fertig');
   storage.set(
     Lernpfad.getStorageKey('erm-grundlagen'),
-    JSON.stringify({ geloesteAufgaben: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] }),
+    JSON.stringify({ geloesteAufgaben: [1, 2, 3, 4, 5, 6, 7, 8, 9] }),
   );
   assert(Lernpfad.isLernpfadDone('erm-grundlagen'), 'ERM-Grundlagen ohne die Abschlussaufgabe fertig');
-  assert.deepStrictEqual({ ...Lernpfad.getFortschritt('erm-grundlagen') }, { erledigt: 10, gesamt: 10 });
+  assert.deepStrictEqual({ ...Lernpfad.getFortschritt('erm-grundlagen') }, { erledigt: 9, gesamt: 9 });
   storage.clear();
 });
 
@@ -826,7 +835,7 @@ pruefe('SQL: Primärschlüssel ohne NULL, Tabellennamen mit sqlite_ werden gemel
 
 pruefe('SQL: alle Musterlösungen laufen in SQLite, Verweise stimmen', () => {
   const dateien = [
-    ...new Set([...rmSzenarien.map((q) => q.jsonFile), 'schule-grundlagen.json', 'schule-auffrischung.json']),
+    ...new Set([...rmSzenarien.map((q) => q.jsonFile), 'schule-rm-grundlagen.json', 'schule-auffrischung.json']),
   ];
   for (const datei of dateien) {
     context.AppState = { state: ermLaden(datei) };
@@ -904,7 +913,7 @@ const alsSzenario = (datei, aufgabe = 'erm') => ({
 
 pruefe('Eigene Szenarien: Musterlösung aus dem ER-Modell = handgeschriebene Musterlösung', () => {
   const menge = (namen) => [...new Set(namen.map(N))].sort().join('|');
-  for (const q of rmSzenarien) {
+  for (const q of rmSzenarienMitErm) {
     const hand = ermSzenarien.get(q.title).masterlösung;
     const auto = Lernpfad.masterAusErm(ermLaden(q.jsonFile));
     const wo = q.jsonFile;

@@ -729,7 +729,7 @@
     {
       title: 'Primärschlüssel setzen',
       theory: `<p class="aufgabe-begriff">Neuer Begriff: Primärschlüssel · Symbol: unterstrichenes Attribut</p>
-        <p><strong>Primärschlüssel:</strong> Ein oder mehrere Attribute, die jede Entität eindeutig kennzeichnen. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
+        <p><strong>Primärschlüssel:</strong> Ein Attribut, das jede Entität eindeutig kennzeichnet. Keine zwei Schüler haben die gleiche SchülerNr. Der Primärschlüssel wird unterstrichen dargestellt.</p>`,
       objective: `<ol>
           <li>Erstelle ein Attribut <strong>„SchülerNr“</strong> bei der Entitätsklasse <strong>„Schüler“</strong></li>
           <li>Markiere „SchülerNr“ als <strong>Primärschlüssel</strong></li>
@@ -754,8 +754,7 @@
     },
     {
       title: 'Attribute für Klasse',
-      theory: `<p><strong>Regel:</strong> Jede Entitätsklasse braucht einen Primärschlüssel. Für „Klasse“ verwenden wir die Bezeichnung als eindeutiges Merkmal (z. B. 9a, 10c).</p>
-        <p><strong>Ausblick „Verbundschlüssel“:</strong> Manchmal werden mehrere Attribute kombiniert, um eine Entität eindeutig zu kennzeichnen. Man könnte die Bezeichnung aufspalten in Klassenstufe (z. B. 9, 10) und Parallelklasse (z. B. a, b, c). Diese beiden Attribute zusammen bilden dann den eindeutigen Schlüssel einer Klasse.</p>`,
+      theory: `<p><strong>Regel:</strong> Jede Entitätsklasse braucht einen Primärschlüssel. Für „Klasse“ verwenden wir die Bezeichnung als eindeutiges Merkmal (z. B. 9a, 10c).</p>`,
       objective: `<ol>
           <li>Erstelle zwei Attribute bei der Entitätsklasse <strong>„Klasse“</strong>:
             <ul>
@@ -838,22 +837,6 @@
       },
     },
     {
-      title: 'Beziehungsattribute',
-      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungsattribut · Symbol: Ellipse an der Raute</p>
-        <p><strong>Beziehungsattribut:</strong> Auch Beziehungen können Attribute haben! Ein Beispiel: Die Beziehung „unterrichtet“ kann das Attribut „Fach“ besitzen, um das in dieser Klasse unterrichtete Fach festzuhalten.</p>`,
-      objective: `<ol>
-          <li>Füge zur Beziehung <strong>„unterrichtet“</strong> ein Attribut mit dem Namen <strong>„Fach“</strong> hinzu</li>
-          <li>Raute „unterrichtet“ anklicken, dann links auf <strong>„Attribut“</strong></li>
-        </ol>`,
-      validator: function () {
-        const rel = getRelationshipByName('unterrichtet');
-        if (!rel) return { passed: false, error: 'Die Beziehung „unterrichtet“ existiert nicht.' };
-        if (!getAttributeByName(rel.id, 'Fach'))
-          return { passed: false, error: 'Das Attribut „Fach“ fehlt bei der Beziehung „unterrichtet“.' };
-        return { passed: true };
-      },
-    },
-    {
       title: 'Weitere Beziehung ergänzen',
       theory: `<p><strong>Zusätzliche Beziehung:</strong> Zwischen denselben Entitätsklassen kann es mehrere Beziehungen geben, wenn sie verschiedene Bedeutungen haben.</p>`,
       objective: `<ol>
@@ -877,8 +860,6 @@
           <li>Attribute hinzufügen</li>
           <li>Primärschlüssel setzen</li>
           <li>Beziehungen erstellen</li>
-          <li>Beziehungsattribute ergänzen</li>
-          <li>Verbundschlüssel (Ausblick)</li>
         </ul>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
@@ -930,7 +911,7 @@
     {
       title: 'Beide Richtungen prüfen',
       theory: `<p><strong>Beide Richtungen prüfen:</strong> Frage von jeder Seite aus, mit wie vielen Partnern sie verbunden ist. Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>
-        <p><strong>Hinweis:</strong> Eine n:m-Beziehung wird im Relationenmodell später eine eigene Tabelle (Relation), die Beziehungstabelle.</p>`,
+        <p><strong>Hinweis:</strong> Im ER-Modell gibst du n:m genauso an wie 1:1 und 1:n. Wie man n:m in Tabellen umsetzt, ist erst im Grundkurs Thema.</p>`,
       objective: `<p>Bestimme die Kardinalität von <strong>„unterrichtet“</strong> zwischen „Lehrer“ und „Klasse“. Prüfe beide Richtungen:</p>
         <ul>
           <li>Wie viele Klassen kann ein Lehrer unterrichten?</li>
@@ -1020,7 +1001,8 @@
   const ermAuffrischungAufgaben = nummeriert([
     {
       title: 'Entitätsklassen mit Schlüsseln',
-      theory: `<p><strong>Entitätsklasse</strong> (Rechteck): eine Gruppe gleichartiger Objekte, z. B. alle Schüler. Ein einzelnes Objekt, z. B. die Schülerin Lena, ist eine <strong>Entität</strong>.</p>
+      theory: `<p class="aufgabe-begriff">Wiederholung</p>
+        <p><strong>Entitätsklasse</strong> (Rechteck): eine Gruppe gleichartiger Objekte, z. B. alle Schüler. Ein einzelnes Objekt, z. B. die Schülerin Lena, ist eine <strong>Entität</strong>.</p>
         <p><strong>Attribut</strong> (Ellipse): eine Eigenschaft. Der <strong>Primärschlüssel</strong> (unterstrichen) kennzeichnet jede Entität eindeutig – jede Entitätsklasse braucht einen.</p>`,
       objective: `<p>Modelliere die Schule mit drei Entitätsklassen und markiere jeweils den Primärschlüssel (unterstrichen):</p>
         <ul>
@@ -1042,42 +1024,20 @@
     },
     {
       title: 'Beziehungen mit Kardinalitäten',
-      theory: `<p><strong>Beziehung</strong> (Raute): verbindet Entitätsklassen. Die <strong>Kardinalität</strong> sagt, wie viele Entitäten jeder Seite beteiligt sind: 1:1, 1:n oder n:m. Die Zahl steht an der Linie zu der Entitätsklasse, deren Anzahl sie angibt.</p>
-        <p>Prüfe immer beide Richtungen: Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Also n:m.</p>`,
-      objective: `<p>Verbinde die Entitätsklassen durch zwei Beziehungen:</p>
+      theory: `<p class="aufgabe-begriff">Wiederholung</p>
+        <p><strong>Beziehung</strong> (Raute): verbindet Entitätsklassen. Die <strong>Kardinalität</strong> sagt, wie viele Entitäten jeder Seite beteiligt sind: 1:1, 1:n oder n:m. Die Zahl steht an der Linie zu der Entitätsklasse, deren Anzahl sie angibt.</p>
+        <p>Prüfe immer beide Richtungen. Zwischen denselben Entitätsklassen kann es mehrere Beziehungen geben, wenn sie Verschiedenes bedeuten.</p>`,
+      objective: `<p>Verbinde die Entitätsklassen durch drei Beziehungen:</p>
         <ol>
           <li><strong>„geht in“</strong> zwischen „Schüler“ und „Klasse“: Schüler <strong>n : 1</strong> Klasse</li>
           <li><strong>„unterrichtet“</strong> zwischen „Lehrer“ und „Klasse“: Lehrer <strong>n : m</strong> Klasse</li>
+          <li><strong>„ist Klassensprecher“</strong> zwischen „Schüler“ und „Klasse“. Jede Klasse hat genau einen Klassensprecher, ein Schüler ist höchstens in einer Klasse Klassensprecher. Die Kardinalität bestimmst du selbst.</li>
         </ol>`,
       validator: function () {
         return validateRelationshipRequirements({
           relationships: [
             { name: 'geht in', from: 'Schüler', to: 'Klasse', cardinality: 'n:1' },
             { name: 'unterrichtet', from: 'Lehrer', to: 'Klasse', cardinality: 'n:m' },
-          ],
-        });
-      },
-    },
-    {
-      title: 'Beziehungsattribut',
-      theory: `<p><strong>Beziehungsattribut</strong> (Ellipse an der Raute): eine Eigenschaft, die erst durch die Beziehung entsteht. Das Fach gehört weder allein zum Lehrer noch allein zur Klasse, sondern zum Paar aus beiden.</p>`,
-      objective: `<p>Füge der Beziehung <strong>„unterrichtet“</strong> das Attribut <strong>„Fach“</strong> hinzu (Rechtsklick oder lange tippen auf die Raute → Attribut hinzufügen).</p>`,
-      validator: function () {
-        return validateRelationshipRequirements({
-          relationships: [
-            { name: 'unterrichtet', from: 'Lehrer', to: 'Klasse', cardinality: 'n:m', attributes: ['Fach'] },
-          ],
-        });
-      },
-    },
-    {
-      title: 'Zwei Beziehungen zwischen denselben Klassen',
-      theory: `<p>Zwischen denselben Entitätsklassen kann es mehrere Beziehungen geben, wenn sie Verschiedenes bedeuten: „geht in“ und „ist Klassensprecher“ verbinden beide „Schüler“ und „Klasse“.</p>`,
-      objective: `<p>Jede Klasse wählt einen Klassensprecher: Jede Klasse hat genau einen Klassensprecher, und ein Schüler kann höchstens in einer Klasse Klassensprecher sein.</p>
-        <p>Erstelle dafür eine zweite Beziehung <strong>„ist Klassensprecher“</strong> zwischen „Schüler“ und „Klasse“. Die Kardinalität bestimmst du selbst.</p>`,
-      validator: function () {
-        return validateRelationshipRequirements({
-          relationships: [
             {
               name: 'ist Klassensprecher',
               from: 'Schüler',
@@ -1086,6 +1046,24 @@
               hinweis:
                 'Prüfe beide Richtungen: Wie viele Klassensprecher hat eine Klasse? Für wie viele Klassen kann ein Schüler Sprecher sein?',
             },
+          ],
+        });
+      },
+    },
+    {
+      title: 'Beziehungsattribut',
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungsattribut · Symbol: Ellipse an der Raute</p>
+        <p><strong>Beziehungsattribut:</strong> Eine Eigenschaft, die erst durch die Beziehung entsteht. Das Fach gehört weder allein zum Lehrer noch allein zur Klasse, sondern zum Paar aus beiden. Die Ellipse hängt deshalb an der Raute, nicht am Rechteck.</p>
+        <p>Typisch ist das bei n:m-Beziehungen: Dort gibt es keine Seite, zu der die Angabe allein gehören könnte.</p>`,
+      objective: `<p>Füge der Beziehung <strong>„unterrichtet“</strong> das Attribut <strong>„Fach“</strong> hinzu:</p>
+        <ol>
+          <li>Klicke die Raute „unterrichtet“ an.</li>
+          <li>Klicke links auf <strong>„Attribut“</strong> und nenne es <strong>„Fach“</strong>.</li>
+        </ol>`,
+      validator: function () {
+        return validateRelationshipRequirements({
+          relationships: [
+            { name: 'unterrichtet', from: 'Lehrer', to: 'Klasse', cardinality: 'n:m', attributes: ['Fach'] },
           ],
         });
       },
@@ -1116,15 +1094,22 @@
       },
     },
     {
-      title: 'Verbundschlüssel',
+      title: 'Verbundschlüssel: Attribute vorbereiten',
       theory: `<p class="aufgabe-begriff">Neuer Begriff: Verbundschlüssel · Symbol: mehrere unterstrichene Attribute</p>
-        <p><strong>Verbundschlüssel:</strong> Ein Primärschlüssel aus mehreren Attributen. Erst zusammen kennzeichnen sie jede Entität eindeutig: Stufe 9 gibt es mehrmals, Parallelklasse a auch – aber 9 und a zusammen nur einmal.</p>`,
-      objective: `<p>Die Bezeichnung „9a“ besteht eigentlich aus zwei Teilen. Ersetze bei „Klasse“ den Primärschlüssel durch einen Verbundschlüssel:</p>
+        <p>Manchmal ist kein einzelnes Attribut eindeutig, und du möchtest keine eigene Nummer ergänzen. Dann kennzeichnen mehrere Attribute die Entität gemeinsam. Bei „Klasse“ steckt das schon in der Bezeichnung: „9a“ besteht aus der Klassenstufe und der Parallelklasse.</p>`,
+      objective: `<p>Teile die Bezeichnung bei „Klasse“ in ihre zwei Teile auf:</p>
         <ol>
           <li>Benenne „Bezeichnung“ in <strong>„Klassenstufe“</strong> um (z. B. 9).</li>
           <li>Füge das Attribut <strong>„Parallelklasse“</strong> hinzu (z. B. a).</li>
-          <li>Markiere <strong>beide</strong> als Primärschlüssel.</li>
         </ol>`,
+      validator: function () {
+        return validateEntityRequirements('Klasse', { attributes: { Klasse: ['Klassenstufe', 'Parallelklasse'] } });
+      },
+    },
+    {
+      title: 'Verbundschlüssel: beide Attribute markieren',
+      theory: `<p><strong>Verbundschlüssel:</strong> Ein Primärschlüssel aus mehreren Attributen. Erst zusammen kennzeichnen sie jede Entität eindeutig: Stufe 9 gibt es mehrmals, Parallelklasse a auch – aber 9 und a zusammen nur einmal.</p>`,
+      objective: `<p>Markiere bei „Klasse“ <strong>„Klassenstufe“</strong> und <strong>„Parallelklasse“</strong> als Primärschlüssel. Beide sind danach unterstrichen.</p>`,
       validator: function () {
         const pks = ['Klassenstufe', 'Parallelklasse'];
         const check = validateEntityRequirements('Klasse', {
@@ -1147,15 +1132,9 @@
     {
       title: '🎉 Abschluss',
       abschluss: true,
-      theory: `<p><strong>Glückwunsch!</strong> Du hast das ER-Modell aufgefrischt:</p>
-        <ul>
-          <li>Entitätsklassen, Attribute und Primärschlüssel</li>
-          <li>Beziehungen und Kardinalitäten</li>
-          <li>Beziehungsattribute</li>
-          <li>mehrere Beziehungen zwischen denselben Entitätsklassen</li>
-          <li>Selbstbeziehungen</li>
-          <li>Verbundschlüssel</li>
-        </ul>`,
+      theory: `<p><strong>Glückwunsch!</strong> Du hast das ER-Modell wiederholt und erweitert.</p>
+        <p><strong>Wiederholt:</strong> Entitätsklassen, Attribute, Primärschlüssel, Beziehungen und Kardinalitäten.</p>
+        <p><strong>Neu:</strong> Beziehungsattribute, Selbstbeziehungen und Verbundschlüssel.</p>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <ol>
           <li>Gib deinem ER-Modell in der Titelleiste einen <strong>Namen</strong> (z. B. „Schule“)</li>
@@ -1279,9 +1258,8 @@
     },
     fitnessstudio: {
       title: 'Fitnessstudio-Kursplanung',
-      jsonFile: 'uebung-5-fitnessstudio.json',
       szenario: `<p>Ein Fitnessstudio möchte seine Kursorganisation so abbilden, dass sichtbar wird, welche Mitglieder an welchen Kursen teilnehmen und welche Trainer welche Kurse übernehmen. Für Mitglied sollen Mitgliedsnummer, Name, Telefonnummer und E-Mail gespeichert werden. Für Kurs werden Kurscode, Titel, Schwierigkeitsstufe und Maximalplätze erfasst. Für Trainer sollen Trainerkürzel, Name und Lizenz geführt werden.</p>
-        <p>Ein Mitglied kann im Laufe der Zeit mehrere Kurse belegen, und ein Kurs kann von vielen Mitgliedern besucht werden (belegt). Zu jeder Belegung soll zusätzlich das Anmeldedatum festgehalten werden. Ebenso kann ein Trainer mehrere Kurse leiten, während ein Kurs auch von mehreren Trainern betreut werden kann (leitet). Zu dieser Zuordnung soll der Wochentag dokumentiert werden.</p>`,
+        <p>Ein Mitglied kann im Laufe der Zeit mehrere Kurse belegen, und ein Kurs kann von vielen Mitgliedern besucht werden (belegt). Ebenso kann ein Trainer mehrere Kurse leiten, während ein Kurs auch von mehreren Trainern betreut werden kann (leitet).</p>`,
       masterlösung: {
         entities: ['Mitglied', 'Kurs', 'Trainer'],
         attributes: {
@@ -1291,45 +1269,39 @@
         },
         primaryKeys: { Mitglied: 'Mitgliedsnummer', Kurs: 'Kurscode', Trainer: 'Trainerkürzel' },
         relationships: [
-          { name: 'belegt', from: 'Mitglied', to: 'Kurs', cardinality: 'n:m', attributes: ['Anmeldedatum'] },
-          { name: 'leitet', from: 'Trainer', to: 'Kurs', cardinality: 'n:m', attributes: ['Wochentag'] },
+          { name: 'belegt', from: 'Mitglied', to: 'Kurs', cardinality: 'n:m' },
+          { name: 'leitet', from: 'Trainer', to: 'Kurs', cardinality: 'n:m' },
         ],
       },
     },
-    // Knackpunkt: Der Text verführt zu „Fahrschüler n:m Fahrlehrer“. Weil dasselbe Paar viele
-    // Fahrstunden hat, braucht es die Entitätsklasse Fahrstunde mit zwei 1:n-Beziehungen.
+    // Knackpunkt: direkt n:m mit Beziehungsattribut – Stundenzahl gehört zum Paar aus Fahrschüler und Fahrlehrer.
     fahrschule: {
       title: 'Fahrschule',
       jsonFile: 'experten-1-fahrschule.json',
       // Experten 1: wichtige Wörter hervorgehoben (ab Experten 2 nicht mehr)
-      szenario: `<p>Eine Fahrschule möchte ihre Ausbildung verwalten. Jeder <strong>Fahrschüler</strong> hat eine eindeutige <strong>Kundennummer</strong>; außerdem werden <strong>Name</strong>, <strong>Geburtsdatum</strong> und <strong>Führerscheinklasse</strong> gespeichert. Jeder <strong>Fahrlehrer</strong> hat eine eindeutige <strong>Personalnummer</strong>, dazu kommen <strong>Name</strong> und <strong>Telefonnummer</strong>. Ein Fahrschüler lernt im Lauf seiner Ausbildung bei mehreren Fahrlehrern, und ein Fahrlehrer hat viele Fahrschüler.</p>
-        <p>Festgehalten wird jede einzelne <strong>Fahrstunde</strong> mit eindeutiger <strong>Stundennummer</strong>, <strong>Datum</strong>, <strong>Uhrzeit</strong> und <strong>Art</strong> (z. B. Überlandfahrt). Derselbe Fahrschüler fährt oft viele Stunden beim selben Fahrlehrer. Jede Fahrstunde fährt genau ein Fahrschüler, ein Fahrschüler fährt viele Fahrstunden (<strong>fährt</strong>). Jede Fahrstunde gibt genau ein Fahrlehrer, ein Fahrlehrer gibt viele Fahrstunden (<strong>gibt</strong>).</p>`,
+      szenario: `<p>Eine Fahrschule möchte ihre Ausbildung verwalten. Jeder <strong>Fahrschüler</strong> hat eine eindeutige <strong>Kundennummer</strong>; außerdem werden <strong>Name</strong>, <strong>Geburtsdatum</strong> und <strong>Führerscheinklasse</strong> gespeichert. Jeder <strong>Fahrlehrer</strong> hat eine eindeutige <strong>Personalnummer</strong>, dazu kommen <strong>Name</strong> und <strong>Telefonnummer</strong>.</p>
+        <p>Ein Fahrschüler lernt im Lauf seiner Ausbildung bei mehreren Fahrlehrern, und ein Fahrlehrer hat viele Fahrschüler (<strong>lernt bei</strong>). Zu jedem Paar aus Fahrschüler und Fahrlehrer wird die <strong>Stundenzahl</strong> festgehalten.</p>
+        <p>Jedes <strong>Fahrzeug</strong> hat ein eindeutiges <strong>Kennzeichen</strong>; außerdem werden <strong>Modell</strong> und <strong>Getriebe</strong> gespeichert. Jeder Fahrlehrer fährt genau ein Fahrzeug, ein Fahrzeug kann von mehreren Fahrlehrern gefahren werden (<strong>fährt mit</strong>).</p>`,
       masterlösung: {
-        entities: ['Fahrschüler', 'Fahrlehrer', 'Fahrstunde'],
+        entities: ['Fahrschüler', 'Fahrlehrer', 'Fahrzeug'],
         attributes: {
           Fahrschüler: ['Kundennummer', 'Name', 'Geburtsdatum', 'Führerscheinklasse'],
           Fahrlehrer: ['Personalnummer', 'Name', 'Telefonnummer'],
-          Fahrstunde: ['Stundennummer', 'Datum', 'Uhrzeit', 'Art'],
+          Fahrzeug: ['Kennzeichen', 'Modell', 'Getriebe'],
         },
-        primaryKeys: { Fahrschüler: 'Kundennummer', Fahrlehrer: 'Personalnummer', Fahrstunde: 'Stundennummer' },
+        primaryKeys: { Fahrschüler: 'Kundennummer', Fahrlehrer: 'Personalnummer', Fahrzeug: 'Kennzeichen' },
         relationships: [
-          { name: 'fährt', from: 'Fahrschüler', to: 'Fahrstunde', cardinality: '1:n' },
-          { name: 'gibt', from: 'Fahrlehrer', to: 'Fahrstunde', cardinality: '1:n' },
+          { name: 'lernt bei', from: 'Fahrschüler', to: 'Fahrlehrer', cardinality: 'n:m', attributes: ['Stundenzahl'] },
+          { name: 'fährt mit', from: 'Fahrlehrer', to: 'Fahrzeug', cardinality: 'n:1' },
         ],
       },
-      regeln: ['Jede Fahrstunde fährt genau ein Fahrschüler mit genau einem Fahrlehrer.'],
+      regeln: ['Jeder Fahrlehrer fährt genau ein Fahrzeug.'],
       sqlRegeln: [
         {
-          relation: 'Fahrstunde',
-          spalte: 'Kundennummer',
+          relation: 'Fahrlehrer',
+          spalte: 'Kennzeichen',
           notNull: true,
-          grund: 'Jede Fahrstunde fährt genau ein Fahrschüler.',
-        },
-        {
-          relation: 'Fahrstunde',
-          spalte: 'Personalnummer',
-          notNull: true,
-          grund: 'Jede Fahrstunde gibt genau ein Fahrlehrer.',
+          grund: 'Jeder Fahrlehrer fährt genau ein Fahrzeug.',
         },
       ],
     },
@@ -1339,7 +1311,7 @@
       jsonFile: 'experten-2-flugbetrieb.json',
       szenario: `<p>Eine Fluggesellschaft plant ihre Flüge. Jeder Flughafen hat einen eindeutigen Flughafencode (z. B. LEJ); außerdem werden Name und Stadt gespeichert. Jeder Flug hat eine eindeutige FlugID sowie Datum, Abflugzeit und Ankunftszeit. Jeder Pilot hat eine eindeutige Lizenznummer, dazu werden Name und Flugstunden gespeichert.</p>
         <p>Jeder Flug startet von genau einem Flughafen, und von einem Flughafen starten viele Flüge (startet von). Ebenso landet jeder Flug in genau einem Flughafen, und in einem Flughafen landen viele Flüge (landet in). Jeden Flug führt genau ein Pilot als Kapitän, ein Pilot führt viele Flüge (führt).</p>
-        <p>Erfahrene Piloten bilden den Nachwuchs aus: Ein Pilot kann viele andere Piloten ausbilden. Jeder Pilot hat höchstens einen Ausbilder aus der eigenen Fluggesellschaft – wer anderswo gelernt hat, hat hier keinen (bildet aus).</p>`,
+        <p>Erfahrene Piloten bilden den Nachwuchs aus: Ein Pilot kann viele andere Piloten ausbilden. Jeder Pilot hat höchstens einen Ausbilder aus der eigenen Fluggesellschaft – wer anderswo gelernt hat, hat hier keinen (bildet aus). Zu jeder Ausbildung wird der Ausbildungsbeginn festgehalten.</p>`,
       masterlösung: {
         entities: ['Flughafen', 'Flug', 'Pilot'],
         attributes: {
@@ -1352,7 +1324,7 @@
           { name: 'startet von', from: 'Flug', to: 'Flughafen', cardinality: 'n:1' },
           { name: 'landet in', from: 'Flug', to: 'Flughafen', cardinality: 'n:1' },
           { name: 'führt', from: 'Pilot', to: 'Flug', cardinality: '1:n' },
-          { name: 'bildet aus', from: 'Pilot', to: 'Pilot', cardinality: '1:n' },
+          { name: 'bildet aus', from: 'Pilot', to: 'Pilot', cardinality: '1:n', attributes: ['Ausbildungsbeginn'] },
         ],
       },
       regeln: [
@@ -1375,8 +1347,8 @@
       title: 'Universität',
       jsonFile: 'experten-3-universitaet.json',
       szenario: `<p>Eine Hochschule möchte ihre Lehrorganisation so modellieren, dass sichtbar wird, welche Dozenten welche Vorlesungen halten, welche Hilfskräfte sie dabei unterstützen und welche Seminare zu einer Vorlesung gehören. Für Dozent werden Dozentenkürzel, Name und Fachgebiet gespeichert. Für Student werden Matrikelnummer, Name, Telefonnummer und E-Mail erfasst. Nicht jeder Student arbeitet zusätzlich an der Hochschule, aber einige Studierende sind zugleich Hilfskraft. Für Hilfskraft sollen HiwiNummer, Wochenstunden und Vertragsbeginn gespeichert werden.</p>
-        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt, jedes Seminar mit Seminarnummer, Wochentag und Raum. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
-        <p>Auch die Teilnahme der Studierenden soll abgebildet werden. Ein Student kann an mehreren Vorlesungen teilnehmen, und eine Vorlesung kann von vielen Studenten besucht werden (besucht). Dasselbe gilt für Seminare: Ein Student kann mehrere Seminare besuchen, und ein Seminar kann viele Studenten haben (nimmt teil an).</p>`,
+        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt, jedes Seminar mit Seminarnummer, Wochentag und Raum. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Eine Vorlesung kann mehrere andere Vorlesungen voraussetzen und selbst Voraussetzung für mehrere andere sein (setzt voraus). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
+        <p>Auch die Teilnahme der Studierenden soll abgebildet werden. Ein Student kann an mehreren Vorlesungen teilnehmen, und eine Vorlesung kann von vielen Studenten besucht werden (besucht). Zu jedem Besuch einer Vorlesung wird die Note festgehalten. Dasselbe gilt für Seminare: Ein Student kann mehrere Seminare besuchen, und ein Seminar kann viele Studenten haben (nimmt teil an).</p>`,
       masterlösung: {
         entities: ['Dozent', 'Student', 'Hilfskraft', 'Vorlesung', 'Seminar'],
         attributes: {
@@ -1399,8 +1371,9 @@
           { name: 'ist', from: 'Student', to: 'Hilfskraft', cardinality: '1:1' },
           { name: 'gehört zu', from: 'Seminar', to: 'Vorlesung', cardinality: 'n:1' },
           { name: 'leitet', from: 'Hilfskraft', to: 'Seminar', cardinality: '1:n' },
-          { name: 'besucht', from: 'Student', to: 'Vorlesung', cardinality: 'n:m' },
+          { name: 'besucht', from: 'Student', to: 'Vorlesung', cardinality: 'n:m', attributes: ['Note'] },
           { name: 'nimmt teil an', from: 'Student', to: 'Seminar', cardinality: 'n:m' },
+          { name: 'setzt voraus', from: 'Vorlesung', to: 'Vorlesung', cardinality: 'n:m' },
         ],
       },
       regeln: [
@@ -1460,7 +1433,7 @@
       szenario: `<p>Eine Fachtagung soll so geplant werden, dass klar ist, wer welchen Vortrag hält, in welchem Raum er stattfindet und welche Helfer die Räume betreuen. Jeder Referent hat eine eindeutige Referentennummer; außerdem werden Name und Fachgebiet gespeichert. Jeder Vortrag hat eine eindeutige Vortragsnummer sowie Titel, Datum, Startzeit und Endzeit. Jeder Helfer hat eine eindeutige Helfernummer, dazu Name und Telefonnummer.</p>
         <p>Die Tagung nutzt mehrere Gebäude. Einen Raum erkennt man erst an Gebäude und Raumnummer zusammen – Raum 101 gibt es in jedem Gebäude. Zu jedem Raum wird außerdem die Kapazität gespeichert.</p>
         <p>Ein Referent kann mehrere Vorträge halten, jeder Vortrag wird von genau einem Referenten gehalten (hält). In einem Raum finden viele Vorträge statt; jeder Vortrag findet in höchstens einem Raum statt – solange die Raumplanung läuft, steht bei manchen Vorträgen noch kein Raum fest (findet statt in).</p>
-        <p>Ein Helfer betreut mehrere Räume, und jeder Raum wird von mehreren Helfern betreut (betreut). Erfahrene Helfer arbeiten neue ein: Ein Helfer kann mehrere andere einarbeiten und selbst von mehreren eingearbeitet werden (arbeitet ein).</p>`,
+        <p>Ein Helfer betreut mehrere Räume, und jeder Raum wird von mehreren Helfern betreut (betreut). Zu jeder Betreuung wird die Schicht festgehalten. Erfahrene Helfer arbeiten neue ein: Ein Helfer kann mehrere andere einarbeiten und selbst von mehreren eingearbeitet werden (arbeitet ein).</p>`,
       masterlösung: {
         entities: ['Referent', 'Vortrag', 'Raum', 'Helfer'],
         attributes: {
@@ -1478,7 +1451,7 @@
         relationships: [
           { name: 'hält', from: 'Referent', to: 'Vortrag', cardinality: '1:n' },
           { name: 'findet statt in', from: 'Vortrag', to: 'Raum', cardinality: 'n:1' },
-          { name: 'betreut', from: 'Helfer', to: 'Raum', cardinality: 'n:m' },
+          { name: 'betreut', from: 'Helfer', to: 'Raum', cardinality: 'n:m', attributes: ['Schicht'] },
           { name: 'arbeitet ein', from: 'Helfer', to: 'Helfer', cardinality: 'n:m' },
         ],
       },
@@ -1509,7 +1482,7 @@
       jsonFile: 'experten-5-katastrophenschutz.json',
       szenario: `<p>Eine regionale Leitstelle möchte Einsätze im Katastrophenschutz so modellieren, dass sichtbar wird, welche Einsatzkräfte in welchen Teams organisiert sind, welche Einsätze von welchen Teams übernommen werden und welche Fahrzeuge dabei eingesetzt werden. Für Einsatzkraft werden Funkrufname, Name, Qualifikation und Telefonnummer gespeichert. Teams werden mit Teamname, Standort und Bereitschaftsstufe geführt. Fahrzeuge werden über Kennzeichen, Fahrzeugtyp und Kapazität verwaltet.</p>
         <p>Zwischen Einsatzkraft und Team gibt es zwei unterschiedliche Beziehungen. Jede Einsatzkraft gehört genau zu einem Team, ein Team kann jedoch viele Einsatzkräfte umfassen (gehört zu). Zusätzlich hat jedes Team genau eine Einsatzleitung, und eine Einsatzkraft kann die Leitung für mehrere Teams übernehmen (leitet). Außerdem soll die fachliche Einarbeitung abgebildet werden: Eine erfahrene Einsatzkraft kann mehrere andere Einsatzkräfte einarbeiten, und jede eingearbeitete Einsatzkraft kann wiederum später andere einarbeiten. Jede Einsatzkraft wird von genau einer erfahrenen Einsatzkraft eingearbeitet (arbeitet ein).</p>
-        <p>Ein Einsatz wird nicht über eine künstliche Einzel-ID, sondern über einen Verbundschlüssel aus Einsatzgebiet, Datum und Startzeit eindeutig bestimmt. Zusätzlich werden Priorität und Lagebild gespeichert. Mehrere Teams können denselben Einsatz bearbeiten, und ein Team kann an vielen Einsätzen beteiligt sein (bearbeitet). Ebenso können in einem Einsatz mehrere Fahrzeuge verwendet werden, und ein Fahrzeug kann über die Zeit in vielen Einsätzen genutzt werden (nutzt).</p>`,
+        <p>Ein Einsatz wird nicht über eine künstliche Einzel-ID, sondern über einen Verbundschlüssel aus Einsatzgebiet, Datum und Startzeit eindeutig bestimmt. Zusätzlich werden Priorität und Lagebild gespeichert. Mehrere Teams können denselben Einsatz bearbeiten, und ein Team kann an vielen Einsätzen beteiligt sein (bearbeitet). Zu jeder Bearbeitung wird die Rolle des Teams festgehalten. Ebenso können in einem Einsatz mehrere Fahrzeuge verwendet werden, und ein Fahrzeug kann über die Zeit in vielen Einsätzen genutzt werden (nutzt).</p>`,
       masterlösung: {
         entities: ['Einsatzkraft', 'Team', 'Einsatz', 'Fahrzeug'],
         attributes: {
@@ -1527,7 +1500,7 @@
         relationships: [
           { name: 'gehört zu', from: 'Einsatzkraft', to: 'Team', cardinality: 'n:1' },
           { name: 'leitet', from: 'Einsatzkraft', to: 'Team', cardinality: '1:n' },
-          { name: 'bearbeitet', from: 'Team', to: 'Einsatz', cardinality: 'n:m' },
+          { name: 'bearbeitet', from: 'Team', to: 'Einsatz', cardinality: 'n:m', attributes: ['Rolle'] },
           { name: 'nutzt', from: 'Einsatz', to: 'Fahrzeug', cardinality: 'n:m' },
           { name: 'arbeitet ein', from: 'Einsatzkraft', to: 'Einsatzkraft', cardinality: '1:n' },
         ],
@@ -1557,11 +1530,14 @@
     };
   }
 
-  function rmSzenarioAufgabe(s) {
+  function rmSzenarioAufgabe(s, fortgeschritten = false) {
+    const zusatz = fortgeschritten
+      ? ' oder nach seiner Rolle (z. B. „Vorgesetzter“); eine Beziehungstabelle heißt wie die Beziehung'
+      : '';
     return {
       title: s.title,
       szenario: `<p><strong>Überführe das ER-Modell „${s.title}“ in das Relationenmodell.</strong></p>
-        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt, oder nach seiner Rolle (z. B. „Vorgesetzter“); eine Beziehungstabelle heißt wie die Beziehung.</p>`,
+        <p>Lege die passenden Relationen in der Seitenleiste an. Ein Fremdschlüssel heißt wie der Primärschlüssel oder die Tabelle, auf die er zeigt${zusatz}.</p>`,
       jsonFile: s.jsonFile,
       validator: function () {
         return window.RelModel?.checkAndGetResult?.() || { passed: false };
@@ -1615,8 +1591,15 @@
 
   const ermUebungAufgaben = nummeriert(UEBUNG.map(ermSzenarioAufgabe));
   const ermExpertenAufgaben = nummeriert(EXPERTEN.map(ermSzenarioAufgabe));
-  const rmUebungAufgaben = nummeriert(UEBUNG.map(rmSzenarioAufgabe));
-  const rmExpertenAufgaben = nummeriert(EXPERTEN.map(rmSzenarioAufgabe));
+  // Relationenmodell auf der Stufe Einstieg: nur 1:1 und 1:n, deshalb Fußball ohne „Spiel“ und ohne Fitnessstudio
+  const RM_UEBUNG = [
+    SZENARIEN.hotel,
+    SZENARIEN.krankenhaus,
+    SZENARIEN.bibliothek,
+    { ...SZENARIEN.fussball, jsonFile: 'uebung-4-fussball-rm.json' },
+  ];
+  const rmUebungAufgaben = nummeriert(RM_UEBUNG.map((s) => rmSzenarioAufgabe(s)));
+  const rmExpertenAufgaben = nummeriert(EXPERTEN.map((s) => rmSzenarioAufgabe(s, true)));
   // SQL-Übung: Aufgabe 1 führt Muss, Kann und UNIQUE am Schul-Relationenmodell ein, danach die Szenarien
   const sqlUebungAufgaben = nummeriert([
     {
@@ -1656,7 +1639,7 @@
     ...EXPERTEN.map((s, i) => sqlUebungAufgabe(s, i + 1)),
   ]);
 
-  // ---- Aufgaben-Datenbank: RELATIONENMODELL-GRUNDLAGEN (Stufe Einstieg, ERM aus files/schule-grundlagen.json) ----
+  // ---- Aufgaben-Datenbank: RELATIONENMODELL-GRUNDLAGEN (Stufe Einstieg, ERM aus files/schule-rm-grundlagen.json) ----
   const rmGrundlagenAufgaben = nummeriert([
     {
       title: 'Seitenleiste öffnen',
@@ -1761,45 +1744,21 @@
       },
     },
     {
-      title: 'n:m-Beziehung „unterrichtet“',
-      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungstabelle · Symbol: eigene Relation mit dem Namen der Beziehung</p>
-        <p><strong>n:m-Beziehung abbilden:</strong> Eine n:m-Beziehung passt in keine der bestehenden Relationen. Die Beziehung wird deshalb eine eigene Tabelle (Relation): die <strong>Beziehungstabelle</strong>. Sie heißt wie die Beziehung.</p>
-        <p>Die Beziehungstabelle erhält die Primärschlüssel <strong>beider beteiligten Entitätsklassen</strong> als <strong>Fremdschlüssel</strong>. Zusammen bilden diese ihren <strong>Primärschlüssel</strong> (einen Verbundschlüssel).</p>`,
-      objective: `<p>Bilde die n:m-Beziehung „unterrichtet“ (Lehrer n : m Klasse) als Beziehungstabelle ab.</p>
-        <ol>
-          <li>Erstelle eine neue Relation <strong>„unterrichtet“</strong></li>
-          <li>Füge die Attribute <strong>„Lehrer-Kürzel“</strong> und <strong>„Bezeichnung“</strong> hinzu (oder wie bei „Schüler“ <strong>„Klasse_Bezeichnung“</strong> bzw. <strong>„Klasse“</strong>)</li>
-          <li>Markiere beide als <strong>Primärschlüssel (PS)</strong> und <strong>Fremdschlüssel (FS)</strong></li>
-        </ol>`,
+      title: '1:1-Beziehung „ist Klassenleiter von“',
+      theory: `<p>Hier gilt dieselbe Regel wie eben: Der Primärschlüssel einer Seite kommt als Fremdschlüssel auf die andere Seite. Welche der beiden du nimmst, ist egal.</p>
+        <p><strong>Und n:m?</strong> Die Beziehung „unterrichtet“ aus deinem ER-Modell fehlt hier absichtlich: n:m-Beziehungen überführst du erst im Grundkurs.</p>`,
+      objective: `<p>Bilde die 1:1-Beziehung <strong>„ist Klassenleiter von“</strong> (Lehrer 1 : 1 Klasse) ab. Diesmal entscheidest du selbst:</p>
+        <ul>
+          <li>entweder <strong>„Lehrer-Kürzel“</strong> als <strong>FS</strong> in „Klasse“</li>
+          <li>oder <strong>„Bezeichnung“</strong> als <strong>FS</strong> in „Lehrer“</li>
+        </ul>`,
       validator: function () {
-        if (!getStudentRelByName('unterrichtet')) return { passed: false, error: 'Die Relation „unterrichtet“ fehlt.' };
-        const lehrer = getStudentRelAttr('unterrichtet', 'Lehrer-Kürzel');
-        for (const [name, attr] of [
-          ['Lehrer-Kürzel', lehrer ? [lehrer] : []],
-          ['Bezeichnung', klassenFs('unterrichtet')],
-        ]) {
-          if (!attr.length) return { passed: false, error: `Das Attribut „${name}“ fehlt bei „unterrichtet“.` };
-          const a = attr.find((x) => x.isPk && x.isFk) || attr[0];
-          if (!a.isPk)
-            return { passed: false, error: `„${a.name}“ muss bei „unterrichtet“ als Primärschlüssel markiert sein.` };
-          if (!a.isFk)
-            return { passed: false, error: `„${a.name}“ muss bei „unterrichtet“ als Fremdschlüssel markiert sein.` };
-        }
-        return { passed: true };
-      },
-    },
-    {
-      title: 'Beziehungsattribut „Fach“',
-      theory: `<p><strong>Beziehungsattribute:</strong> Attribute, die im ER-Modell an einer Beziehung hängen, werden in die Beziehungstabelle (bei n:m) oder in die Relation der n-Seite (bei 1:n) übernommen.</p>
-        <p>Das Attribut „Fach“ gehört zur Beziehung „unterrichtet“ und wird daher in die Beziehungstabelle „unterrichtet“ aufgenommen.</p>
-        <p><strong>Faustregel:</strong> Beziehungsattribute wandern immer dorthin, wo auch die Fremdschlüssel hin wandern.</p>`,
-      objective: `<p>Füge das Beziehungsattribut zur Beziehungstabelle hinzu.</p>
-        <p>Ergänze bei der Relation <strong>„unterrichtet“</strong> das Attribut <strong>„Fach“</strong>.</p>
-        <p><em>Beziehungsattribute sind reguläre Attribute – kein PS und kein FS.</em></p>`,
-      validator: function () {
-        if (!studentRelHasAttr('unterrichtet', 'Fach'))
-          return { passed: false, error: 'Das Attribut „Fach“ fehlt bei der Relation „unterrichtet“.' };
-        return { passed: true };
+        if (studentRelAttrIsFk('Klasse', 'Lehrer-Kürzel') || klassenFs('Lehrer').some((a) => a.isFk))
+          return { passed: true };
+        return {
+          passed: false,
+          error: 'Füge „Lehrer-Kürzel“ als Fremdschlüssel zu „Klasse“ hinzu oder „Bezeichnung“ als Fremdschlüssel zu „Lehrer“.',
+        };
       },
     },
     {
@@ -1813,8 +1772,6 @@
           <li>Primärschlüssel setzen</li>
           <li>1:n-Beziehungen abbilden (FS auf n-Seite)</li>
           <li>1:1-Beziehungen abbilden</li>
-          <li>n:m-Beziehungen als Beziehungstabelle abbilden</li>
-          <li>Beziehungsattribute übernehmen</li>
         </ul>
         <p><strong>Ausblick:</strong> Mit „SQL erzeugen“ in der Seitenleiste wird aus deinen Relationen SQL-Code (CREATE TABLE). Damit legst du die Tabellen in einer echten Datenbank an.</p>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
@@ -1835,24 +1792,45 @@
       title: 'Relationen mit Schlüsseln',
       // Die Aufgabe sagt „Öffne die Seitenleiste“ – also beim Start zu lassen.
       seitenleisteSelbstOeffnen: true,
-      theory: `<p><strong>Regel 1 – Entitätsklasse:</strong> Jede Entitätsklasse wird eine Relation mit allen ihren Attributen. Der Primärschlüssel bleibt Primärschlüssel – auch ein Verbundschlüssel aus mehreren Attributen.</p>`,
-      objective: `<p>Das Schul-ERM aus der ERM-Auffrischung ist geladen. Öffne oben rechts die <strong>Seitenleiste „Relationenmodell“</strong> und lege für <strong>„Schüler“</strong>, <strong>„Klasse“</strong> und <strong>„Lehrer“</strong> je eine Relation mit allen Attributen an. Markiere die Primärschlüssel.</p>`,
+      theory: `<p class="aufgabe-begriff">Wiederholung</p>
+        <p><strong>Regel Entitätsklasse:</strong> Jede Entitätsklasse wird eine Relation mit allen ihren Attributen. Der Primärschlüssel bleibt Primärschlüssel.</p>`,
+      objective: `<p>Das Schul-ERM aus der ERM-Auffrischung ist geladen. Öffne oben rechts die <strong>Seitenleiste „Relationenmodell“</strong> und lege für <strong>„Schüler“</strong> und <strong>„Lehrer“</strong> je eine Relation mit allen Attributen an. Markiere die Primärschlüssel.</p>`,
       validator: function () {
         const error =
           checkStudentRelation('Schüler', ['SchülerNr', 'Vorname', 'Nachname'], ['SchülerNr']) ||
-          checkStudentRelation(
-            'Klasse',
-            ['Klassenstufe', 'Parallelklasse', 'Klassenraum'],
-            ['Klassenstufe', 'Parallelklasse'],
-          ) ||
           checkStudentRelation('Lehrer', ['Lehrer-Kürzel', 'Vorname', 'Nachname'], ['Lehrer-Kürzel']);
         return error ? { passed: false, error } : { passed: true };
       },
     },
     {
+      title: 'Verbundschlüssel übernehmen',
+      theory: `<p><strong>Verbundschlüssel im Relationenmodell:</strong> Er bleibt ein Primärschlüssel aus mehreren Attributen. In der Relation wird jedes seiner Attribute als PS markiert.</p>`,
+      objective: `<p>Lege die Relation <strong>„Klasse“</strong> mit den Attributen „Klassenstufe“, „Parallelklasse“ und „Klassenraum“ an. Markiere <strong>„Klassenstufe“</strong> und <strong>„Parallelklasse“</strong> als Primärschlüssel.</p>`,
+      validator: function () {
+        const error = checkStudentRelation(
+          'Klasse',
+          ['Klassenstufe', 'Parallelklasse', 'Klassenraum'],
+          ['Klassenstufe', 'Parallelklasse'],
+        );
+        return error ? { passed: false, error } : { passed: true };
+      },
+    },
+    {
+      title: '1:1-Beziehung „ist Klassensprecher“',
+      theory: `<p class="aufgabe-begriff">Wiederholung</p>
+        <p><strong>Regel 1:1:</strong> Der Primärschlüssel einer Seite wandert als Fremdschlüssel in die andere – am besten dorthin, wo jede Entität sicher einen Partner hat.</p>
+        <p><em>UNIQUE sorgt dafür, dass jede SchülerNr in „Klasse“ nur einmal vorkommt – das setzt du später in der SQL-Übung.</em></p>`,
+      objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. Jede Klasse hat einen Klassensprecher, aber nicht jeder Schüler ist einer: Der Fremdschlüssel <strong>„SchülerNr“</strong> kommt deshalb in <strong>„Klasse“</strong>.</p>`,
+      validator: function () {
+        if (getStudentFks('Klasse', 'SchülerNr').length) return { passed: true };
+        return { passed: false, error: 'Füge „SchülerNr“ als Fremdschlüssel zur Relation „Klasse“ hinzu.' };
+      },
+    },
+    {
       title: 'Zusammengesetzter Fremdschlüssel',
-      theory: `<p><strong>Regel 2 – 1:n:</strong> Der Primärschlüssel der 1-Seite wandert als Fremdschlüssel in die Relation der n-Seite. Ist er ein Verbundschlüssel, wandern <strong>alle</strong> seine Attribute mit – zusammen bilden sie einen zusammengesetzten Fremdschlüssel.</p>`,
-      objective: `<p>Bilde die Beziehung <strong>„geht in“</strong> (Schüler n : 1 Klasse) in der rechten Seitenleiste ab. Welche Relation bekommt den Fremdschlüssel, und aus welchen Attributen besteht er? Markiere sie als FS.</p>`,
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: zusammengesetzter Fremdschlüssel · Symbol: mehrere Attribute mit ↑</p>
+        <p><strong>Regel 1:n:</strong> Der Primärschlüssel der 1-Seite wandert als Fremdschlüssel in die Relation der n-Seite. Das kennst du schon. Neu: Ist er ein Verbundschlüssel, wandern <strong>alle</strong> seine Attribute mit. Zusammen bilden sie einen zusammengesetzten Fremdschlüssel.</p>`,
+      objective: `<p>Bilde die Beziehung <strong>„geht in“</strong> (Schüler n : 1 Klasse) ab. Füge bei <strong>„Schüler“</strong> die Attribute <strong>„Klassenstufe“</strong> und <strong>„Parallelklasse“</strong> hinzu und markiere beide als FS.</p>`,
       validator: function () {
         for (const attr of ['Klassenstufe', 'Parallelklasse']) {
           if (!getStudentFks('Schüler', attr).length)
@@ -1865,19 +1843,16 @@
       },
     },
     {
-      title: '1:1-Beziehung „ist Klassensprecher“',
-      theory: `<p><strong>Regel 3 – 1:1:</strong> Der Fremdschlüssel kommt auf eine Seite – am besten dorthin, wo jede Entität sicher einen Partner hat – und bekommt UNIQUE.</p>
-        <p><em>UNIQUE sorgt dafür, dass jede SchülerNr in „Klasse“ nur einmal vorkommt – das setzt du später in der SQL-Übung.</em></p>`,
-      objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. Jede Klasse hat einen Klassensprecher, aber nicht jeder Schüler ist einer – der Fremdschlüssel <strong>„SchülerNr“</strong> kommt deshalb in <strong>„Klasse“</strong>. In „Schüler“ bräuchtest du außerdem ein zweites, umbenanntes Paar aus Klassenstufe und Parallelklasse.</p>`,
-      validator: function () {
-        if (getStudentFks('Klasse', 'SchülerNr').length) return { passed: true };
-        return { passed: false, error: 'Füge „SchülerNr“ als Fremdschlüssel zur Relation „Klasse“ hinzu.' };
-      },
-    },
-    {
       title: 'Beziehungstabelle „unterrichtet“',
-      theory: `<p><strong>Regel 4 – n:m:</strong> Die Beziehung wird eine eigene Tabelle (Relation), die <strong>Beziehungstabelle</strong> (in Büchern auch Zwischen- oder Koppeltabelle). Sie heißt wie die Beziehung und enthält die Primärschlüssel beider Seiten als Fremdschlüssel – zusammen ihr Primärschlüssel. Beziehungsattribute kommen dazu.</p>`,
-      objective: `<p>Bilde <strong>„unterrichtet“</strong> (Lehrer n : m Klasse, mit dem Attribut „Fach“) als Beziehungstabelle ab. Achtung: Der Schlüssel von „Klasse“ hat zwei Attribute.</p>`,
+      theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungstabelle · Symbol: eigene Relation mit dem Namen der Beziehung</p>
+        <p><strong>Regel n:m:</strong> Eine n:m-Beziehung passt in keine der bestehenden Relationen. Die Beziehung wird deshalb eine eigene Tabelle (Relation), die <strong>Beziehungstabelle</strong> (in Büchern auch Zwischen- oder Koppeltabelle). Sie heißt wie die Beziehung und enthält die Primärschlüssel beider Seiten als Fremdschlüssel. Zusammen bilden diese ihren Primärschlüssel (einen Verbundschlüssel).</p>`,
+      objective: `<p>Bilde <strong>„unterrichtet“</strong> (Lehrer n : m Klasse) als Beziehungstabelle ab:</p>
+        <ol>
+          <li>Erstelle eine neue Relation <strong>„unterrichtet“</strong>.</li>
+          <li>Füge den Primärschlüssel von „Lehrer“ hinzu: <strong>„Lehrer-Kürzel“</strong>.</li>
+          <li>Füge den Primärschlüssel von „Klasse“ hinzu: <strong>„Klassenstufe“</strong> und <strong>„Parallelklasse“</strong>.</li>
+          <li>Markiere alle drei als <strong>PS</strong> und als <strong>FS</strong>.</li>
+        </ol>`,
       validator: function () {
         if (!getStudentRelByName('unterrichtet')) return { passed: false, error: 'Die Relation „unterrichtet“ fehlt.' };
         for (const attr of ['Lehrer-Kürzel', 'Klassenstufe', 'Parallelklasse']) {
@@ -1886,6 +1861,16 @@
           if (!a.isPk || !a.isFk)
             return { passed: false, error: `„${attr}“ muss bei „unterrichtet“ als PS und als FS markiert sein.` };
         }
+        return { passed: true };
+      },
+    },
+    {
+      title: 'Beziehungsattribut „Fach“',
+      theory: `<p><strong>Regel Beziehungsattribut:</strong> Attribute, die im ER-Modell an einer Beziehung hängen, werden in die Beziehungstabelle (bei n:m) oder in die Relation mit dem Fremdschlüssel (bei 1:n und 1:1) übernommen.</p>
+        <p><strong>Faustregel:</strong> Beziehungsattribute wandern immer dorthin, wo auch die Fremdschlüssel hin wandern.</p>`,
+      objective: `<p>Ergänze bei der Relation <strong>„unterrichtet“</strong> das Attribut <strong>„Fach“</strong>.</p>
+        <p><em>Beziehungsattribute sind reguläre Attribute – kein PS und kein FS.</em></p>`,
+      validator: function () {
         const fach = getStudentRelAttr('unterrichtet', 'Fach');
         if (!fach) return { passed: false, error: 'Das Beziehungsattribut „Fach“ fehlt bei „unterrichtet“.' };
         if (fach.isPk || fach.isFk)
@@ -1895,8 +1880,13 @@
     },
     {
       title: 'Selbstbeziehung „ist befreundet mit“',
-      theory: `<p><strong>Selbstbeziehung</strong> (rekursive Beziehung): Sie wird wie jede andere Beziehung abgebildet. Weil beide Fremdschlüssel auf dieselbe Relation zeigen, müssen sie <strong>umbenannt</strong> werden: Name des Primärschlüssels plus Zusatz mit - oder _, z. B. „SchülerNr“ und „SchülerNr-Freund“. Bei einer 1:n-Selbstbeziehung landet der umbenannte Fremdschlüssel in der Relation selbst, z. B. „SchülerNr-Pate“.</p>`,
-      objective: `<p>Bilde die n:m-Selbstbeziehung <strong>„ist befreundet mit“</strong> als Beziehungstabelle ab. Beide Fremdschlüssel verweisen auf „SchülerNr“ – benenne sie so, dass sie sich unterscheiden.</p>`,
+      theory: `<p><strong>Regel Selbstbeziehung</strong> (rekursive Beziehung): Sie wird wie jede andere Beziehung abgebildet. Weil beide Fremdschlüssel auf dieselbe Relation zeigen, müssen sie <strong>umbenannt</strong> werden: Name des Primärschlüssels plus Zusatz mit - oder _, z. B. „SchülerNr“ und „SchülerNr-Freund“. Bei einer 1:n-Selbstbeziehung landet der umbenannte Fremdschlüssel in der Relation selbst, z. B. „SchülerNr-Pate“.</p>`,
+      objective: `<p>Bilde die n:m-Selbstbeziehung <strong>„ist befreundet mit“</strong> als Beziehungstabelle ab:</p>
+        <ol>
+          <li>Erstelle die Relation <strong>„ist befreundet mit“</strong>.</li>
+          <li>Füge <strong>„SchülerNr“</strong> und <strong>„SchülerNr-Freund“</strong> hinzu.</li>
+          <li>Markiere beide als <strong>PS</strong> und als <strong>FS</strong>.</li>
+        </ol>`,
       validator: function () {
         const rel = getStudentRelByName('ist befreundet mit');
         if (!rel) return { passed: false, error: 'Die Relation „ist befreundet mit“ fehlt.' };
@@ -1915,13 +1905,9 @@
     {
       title: '🎉 Abschluss',
       abschluss: true,
-      theory: `<p><strong>Glückwunsch!</strong> Du hast die Transformationsregeln aufgefrischt:</p>
-        <ul>
-          <li>Entitätsklassen und Verbundschlüssel übernehmen</li>
-          <li>1:n und 1:1 mit (zusammengesetzten) Fremdschlüsseln abbilden</li>
-          <li>n:m-Beziehungen als Beziehungstabelle abbilden</li>
-          <li>Selbstbeziehungen mit umbenannten Fremdschlüsseln abbilden</li>
-        </ul>`,
+      theory: `<p><strong>Glückwunsch!</strong> Du kennst jetzt alle Transformationsregeln.</p>
+        <p><strong>Wiederholt:</strong> Entitätsklassen sowie 1:n und 1:1 mit Fremdschlüsseln.</p>
+        <p><strong>Neu:</strong> Verbundschlüssel und zusammengesetzte Fremdschlüssel, Beziehungstabellen für n:m, Beziehungsattribute und Selbstbeziehungen mit umbenannten Fremdschlüsseln.</p>`,
       objective: `<p>🏆 <strong>Fast geschafft – speichere dein Ergebnis!</strong></p>
         <p>Speichere die Relationen in der Seitenleiste mit <strong>„JSON-Export“</strong>.</p>
         <p>Danach geht es im Menü mit dem Lernpfad „Relationenmodell-Experten“ weiter!</p>`,
@@ -1972,7 +1958,7 @@
       titel: 'ERM-Übung',
       untertitel: 'Fünf Szenarien selbst modellieren',
       abschlussText:
-        'Du modellierst jetzt selbstständig Szenarien mit 1:1-, 1:n- und n:m-Beziehungen und Beziehungsattributen. Als Nächstes überführst du ER-Modelle ins Relationenmodell: Lernpfad „Relationenmodell-Grundlagen“.',
+        'Du modellierst jetzt selbstständig Szenarien mit 1:1-, 1:n- und n:m-Beziehungen. Als Nächstes überführst du ER-Modelle ins Relationenmodell: Lernpfad „Relationenmodell-Grundlagen“.',
       aufgaben: ermUebungAufgaben,
     },
     {
@@ -1983,7 +1969,9 @@
       icon: ICON_RM,
       titel: 'Relationenmodell-Grundlagen',
       untertitel: 'Das Schul-ERM Schritt für Schritt überführen',
-      ermDatei: 'schule-grundlagen.json',
+      ermDatei: 'schule-rm-grundlagen.json',
+      // Version 2: anderes ER-Modell (ohne n:m), Schritte zu n:m und „Fach“ entfallen
+      version: 2,
       aufgaben: rmGrundlagenAufgaben,
     },
     {
@@ -1995,7 +1983,7 @@
       titel: 'Relationenmodell-Übung',
       untertitel: 'Die Übungsszenarien überführen',
       abschlussText:
-        'Du überführst jetzt ER-Modelle mit allen Beziehungstypen sicher ins Relationenmodell – mit Fremdschlüsseln und Beziehungstabellen.',
+        'Du überführst jetzt ER-Modelle mit 1:1- und 1:n-Beziehungen sicher ins Relationenmodell – mit Primär- und Fremdschlüsseln.',
       aufgaben: rmUebungAufgaben,
     },
     {
@@ -2005,7 +1993,9 @@
       schritt: true,
       icon: '🔷',
       titel: 'ERM-Auffrischung',
-      untertitel: 'Alles Wichtige in großen Schritten',
+      untertitel: 'Wiederholen, neu: Beziehungsattribute und Verbundschlüssel',
+      // Version 2: Wiederholung zusammengefasst, Verbundschlüssel in zwei Schritten
+      version: 2,
       aufgaben: ermAuffrischungAufgaben,
     },
     {
@@ -2017,7 +2007,7 @@
       titel: 'ERM-Experten',
       untertitel: 'Knifflige Szenarien selbst modellieren',
       abschlussText:
-        'Du modellierst jetzt auch knifflige Szenarien – mit vermittelnden Entitätsklassen, mehreren Beziehungen zwischen denselben Entitätsklassen, Selbstbeziehungen und Verbundschlüsseln.',
+        'Du modellierst jetzt auch knifflige Szenarien – mit n:m-Beziehungen, mehreren Beziehungen zwischen denselben Entitätsklassen, Beziehungsattributen, Selbstbeziehungen und Verbundschlüsseln.',
       aufgaben: ermExpertenAufgaben,
     },
     {
@@ -2027,8 +2017,10 @@
       schritt: true,
       icon: ICON_RM,
       titel: 'Relationenmodell-Auffrischung',
-      untertitel: 'Transformationsregeln kompakt',
+      untertitel: 'Wiederholen, neu: Beziehungstabellen und Verbundschlüssel',
       ermDatei: 'schule-auffrischung.json',
+      // Version 2: erst Wiederholung, dann das Neue in eigenen Schritten – die Nummern passen nicht mehr
+      version: 2,
       aufgaben: rmAuffrischungAufgaben,
     },
     {
@@ -2040,7 +2032,7 @@
       titel: 'Relationenmodell-Experten',
       untertitel: 'Knifflige ER-Modelle überführen',
       abschlussText:
-        'Du überführst jetzt auch Selbstbeziehungen, mehrere Beziehungen zwischen denselben Entitätsklassen und Verbundschlüssel. Weiter geht es mit dem Lernpfad „SQL-Übung“.',
+        'Du überführst jetzt auch Beziehungstabellen mit Beziehungsattributen, Selbstbeziehungen, mehrere Beziehungen zwischen denselben Entitätsklassen und Verbundschlüssel. Weiter geht es mit dem Lernpfad „SQL-Übung“.',
       aufgaben: rmExpertenAufgaben,
     },
     {

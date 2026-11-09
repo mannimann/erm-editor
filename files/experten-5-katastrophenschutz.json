@@ -184,6 +184,14 @@
       "y": 440,
       "name": "Kapazität",
       "isPrimaryKey": false
+    },
+    {
+      "id": "s60",
+      "type": "attribute",
+      "x": 300,
+      "y": 200,
+      "name": "Rolle",
+      "isPrimaryKey": false
     }
   ],
   "edges": [
@@ -356,7 +364,13 @@
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "1"
+    },
+    {
+      "id": "s61",
+      "fromId": "s8",
+      "toId": "s60",
+      "edgeType": "attribute"
     }
   ],
-  "nextId": 60
+  "nextId": 62
 }

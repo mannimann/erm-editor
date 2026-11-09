@@ -83,14 +83,6 @@
       "isPrimaryKey": false
     },
     {
-      "id": "s36",
-      "type": "attribute",
-      "x": -40,
-      "y": 220,
-      "name": "Fach",
-      "isPrimaryKey": false
-    },
-    {
       "id": "s39",
       "type": "relationship",
       "x": 340,
@@ -185,12 +177,6 @@
       "edgeType": "relationship",
       "chenFrom": "",
       "chenTo": ""
-    },
-    {
-      "id": "s37",
-      "fromId": "s31",
-      "toId": "s36",
-      "edgeType": "attribute"
     },
     {
       "id": "s40",

@@ -1,0 +1,231 @@
+{
+  "snapToGrid": true,
+  "diagramTitle": "Fußball-Turnier",
+  "nodes": [
+    {
+      "id": "s1",
+      "type": "entity",
+      "x": 120,
+      "y": 320,
+      "name": "Spieler",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s2",
+      "type": "entity",
+      "x": 520,
+      "y": 320,
+      "name": "Team",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s4",
+      "type": "entity",
+      "x": 120,
+      "y": 80,
+      "name": "Trainer",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s5",
+      "type": "attribute",
+      "x": -60,
+      "y": 320,
+      "name": "SpielerNr",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s6",
+      "type": "attribute",
+      "x": -20,
+      "y": 400,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s7",
+      "type": "attribute",
+      "x": 100,
+      "y": 440,
+      "name": "Position",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s8",
+      "type": "attribute",
+      "x": 700,
+      "y": 380,
+      "name": "Teamname",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s9",
+      "type": "attribute",
+      "x": 580,
+      "y": 420,
+      "name": "Altersklasse",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s10",
+      "type": "attribute",
+      "x": 720,
+      "y": 300,
+      "name": "Ort",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s15",
+      "type": "attribute",
+      "x": -60,
+      "y": 80,
+      "name": "TrainerNr",
+      "isPrimaryKey": true
+    },
+    {
+      "id": "s16",
+      "type": "attribute",
+      "x": 0,
+      "y": 0,
+      "name": "Name",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s17",
+      "type": "attribute",
+      "x": 160,
+      "y": -20,
+      "name": "Lizenz",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s18",
+      "type": "relationship",
+      "x": 320,
+      "y": 200,
+      "name": "trainiert",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s19",
+      "type": "relationship",
+      "x": 320,
+      "y": 320,
+      "name": "spielt in",
+      "isPrimaryKey": false
+    },
+    {
+      "id": "s20",
+      "type": "relationship",
+      "x": 320,
+      "y": 420,
+      "name": "ist Kapitän",
+      "isPrimaryKey": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "s22",
+      "fromId": "s1",
+      "toId": "s5",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s23",
+      "fromId": "s1",
+      "toId": "s6",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s24",
+      "fromId": "s1",
+      "toId": "s7",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s25",
+      "fromId": "s2",
+      "toId": "s8",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s26",
+      "fromId": "s2",
+      "toId": "s9",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s27",
+      "fromId": "s2",
+      "toId": "s10",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s32",
+      "fromId": "s4",
+      "toId": "s15",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s33",
+      "fromId": "s4",
+      "toId": "s16",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s34",
+      "fromId": "s4",
+      "toId": "s17",
+      "edgeType": "attribute"
+    },
+    {
+      "id": "s35",
+      "fromId": "s4",
+      "toId": "s18",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s36",
+      "fromId": "s2",
+      "toId": "s18",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s37",
+      "fromId": "s1",
+      "toId": "s19",
+      "edgeType": "relationship",
+      "chenFrom": "n",
+      "chenTo": "1"
+    },
+    {
+      "id": "s38",
+      "fromId": "s2",
+      "toId": "s19",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s39",
+      "fromId": "s1",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s40",
+      "fromId": "s2",
+      "toId": "s20",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    }
+  ],
+  "nextId": 43
+}

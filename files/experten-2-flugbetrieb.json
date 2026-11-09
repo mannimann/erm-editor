@@ -137,6 +137,14 @@
       "y": 460,
       "name": "bildet aus",
       "isPrimaryKey": false
+    },
+    {
+      "id": "s36",
+      "type": "attribute",
+      "x": 380,
+      "y": 460,
+      "name": "Ausbildungsbeginn",
+      "isPrimaryKey": false
     }
   ],
   "edges": [
@@ -263,7 +271,13 @@
       "edgeType": "relationship",
       "chenFrom": "1",
       "chenTo": "n"
+    },
+    {
+      "id": "s37",
+      "fromId": "s17",
+      "toId": "s36",
+      "edgeType": "attribute"
     }
   ],
-  "nextId": 36
+  "nextId": 38
 }
