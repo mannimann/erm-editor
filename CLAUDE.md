@@ -1,3 +1,3 @@
 # Git
 
-Immer auf dem aktuell ausgecheckten Branch committen und pushen, keine neuen Branches anlegen.
+Wenn, dann immer auf dem aktuell ausgecheckten Branch committen, keine neuen Branches anlegen.
