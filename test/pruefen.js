@@ -551,7 +551,7 @@ pruefe('Schritt-Lernpfade: das fertige Modell erfüllt jede Aufgabe', () => {
   context.AppState = { state: ermLaden('schule-grundlagen.json') };
   bestehen('erm-grundlagen', 1, 99);
 
-  // ERM-Kardinalitäten: Vorlage hat „?“, fertig mit Zahlen und „ist Klassenleiter von“ (Lehrer 1 : n Klasse)
+  // ERM-Kardinalitäten: Vorlage hat „?“, fertig mit Zahlen und „ist Klassenleiter von“ (Lehrer 1 : 1 Klasse)
   context.AppState = { state: ermLaden('schule-ohne-kardinalitaeten.json') };
   assert(
     !Lernpfad.getAlleAufgaben('erm-kardinalitaeten')[0].validator().passed,
@@ -562,7 +562,7 @@ pruefe('Schritt-Lernpfade: das fertige Modell erfüllt jede Aufgabe', () => {
   fertig.nodes.push({ id: 's900', type: 'relationship', x: 0, y: 0, name: 'ist Klassenleiter von' });
   fertig.edges.push(
     { id: 's901', fromId: 's900', toId: id('Lehrer'), edgeType: 'relationship', chenFrom: '1', chenTo: '1' },
-    { id: 's902', fromId: 's900', toId: id('Klasse'), edgeType: 'relationship', chenFrom: '1', chenTo: 'n' },
+    { id: 's902', fromId: 's900', toId: id('Klasse'), edgeType: 'relationship', chenFrom: '1', chenTo: '1' },
   );
   context.AppState = { state: fertig };
   bestehen('erm-kardinalitaeten', 1, 99);
@@ -1252,6 +1252,31 @@ pruefe('Auto-Layout: keine Überlappung, auch bei langen Namen; Raster-Einstellu
   }
 });
 
+pruefe('Auto-Layout: zwei Beziehungen zwischen denselben Entitätsklassen liegen symmetrisch zur Verbindungslinie', () => {
+  for (let lauf = 0; lauf < 10; lauf += 1) {
+    const state = {
+      nodes: [
+        { id: 'e1', type: 'entity', x: 0, y: 0, name: 'Lehrer' },
+        { id: 'e2', type: 'entity', x: 0, y: 0, name: 'Klasse' },
+        { id: 'r1', type: 'relationship', x: 0, y: 0, name: 'unterrichtet' },
+        { id: 'r2', type: 'relationship', x: 0, y: 0, name: 'leitet' },
+      ],
+      edges: [
+        { id: 'k1', fromId: 'r1', toId: 'e1', edgeType: 'relationship' },
+        { id: 'k2', fromId: 'r1', toId: 'e2', edgeType: 'relationship' },
+        // Umgekehrte Reihenfolge der Enden: Beide müssen trotzdem auf verschiedenen Seiten landen
+        { id: 'k3', fromId: 'r2', toId: 'e2', edgeType: 'relationship' },
+        { id: 'k4', fromId: 'r2', toId: 'e1', edgeType: 'relationship' },
+      ],
+    };
+    diagrammFuer(state).autoLayout();
+    const [e1, e2, r1, r2] = state.nodes;
+    const mitte = { x: (e1.x + e2.x) / 2, y: (e1.y + e2.y) / 2 };
+    assert.deepStrictEqual({ x: (r1.x + r2.x) / 2, y: (r1.y + r2.y) / 2 }, mitte, 'symmetrisch um die Mitte');
+    assert(Math.hypot(r1.x - mitte.x, r1.y - mitte.y) > 0, 'keine liegt in der Mitte');
+  }
+});
+
 // ---- 8. Browser-Speicher ----
 pruefe('Speicher gesperrt oder voll: app.js läuft weiter, setItem wirft nicht', () => {
   class Storage {
@@ -1327,6 +1352,10 @@ async function pruefeAsync(name, fn) {
         const wieder = Szenario.fuerLink(Szenario.pruefeSzenario(ausLink).sz);
         assert(JSON.stringify(wieder.ermBild) === JSON.stringify(bild) && !wieder.erm, 'neu verpackt');
       }
+      // Schülerdatei: derselbe Inhalt als JSON, ohne Lösung, startet die Prüfung und nicht die Lehrer-Ansicht
+      const schuelerDatei = JSON.parse(JSON.stringify(Szenario.fuerLink(datei, bild)));
+      assert(!('erm' in schuelerDatei) && !Szenario.pruefeSzenario(schuelerDatei).sz.erm, `${aufgabe}: Schülerdatei ohne Lösung`);
+      assert.strictEqual(Szenario.pruefungsId(Szenario.pruefeSzenario(schuelerDatei).sz), Szenario.pruefungsId(datei), `${aufgabe}: Abgaben passen`);
       const sz = Szenario.pruefeSzenario(ausLink).sz;
       assert(sz && sz.pruefung, `${aufgabe}: Link lesbar`);
       assert.strictEqual(Szenario.pruefungsId(sz), Szenario.pruefungsId(datei), `${aufgabe}: Prüfungs-ID`);

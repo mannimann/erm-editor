@@ -298,7 +298,9 @@
                   (e.fromId === fromEntity.id && e.toId === relNode.id)),
             ) || [];
           if (edges.length >= 2)
-            karten = edges.slice(0, 2).map((e) => normalizeCardinality(e.fromId === relNode.id ? e.chenTo : e.chenFrom));
+            karten = edges
+              .slice(0, 2)
+              .map((e) => normalizeCardinality(e.fromId === relNode.id ? e.chenTo : e.chenFrom));
         } else {
           const fromCard = getCardinalityForEntityOnRelationship(relNode.id, fromEntity.id);
           const toCard = getCardinalityForEntityOnRelationship(relNode.id, toEntity.id);
@@ -528,8 +530,7 @@
       (a) =>
         a.isFk &&
         !a.isPk &&
-        (R.fkRawNameMatches(a.name, baseName) ||
-          solFks.some((sf) => R.fkMatches(a.name, sf) || paare.get(sf) === a)),
+        (R.fkRawNameMatches(a.name, baseName) || solFks.some((sf) => R.fkMatches(a.name, sf) || paare.get(sf) === a)),
     );
   }
 
@@ -601,7 +602,9 @@
       cat.items.push({ label, ok });
     };
     const extras = studentRels
-      .filter((r) => String(r.name || '').trim() && !solution.some((s) => normalizeName(s.name) === normalizeName(r.name)))
+      .filter(
+        (r) => String(r.name || '').trim() && !solution.some((s) => normalizeName(s.name) === normalizeName(r.name)),
+      )
       .map((r) => `Relation „${r.name.trim()}“ ist nicht Teil der Lösung.`);
     // Wie removeCompletelyEmptyRelations: eine gerade angelegte, noch leere Relation zählt nicht
     if (studentRels.some((r) => !String(r.name || '').trim() && r.attrs.some((a) => String(a.name || '').trim())))
@@ -630,9 +633,7 @@
       const selbstFs = selbst ? R.selbstFsGueltig(solRel, studRel.attrs, solution) : [];
       // ok für einen Fremdschlüssel der Lösung; bei der Selbstbeziehung zählt die Anzahl
       const fkOk = (solAttr) =>
-        selbst
-          ? selbstFs.length > solRel.attrs.filter((a) => a.isFk).indexOf(solAttr)
-          : paare.has(solAttr);
+        selbst ? selbstFs.length > solRel.attrs.filter((a) => a.isFk).indexOf(solAttr) : paare.has(solAttr);
 
       for (const attr of solRel.attrs.filter((a) => !a.isFk)) {
         tick(
@@ -695,7 +696,7 @@
       title: 'Erste Entitätsklasse',
       theory: `<p class="aufgabe-begriff">Neuer Begriff: Entitätsklasse · Symbol: Rechteck</p>
         <p><strong>Entitätsklasse:</strong> Ein Rechteck im ER-Modell, das eine Gruppe von ähnlichen Objekten der realen Welt darstellt. Beispiel: Schüler, Auto, Person.</p>
-        <p class="aufgabe-begriff">Neuer Begriff: Entität · Symbol: –</p>
+        <p class="aufgabe-begriff">Neuer Begriff: Entität · kein Symbol</p>
         <p>Ein einzelnes Objekt, z. B. die Schülerin Lena, heißt <strong>Entität</strong>.</p>`,
       objective: `<p>Erstelle eine Entitätsklasse mit dem Namen <strong>„Schüler“</strong>.</p>`,
       validator: function () {
@@ -781,7 +782,7 @@
     {
       title: 'Beziehung erstellen',
       theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehung · Symbol: Raute</p>
-        <p><strong>Beziehung (Relationship):</strong> Eine Raute, die zwei Entitätsklassen verbindet. Mit ihnen zusammen ergibt ihr Name einen Satz: „Schüler geht in Klasse“. In welche Richtung der Satz gemeint ist, ergibt sich aus dem Sinn – nicht aus links und rechts, denn nach dem Verschieben oder dem Auto-Layout kann „Klasse“ auch links stehen.</p>`,
+        <p><strong>Beziehung (Relationship):</strong> Eine Raute, die zwei Entitätsklassen verbindet. Mit ihnen zusammen ergibt ihr Name einen Satz: „Schüler geht in Klasse“. In welche Richtung der Satz gemeint ist, ergibt sich aus dem Sinn – nicht aus links und rechts, denn nach dem Verschieben kann „Klasse“ auch links stehen.</p>`,
       objective: `<p>Erstelle eine Beziehung zwischen <strong>„Schüler“</strong> und <strong>„Klasse“</strong>:</p>
         <ol>
           <li>Klicke links auf <strong>„Beziehung“</strong>: Der Dialog „Beziehung bearbeiten“ öffnet sich.</li>
@@ -973,7 +974,7 @@
     {
       title: 'Eine Beziehung selbst bestimmen',
       theory: `<p>Zwischen „Lehrer“ und „Klasse“ gibt es jetzt zwei Beziehungen mit verschiedener Bedeutung – und verschiedenen Kardinalitäten.</p>`,
-      objective: `<p>Jede Klasse hat genau einen Klassenleiter. An unserer Schule leiten manche Lehrer auch zwei Klassen.</p>
+      objective: `<p>Jede Klasse hat genau einen Klassenleiter. Ein Lehrer leitet höchstens eine Klasse.</p>
         <ol>
           <li>Klicke links auf <strong>„Beziehung“</strong> und lege <strong>„ist Klassenleiter von“</strong> zwischen „Lehrer“ und „Klasse“ an.</li>
           <li>Die Kardinalität bestimmst du selbst.</li>
@@ -985,9 +986,9 @@
               name: 'ist Klassenleiter von',
               from: 'Lehrer',
               to: 'Klasse',
-              cardinality: '1:n',
+              cardinality: '1:1',
               hinweis:
-                'Ein Lehrer kann Klassenleiter mehrerer Klassen sein, jede Klasse hat genau einen: Lehrer 1, Klasse n.',
+                'Prüfe beide Richtungen: Wie viele Klassenleiter hat eine Klasse? Wie viele Klassen leitet ein Lehrer höchstens?',
             },
           ],
         });

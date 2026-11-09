@@ -1,7 +1,8 @@
 /* ============================================================
    szenario.js  –  Eigene Szenarien von Lehrkräften
    Die Lehrkraft zeichnet die Musterlösung als ER-Modell und schreibt den Text. Daraus wird eine Datei
-   (.erm-szenario.json) oder ein Link (#szenario=…). Schüler öffnen sie als Übungs-Lernpfad; geprüft wird
+   (.erm-szenario.json) oder ein Link (#szenario=…). Prüfungen haben zwei Dateien: .lehrer (mit Lösung) und
+   .schueler (Inhalt wie der Link, ohne Lösung). Schüler öffnen sie als Übungs-Lernpfad; geprüft wird
    gegen das ER-Modell (js/lernpfad.js: masterAusErm) bzw. dessen Relationenmodell.
    ============================================================ */
 'use strict';
@@ -91,7 +92,7 @@
     if (erm && !erm.nodes.some((n) => n.type === 'entity')) return { fehler: 'Das ER-Modell im Szenario ist leer.' };
     const bild = ohneErm && aufgabe === 'rm' ? pruefeErmBild(d.ermBild) : null;
     if (ohneErm && aufgabe === 'rm' && !(bild && /^[a-z0-9]{1,16}$/.test(String(d.ermId))))
-      return { fehler: 'Im Prüfungslink fehlt das Bild des ER-Modells.' };
+      return { fehler: 'Im Prüfungslink oder in der Schülerdatei fehlt das Bild des ER-Modells.' };
 
     const sz = {
       titel,
@@ -283,6 +284,7 @@
   const offen = () => document.body.classList.contains('erstellen');
   let titelVorher = '';
   let letzterLink = null; // { id, link }: Der angezeigte Link gilt nur für diesen Stand des Entwurfs
+  let schuelerDateiId = null; // Stand, für den zuletzt eine Datei für die Schüler gespeichert wurde
 
   function formular() {
     const wahl = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value;
@@ -648,12 +650,15 @@
     const gesichert = !!sz && entwurfLesen().gesichert === sz.id;
     ['btn-szenario-link', 'btn-szenario-speichern', 'btn-szenario-testen'].forEach((id) => (feld(id).disabled = !sz));
     ['btn-pruefung-datei', 'btn-pruefung-ansehen', 'btn-pruefung-korrigieren'].forEach((id) => (feld(id).disabled = !sz));
-    feld('btn-pruefung-link').disabled = !gesichert;
+    ['btn-pruefung-link', 'btn-pruefung-schuelerdatei'].forEach((id) => (feld(id).disabled = !gesichert));
+    // Vor dem ersten Klick gibt es noch keinen Link zum Kopieren
+    const linkText = `🔗 Link für Schüler ${sz && letzterLink?.id === sz.id ? 'kopieren' : 'erzeugen'}`;
+    ['btn-szenario-link', 'btn-pruefung-link'].forEach((id) => (feld(id).textContent = linkText));
     feld('pruefung-datei-info').textContent = gesichert
-      ? '✓ Gespeichert. Nur für dich – nicht an Schüler weitergeben.'
-      : 'Nur für dich: Damit korrigierst du die Abgaben.';
+      ? '✓ Gespeichert. Nicht an Schüler weitergeben.'
+      : 'Enthält die Lösung, nur zum Korrigieren.';
     feld('pruefung-link-info').textContent = gesichert
-      ? 'Für die Schüler, z. B. im LernSax-Aufgabentext.'
+      ? 'Link oder Datei, beide ohne Lösung.'
       : 'Wird frei, sobald die Lösungsdatei gespeichert ist.';
     // Ein angezeigter Link passt nur zum Stand, aus dem er entstand
     if (letzterLink && letzterLink.id !== sz?.id) feld('szenario-link-wrap').hidden = true;
@@ -662,7 +667,7 @@
       1: true,
       2: !fehler.some((z) => z.bereich === 'text'),
       3: !fehler.some((z) => z.bereich === 'modell'),
-      4: !!sz && letzterLink?.id === sz.id,
+      4: !!sz && (letzterLink?.id === sz.id || schuelerDateiId === sz.id),
     };
     panel.querySelectorAll('[data-reiter]').forEach((r) => r.classList.toggle('fertig', !!fertig[r.dataset.reiter]));
     entwurfMerken();
@@ -726,7 +731,7 @@
     if (fehler) return window.App?.showAlertModal?.(fehler, 'Datei nicht geladen');
     if (!sz.erm)
       return window.App?.showAlertModal?.(
-        'Das ist ein Prüfungslink, keine Lösungsdatei. Lade die Lösungsdatei, die du beim Erstellen gespeichert hast.',
+        'Das ist eine Schülerdatei oder ein Prüfungslink, keine Lösungsdatei. Lade die Datei „….lehrer.erm-szenario.json“, die du beim Erstellen gespeichert hast.',
         'Datei nicht geladen',
       );
     const { titel, text, aufgabe, kardinalitaeten, pruefung, klicks } = sz;
@@ -747,11 +752,12 @@
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }
 
-  // Überführen: Das ER-Modell im Editor ist das des Szenarios (entwurf) – sein Bild kommt in den Prüfungslink
-  const linkZu = async (sz) => {
-    const bild = sz.pruefung && sz.aufgabe === 'rm' ? window.Pruefung.ermBildAusEditor() : undefined;
-    return `${location.origin}${location.pathname}#szenario=${await packen(fuerLink(sz, bild))}`;
-  };
+  // Was die Schüler bekommen (Link und Datei). Überführen: Das ER-Modell im Editor ist das des Szenarios
+  // (entwurf) – sein Bild kommt in die Prüfung
+  const schuelerDaten = (sz) =>
+    fuerLink(sz, sz.pruefung && sz.aufgabe === 'rm' ? window.Pruefung.ermBildAusEditor() : undefined);
+
+  const linkZu = async (sz) => `${location.origin}${location.pathname}#szenario=${await packen(schuelerDaten(sz))}`;
 
   async function linkKopieren() {
     const sz = aktualisieren();
@@ -777,14 +783,26 @@
 
   function alsDateiSpeichern() {
     const sz = aktualisieren();
-    if (sz) herunterladen(fuerDatei(sz), `${sz.titel}.erm-szenario.json`);
+    if (!sz) return;
+    herunterladen(fuerDatei(sz), `${sz.titel}.erm-szenario.json`);
+    schuelerDateiId = sz.id;
+    aktualisieren();
   }
 
   function loesungsdateiSpeichern() {
     const sz = aktualisieren();
     if (!sz) return;
-    herunterladen(fuerDatei(sz), `${sz.titel} (Lösungsdatei).erm-szenario.json`);
+    herunterladen(fuerDatei(sz), `${sz.titel}.lehrer.erm-szenario.json`);
     entwurfMerken({ gesichert: sz.id });
+    aktualisieren();
+  }
+
+  // Prüfung: gleicher Inhalt wie der Link, ohne Lösung
+  function schuelerdateiSpeichern() {
+    const sz = aktualisieren();
+    if (!sz || entwurfLesen().gesichert !== sz.id) return;
+    herunterladen(schuelerDaten(sz), `${sz.titel}.schueler.erm-szenario.json`);
+    schuelerDateiId = sz.id;
     aktualisieren();
   }
 
@@ -853,6 +871,7 @@
     klick('btn-szenario-testen', ausprobieren);
     klick('btn-pruefung-datei', loesungsdateiSpeichern);
     klick('btn-pruefung-link', linkKopieren);
+    klick('btn-pruefung-schuelerdatei', schuelerdateiSpeichern);
     klick('btn-pruefung-ansehen', alsSchuelerAnsehen);
     klick('btn-pruefung-korrigieren', korrigieren);
     feld('szenario-datei').addEventListener('change', (e) => {

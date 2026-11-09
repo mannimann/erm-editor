@@ -540,7 +540,7 @@
         if (fehler) korrektur.meldungen.push(`„${name}“: ${fehler}`);
         else if (!sz.erm)
           korrektur.meldungen.push(
-            `„${name}“ ist ein Prüfungslink, keine Lösungsdatei. Nimm die Lösungsdatei, die du beim Erstellen der Prüfung gespeichert hast.`,
+            `„${name}“ ist eine Schülerdatei oder ein Prüfungslink, keine Lösungsdatei. Nimm die Datei „….lehrer.erm-szenario.json“, die du beim Erstellen der Prüfung gespeichert hast.`,
           );
         else Object.assign(korrektur, { sz, szenarioDaten: daten });
       } else if (daten?.format === ABGABE_FORMAT) {
@@ -711,7 +711,7 @@
           el(
             'p',
             'lk-hinweis',
-            'Die Datei „… (Lösungsdatei).erm-szenario.json“, gespeichert beim Erstellen der Prüfung.',
+            'Die Datei „….lehrer.erm-szenario.json“, gespeichert beim Erstellen der Prüfung.',
           ),
           knopf('⬆ Lösungsdatei wählen', 'rel-btn primary', dateiWaehlen),
         );

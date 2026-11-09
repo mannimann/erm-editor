@@ -1342,6 +1342,11 @@
       persistStudentRelations();
     });
     label.appendChild(select);
+    const hinweis = document.createElement('small');
+    hinweis.className = 'fk-ziel-hinweis';
+    hinweis.textContent =
+      'Optional: Das Ziel wird aus dem Namen abgeleitet. Nur nötig, wenn der Name nicht eindeutig ist oder nicht erkannt wird.';
+    label.appendChild(hinweis);
     return label;
   }
 

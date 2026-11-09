@@ -199,6 +199,7 @@
   let selectedNodeId = null;
   let ctxTarget = null;
   let activeModalCleanup = null;
+  let offeneListe = null; // Auswahlliste im Dialog „Beziehung bearbeiten“, die vermutlich aufgeklappt ist
   const viewState = { x: 0, y: 0, scale: 1 };
   let aufgabeValidateTimeout = null; // Debounce timer for aufgabe validation
 
@@ -1087,6 +1088,40 @@
 
     const relFallbackY = startY + entityRows * entityGapY + 140;
     const shuffledRelationships = nurAttribute ? [] : shuffleInPlace(relationships.slice());
+
+    // Mehrere Beziehungen zwischen denselben zwei Entitätsklassen liegen gleichmäßig beiderseits der Verbindungslinie
+    const paare = new Map();
+    shuffledRelationships.forEach((relationship) => {
+      const ids = [
+        ...new Set(
+          getRelationshipEntityEdges(relationship.id).map((edge) =>
+            edge.fromId === relationship.id ? edge.toId : edge.fromId,
+          ),
+        ),
+      ].sort(); // Feste Reihenfolge: Sonst zeigte die Normale je nach Kantenrichtung zur anderen Seite
+      if (ids.length !== 2) return;
+      const schluessel = JSON.stringify(ids);
+      if (!paare.has(schluessel)) paare.set(schluessel, { a: byId(ids[0]), b: byId(ids[1]), beziehungen: [] });
+      paare.get(schluessel).beziehungen.push(relationship);
+    });
+    const parallelLage = new Map();
+    paare.forEach(({ a, b, beziehungen }) => {
+      if (beziehungen.length < 2) return;
+      const laenge = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      const nx = (a.y - b.y) / laenge;
+      const ny = (b.x - a.x) / laenge;
+      const breite = Math.max(...beziehungen.map((rel) => getNodeVisual(rel).w));
+      const hoehe = Math.max(...beziehungen.map((rel) => getNodeVisual(rel).h));
+      // Gerades Rastervielfaches: Auch der halbe Abstand liegt auf dem Raster, beide Seiten bleiben gleich weit weg
+      const abstand = toEvenGridStep(Math.abs(nx) * breite + Math.abs(ny) * hoehe + 40);
+      beziehungen.forEach((rel, i) => {
+        const versatz = (i - (beziehungen.length - 1) / 2) * abstand;
+        parallelLage.set(rel.id, { x: (a.x + b.x) / 2 + nx * versatz, y: (a.y + b.y) / 2 + ny * versatz });
+      });
+    });
+    // Zuerst setzen, sonst belegt eine andere Beziehung den Platz und die Symmetrie bricht
+    shuffledRelationships.sort((a, b) => parallelLage.has(b.id) - parallelLage.has(a.id));
+
     shuffledRelationships.forEach((relationship, index) => {
       const relEdges = getRelationshipEntityEdges(relationship.id);
       const connectedEntities = relEdges
@@ -1135,7 +1170,8 @@
 
         let bestPos = null;
         let bestScore = Number.POSITIVE_INFINITY;
-        candidateCenters.forEach((candidateCenter) => {
+        const parallel = parallelLage.get(relationship.id);
+        (parallel ? [parallel] : candidateCenters).forEach((candidateCenter) => {
           const snapped = clampPosition(candidateCenter.x, candidateCenter.y);
           const bounds = getNodeBounds({ ...relationship, x: snapped.x, y: snapped.y });
           const relCenter = snapped;
@@ -1282,7 +1318,7 @@
       };
 
       // Primäres Ziel: konstante sichtbare Linienlaenge (Rand-zu-Rand), nicht Mittelpunktabstand.
-      const desiredLineLength = (parentNode.type === 'relationship' ? 68 : 76) + Math.max(0, attrs.length - 10) * 2;
+      const desiredLineLength = (parentNode.type === 'relationship' ? 54 : 60) + Math.max(0, attrs.length - 10) * 2;
       const lineLengthOffsets = [0, 6, -6, 12, -12, 18, -18, 26, -26, 60, 90, 120];
       const hemisphereSpan = Math.PI * 0.9;
       const hemisphereSteps = Math.max(20, attrs.length * 7);
@@ -2214,6 +2250,7 @@
       modalOk.removeEventListener('click', onOk);
       modalCancel.removeEventListener('click', onCancel);
       modalBackdrop.style.display = 'none';
+      offeneListe = null;
       if (activeModalCleanup === cleanup) activeModalCleanup = null;
     };
 
@@ -2559,7 +2596,42 @@
     }
   });
 
+  // Ob eine Auswahlliste aufgeklappt ist, meldet der Browser nicht. Im Zweifel gilt sie als offen:
+  // Schlimmstenfalls braucht es ein zweites Enter, statt dass der Dialog zu früh speichert.
+  const listeZu = (e) => {
+    if (offeneListe === e.target) offeneListe = null;
+  };
+  [modalEntity1, modalEntity2, modalCardinality].forEach((liste) => {
+    liste.addEventListener('pointerdown', () => (offeneListe = liste));
+    liste.addEventListener('keydown', (e) => {
+      if ([' ', 'F4', 'ArrowUp', 'ArrowDown'].includes(e.key)) offeneListe = liste;
+    });
+    liste.addEventListener('change', listeZu);
+    liste.addEventListener('blur', listeZu);
+  });
+
   document.addEventListener('keydown', (e) => {
+    // Dialog „Beziehung bearbeiten“: Auf Knöpfen bleibt Enter deren eigener Klick
+    if (e.key === 'Enter' && !e.repeat && !e.isComposing && activeModalCleanup && !e.target.closest?.('button')) {
+      if (offeneListe === e.target) {
+        offeneListe = null; // Dieses Enter wählt nur den Listeneintrag
+        return;
+      }
+      e.preventDefault();
+      modalOk.click();
+      return;
+    }
+    if (e.key === 'F2' && selectedNodeId) {
+      if (e.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('#modal-backdrop:not([style*="none"]), #app-modal-backdrop:not([style*="none"])'))
+        return;
+      e.preventDefault();
+      const node = byId(selectedNodeId);
+      if (S().diagramLocked) window.App?.showLockedWarning?.();
+      else if (istFest(node)) festHinweis();
+      else if (node) startInlineEdit(node);
+      return;
+    }
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const tag = document.activeElement.tagName.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;

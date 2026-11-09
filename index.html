@@ -871,19 +871,22 @@
         <section class="lk-seite" data-seite="4">
           <p id="szenario-offen" class="lk-offen" hidden></p>
           <div class="lk-knoepfe" data-nur="uebung">
-            <button id="btn-szenario-link" class="rel-btn primary" type="button">🔗 Link kopieren</button>
-            <button id="btn-szenario-speichern" class="rel-btn" type="button">⬇ Als Datei speichern</button>
+            <button id="btn-szenario-link" class="rel-btn primary" type="button">🔗 Link für Schüler erzeugen</button>
+            <button id="btn-szenario-speichern" class="rel-btn" type="button">⬇ Datei für Schüler speichern</button>
             <button id="btn-szenario-testen" class="rel-btn" type="button">▶ Ausprobieren</button>
           </div>
           <div class="lk-folge" data-nur="pruefung">
             <div class="lk-folge-schritt">
               <span class="lk-nr">1</span>
-              <button id="btn-pruefung-datei" class="rel-btn primary" type="button">⬇ Lösungsdatei speichern</button>
+              <button id="btn-pruefung-datei" class="rel-btn primary" type="button">⬇ Lösungsdatei speichern (nur für dich)</button>
               <span id="pruefung-datei-info" class="lk-hinweis"></span>
             </div>
             <div class="lk-folge-schritt">
               <span class="lk-nr">2</span>
-              <button id="btn-pruefung-link" class="rel-btn primary" type="button">🔗 Prüfungslink kopieren</button>
+              <div class="lk-knoepfe">
+                <button id="btn-pruefung-link" class="rel-btn primary" type="button">🔗 Link für Schüler erzeugen</button>
+                <button id="btn-pruefung-schuelerdatei" class="rel-btn primary" type="button">⬇ Datei für Schüler speichern</button>
+              </div>
               <span id="pruefung-link-info" class="lk-hinweis"></span>
             </div>
             <div class="lk-knoepfe">
@@ -894,6 +897,43 @@
           <div id="szenario-link-wrap" class="szenario-link" hidden>
             <input id="szenario-link" class="prop-input" type="text" readonly aria-label="Link" />
             <small id="szenario-link-info"></small>
+          </div>
+          <div class="lk-anleitung">
+            <div class="lk-gruppe">
+              <h4>So kommen die Schüler an die Aufgabe</h4>
+              <ul>
+                <li><strong>Link:</strong> z. B. in den LernSax-Aufgabentext stellen. Ein Klick öffnet die Aufgabe.</li>
+                <li>
+                  <strong>Datei:</strong> z. B. bei LernSax hochladen. Die Schüler laden sie herunter, öffnen den ERM-Editor,
+                  klicken oben rechts auf „⬆ Importieren“ und wählen die Datei.
+                </li>
+                <li data-nur="pruefung">
+                  <strong>Abgabe:</strong> „📤 Abgeben“ erzeugt eine Datei „….erm-abgabe.json“. Die Schüler geben sie bei dir
+                  ab, z. B. über LernSax.
+                </li>
+              </ul>
+            </div>
+            <div class="lk-gruppe">
+              <h4>Das machst du als Lehrkraft</h4>
+              <ul>
+                <li data-nur="pruefung">
+                  <strong>Korrigieren:</strong> 🗺️ Lernpfade → „📝 Abgaben korrigieren“, dann die Lösungsdatei
+                  „….lehrer.erm-szenario.json“ und die Abgaben wählen oder ins Fenster ziehen.
+                </li>
+                <li data-nur="uebung">
+                  <strong>Datei:</strong> Dieselbe Datei gilt für Schüler und für dich. Sie enthält die Musterlösung, die
+                  Schüler in der Übung ansehen dürfen.
+                </li>
+                <li>
+                  <strong>Weiterbearbeiten:</strong> 🗺️ Lernpfade → „🛠 Übung oder Prüfung erstellen“ → ☰ Übersicht →
+                  „⬆ Datei laden“.
+                </li>
+                <li data-nur="pruefung">
+                  <strong>Achtung:</strong> Die Lösungsdatei enthält die Lösung. Gib nie die Datei mit „.lehrer“ weiter, nur die
+                  mit „.schueler“.
+                </li>
+              </ul>
+            </div>
           </div>
         </section>
       </div>
