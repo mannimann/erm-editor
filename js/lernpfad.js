@@ -714,8 +714,7 @@
           <li>Attribut <strong>„Vorname“</strong></li>
           <li>Attribut <strong>„Nachname“</strong></li>
         </ol>
-        <p><strong>So geht's:</strong> „Schüler“ anklicken, dann links auf <strong>„Attribut“</strong>.</p>
-        <p><strong>Hinweis:</strong> Markiere sie NICHT als Primärschlüssel.</p>`,
+        <p><strong>So geht's:</strong> „Schüler“ anklicken, dann links auf <strong>„Attribut“</strong>.</p>`,
       validator: function () {
         const schueler = getEntityByName('Schüler');
         if (!schueler) return { passed: false, error: 'Die Entitätsklasse „Schüler“ existiert nicht.' };
@@ -867,7 +866,7 @@
           <li>Klicke auf <strong>„JSON-Export“</strong> in der Titelleiste oben rechts und speichere die Datei</li>
           <li>Klicke auf <strong>„PNG-Export“</strong> und speichere das Bild</li>
         </ol>
-        <p>Danach geht es im Menü mit dem Lernpfad „ERM-Übung“ weiter: Bearbeite dort Szenario 1 „Hotel-Verwaltung“ – auch noch ohne Kardinalitäten.</p>`,
+        <p>Danach geht es im Menü mit dem Lernpfad „ERM-Übung“ weiter: Bearbeite dort Szenario 1 „Hotel-Verwaltung“.</p>`,
       validator: function () {
         // Abschluss-Screen ist immer erfolgreich
         return { passed: true };
@@ -910,8 +909,7 @@
     },
     {
       title: 'Beide Richtungen prüfen',
-      theory: `<p><strong>Beide Richtungen prüfen:</strong> Frage von jeder Seite aus, mit wie vielen Partnern sie verbunden ist. Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>
-        <p><strong>Hinweis:</strong> Im ER-Modell gibst du n:m genauso an wie 1:1 und 1:n. Wie man n:m in Tabellen umsetzt, ist erst im Grundkurs Thema.</p>`,
+      theory: `<p><strong>Beide Richtungen prüfen:</strong> Frage von jeder Seite aus, mit wie vielen Partnern sie verbunden ist. Ein Lehrer unterrichtet viele Klassen — und eine Klasse hat viele Lehrer. Erst wenn beide Richtungen „viele“ ergeben, ist es n:m.</p>`,
       objective: `<p>Bestimme die Kardinalität von <strong>„unterrichtet“</strong> zwischen „Lehrer“ und „Klasse“. Prüfe beide Richtungen:</p>
         <ul>
           <li>Wie viele Klassen kann ein Lehrer unterrichten?</li>
@@ -1158,7 +1156,7 @@
       szenario: `<p>Ein kleines Hotel möchte seine Reservierungen sauber modellieren. Dafür werden Gäste, Zimmer und einzelne Buchungen getrennt verwaltet, damit nachvollziehbar bleibt, wer wann welches Zimmer reserviert hat.</p>
         <p>Lege die Entitätsklasse <strong>„Gast“</strong> mit den Attributen <strong>„Gastnummer“</strong>, <strong>„Vorname“</strong>, <strong>„Nachname“</strong>, <strong>„E-Mail“</strong> und <strong>„Telefon“</strong> an. Verwende <strong>„Gastnummer“</strong> als Primärschlüssel.</p>
         <p>Lege außerdem die Entitätsklasse <strong>„Zimmer“</strong> mit den Attributen <strong>„Zimmernummer“</strong>, <strong>„Kategorie“</strong> und <strong>„PreisProNacht“</strong> an. <strong>„Zimmernummer“</strong> ist der Primärschlüssel. Jede Reservierung wird als Entitätsklasse <strong>„Buchung“</strong> mit den Attributen <strong>„Buchungsnummer“</strong>, <strong>„Anreisedatum“</strong>, <strong>„Abreisedatum“</strong> und <strong>„AnzahlNächte“</strong> modelliert; Primärschlüssel ist <strong>„Buchungsnummer“</strong>.</p>
-        <p>Verbinde das Modell über die Beziehungen <strong>„bucht“</strong> zwischen <strong>„Gast“</strong> und <strong>„Buchung“</strong> sowie <strong>„gilt für“</strong> zwischen <strong>„Zimmer“</strong> und <strong>„Buchung“</strong>. Kardinalitäten brauchst du hier noch nicht.</p>`,
+        <p>Verbinde das Modell über die Beziehungen <strong>„bucht“</strong> zwischen <strong>„Gast“</strong> und <strong>„Buchung“</strong> sowie <strong>„gilt für“</strong> zwischen <strong>„Zimmer“</strong> und <strong>„Buchung“</strong>.</p>`,
       masterlösung: {
         entities: ['Gast', 'Zimmer', 'Buchung'],
         attributes: {
@@ -1818,8 +1816,7 @@
     {
       title: '1:1-Beziehung „ist Klassensprecher“',
       theory: `<p class="aufgabe-begriff">Wiederholung</p>
-        <p><strong>Regel 1:1:</strong> Der Primärschlüssel einer Seite wandert als Fremdschlüssel in die andere – am besten dorthin, wo jede Entität sicher einen Partner hat.</p>
-        <p><em>UNIQUE sorgt dafür, dass jede SchülerNr in „Klasse“ nur einmal vorkommt – das setzt du später in der SQL-Übung.</em></p>`,
+        <p><strong>Regel 1:1:</strong> Der Primärschlüssel einer Seite wandert als Fremdschlüssel in die andere – am besten dorthin, wo jede Entität sicher einen Partner hat.</p>`,
       objective: `<p>Bilde die Beziehung <strong>„ist Klassensprecher“</strong> ab. Jede Klasse hat einen Klassensprecher, aber nicht jeder Schüler ist einer: Der Fremdschlüssel <strong>„SchülerNr“</strong> kommt deshalb in <strong>„Klasse“</strong>.</p>`,
       validator: function () {
         if (getStudentFks('Klasse', 'SchülerNr').length) return { passed: true };
@@ -1845,7 +1842,7 @@
     {
       title: 'Beziehungstabelle „unterrichtet“',
       theory: `<p class="aufgabe-begriff">Neuer Begriff: Beziehungstabelle · Symbol: eigene Relation mit dem Namen der Beziehung</p>
-        <p><strong>Regel n:m:</strong> Eine n:m-Beziehung passt in keine der bestehenden Relationen. Die Beziehung wird deshalb eine eigene Tabelle (Relation), die <strong>Beziehungstabelle</strong> (in Büchern auch Zwischen- oder Koppeltabelle). Sie heißt wie die Beziehung und enthält die Primärschlüssel beider Seiten als Fremdschlüssel. Zusammen bilden diese ihren Primärschlüssel (einen Verbundschlüssel).</p>`,
+        <p><strong>Regel n:m:</strong> Eine n:m-Beziehung passt in keine der bestehenden Relationen. Die Beziehung wird deshalb eine eigene Tabelle (Relation), die <strong>Beziehungstabelle</strong>. Sie heißt wie die Beziehung und enthält die Primärschlüssel beider Seiten als Fremdschlüssel. Zusammen bilden diese ihren Primärschlüssel (einen Verbundschlüssel).</p>`,
       objective: `<p>Bilde <strong>„unterrichtet“</strong> (Lehrer n : m Klasse) als Beziehungstabelle ab:</p>
         <ol>
           <li>Erstelle eine neue Relation <strong>„unterrichtet“</strong>.</li>
@@ -1931,7 +1928,7 @@
       schritt: true,
       icon: '🔷',
       titel: 'ERM-Grundlagen',
-      untertitel: 'Erstes ER-Modell, noch ohne Kardinalitäten',
+      untertitel: 'Das erste ER-Modell Schritt für Schritt',
       kardinalitaeten: false,
       aufgaben: ermGrundlagenAufgaben,
     },
