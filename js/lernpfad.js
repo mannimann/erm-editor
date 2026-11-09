@@ -1097,8 +1097,8 @@
         <p>Manchmal ist kein einzelnes Attribut eindeutig, und du möchtest keine eigene Nummer ergänzen. Dann kennzeichnen mehrere Attribute die Entität gemeinsam. Bei „Klasse“ steckt das schon in der Bezeichnung: „9a“ besteht aus der Klassenstufe und der Parallelklasse.</p>`,
       objective: `<p>Teile die Bezeichnung bei „Klasse“ in ihre zwei Teile auf:</p>
         <ol>
-          <li>Benenne „Bezeichnung“ in <strong>„Klassenstufe“</strong> um (z. B. 9).</li>
-          <li>Füge das Attribut <strong>„Parallelklasse“</strong> hinzu (z. B. a).</li>
+          <li>Benenne „Bezeichnung“ in <strong>„Klassenstufe“</strong> um (in der Tabelle würde dort z. B. „9“ stehen).</li>
+          <li>Füge das Attribut <strong>„Parallelklasse“</strong> hinzu (in der Tabelle würde dort z. B. „a“ stehen).</li>
         </ol>`,
       validator: function () {
         return validateEntityRequirements('Klasse', { attributes: { Klasse: ['Klassenstufe', 'Parallelklasse'] } });
@@ -1261,7 +1261,13 @@
           Spind: ['Spindnummer', 'Bereich'],
           Raum: ['Raumnummer', 'Etage', 'Plätze'],
         },
-        primaryKeys: { Mitglied: 'Mitgliedsnummer', Kurs: 'Kurscode', Trainer: 'Trainerkürzel', Spind: 'Spindnummer', Raum: 'Raumnummer' },
+        primaryKeys: {
+          Mitglied: 'Mitgliedsnummer',
+          Kurs: 'Kurscode',
+          Trainer: 'Trainerkürzel',
+          Spind: 'Spindnummer',
+          Raum: 'Raumnummer',
+        },
         relationships: [
           { name: 'belegt', from: 'Mitglied', to: 'Kurs', cardinality: 'n:m' },
           { name: 'leitet', from: 'Trainer', to: 'Kurs', cardinality: '1:n' },
@@ -1755,7 +1761,8 @@
           return { passed: true };
         return {
           passed: false,
-          error: 'Füge „Lehrer-Kürzel“ als Fremdschlüssel zu „Klasse“ hinzu oder „Bezeichnung“ als Fremdschlüssel zu „Lehrer“.',
+          error:
+            'Füge „Lehrer-Kürzel“ als Fremdschlüssel zu „Klasse“ hinzu oder „Bezeichnung“ als Fremdschlüssel zu „Lehrer“.',
         };
       },
     },
