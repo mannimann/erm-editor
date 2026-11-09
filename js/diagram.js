@@ -197,6 +197,8 @@
   const touchPoints = new Map();
   let pinch = null;
   let selectedNodeId = null;
+  let letzteForm = null; // Tab läuft nach einem Klick auf die Zeichenfläche hier weiter
+  let flaecheGeklickt = false;
   let ctxTarget = null;
   let activeModalCleanup = null;
   let offeneListe = null; // Auswahlliste im Dialog „Beziehung bearbeiten“, die vermutlich aufgeklappt ist
@@ -2590,6 +2592,17 @@
     }
   });
 
+  // Formen und Fläche verhindern beim Ziehen den Standard des Browsers und damit den Fokuswechsel.
+  // Ohne das bliebe der Fokus auf dem letzten Knopf oder Feld, und die Tasten kämen nicht beim Diagramm an.
+  svg.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (!e.target.closest('.svg-inline-input')) document.activeElement?.blur?.();
+      flaecheGeklickt = !e.target.closest('.node');
+    },
+    true,
+  );
+
   svg.addEventListener('contextmenu', (e) => {
     if (e.target === svg || (e.target.tagName === 'rect' && !e.target.closest('.node'))) {
       hideContextMenu();
@@ -2619,6 +2632,10 @@
       }
       e.preventDefault();
       modalOk.click();
+      return;
+    }
+    if (['Enter', 'Tab', ...Object.keys(PFEILE)].includes(e.key)) {
+      formenTaste(e);
       return;
     }
     if (e.key === 'F2' && selectedNodeId) {
@@ -2655,6 +2672,79 @@
     }
   });
 
+  const PFEILE = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+
+  // Enter: neues Attribut an der Auswahl. Tab und Pfeiltasten: zur nächsten Entitätsklasse oder Beziehung.
+  function formenTaste(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return; // z. B. Alt+Pfeil = Seite zurück
+    if (e.target.closest?.('input, textarea, select, button, a, [contenteditable="true"]')) return;
+    if (document.querySelector('[id$="-backdrop"]:not([style*="none"])')) return;
+
+    if (e.key === 'Enter') {
+      if (e.repeat || !attributZiel()) return;
+      e.preventDefault();
+      if (S().diagramLocked) window.App?.showLockedWarning?.();
+      else if (nurKardinalitaeten()) festHinweis();
+      else addAttributeAction();
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      // Ohne Auswahl bleibt Tab die Navigation der Seite, außer direkt nach einem Klick auf die Zeichenfläche
+      if (!byId(selectedNodeId) && !flaecheGeklickt) return;
+      flaecheGeklickt = false;
+    }
+    if (formWechseln(e.key, e.shiftKey)) e.preventDefault();
+  }
+
+  // Gibt false zurück, wenn es keine Form zum Wechseln gibt
+  function formWechseln(taste, rueckwaerts) {
+    const von = byId(selectedNodeId) || (taste === 'Tab' && byId(letzteForm));
+    const formen = S().nodes.filter((n) => n.type === 'entity' || n.type === 'relationship');
+    if (!formen.length) return false;
+
+    let ziel = formen[0];
+    if (von && taste === 'Tab') {
+      const i = formen.indexOf(attributZiel(von));
+      const n = formen.length;
+      if (i >= 0) ziel = formen[(i + (rueckwaerts ? -1 : 1) + n) % n];
+    } else if (von) {
+      ziel = naechsteInRichtung(von, formen, PFEILE[taste]);
+    }
+    if (ziel) {
+      insBild(ziel);
+      selectNodeFn(ziel.id);
+    }
+    return true;
+  }
+
+  // Quer zur Richtung zählt der Abstand doppelt, damit die Taste möglichst geradeaus springt
+  function naechsteInRichtung(von, kandidaten, [rx, ry]) {
+    let beste = null;
+    let besterWert = Infinity;
+    for (const n of kandidaten) {
+      const dx = n.x - von.x;
+      const dy = n.y - von.y;
+      const vor = dx * rx + dy * ry;
+      if (n === von || vor <= 0) continue;
+      const wert = vor + 2 * Math.abs(dx * ry - dy * rx);
+      if (wert < besterWert) [beste, besterWert] = [n, wert];
+    }
+    return beste;
+  }
+
+  // Liegt die Form außerhalb des sichtbaren Bereichs, rückt sie in die Mitte
+  function insBild(node) {
+    const RAND = 60;
+    const mitte = getCanvasCenterLocal();
+    const x = node.x * viewState.scale + viewState.x;
+    const y = node.y * viewState.scale + viewState.y;
+    if (x >= RAND && x <= mitte.x * 2 - RAND && y >= RAND && y <= mitte.y * 2 - RAND) return;
+    viewState.x = mitte.x - node.x * viewState.scale;
+    viewState.y = mitte.y - node.y * viewState.scale;
+    applyViewTransform();
+  }
+
   function deleteNode(nodeId) {
     const node = byId(nodeId);
     // Beim Löschen einer Entität oder Beziehung: alle direkt verbundenen Attribut-Nodes mitlöschen
@@ -2678,7 +2768,7 @@
   }
 
   function selectNodeFn(id) {
-    selectedNodeId = id;
+    selectedNodeId = letzteForm = id;
     window.AppSelect.selectNode(id);
     renderAll();
   }
@@ -2935,6 +3025,14 @@
         e.stopPropagation();
         finishAction = 'commit';
         input.blur();
+        return;
+      }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        e.stopPropagation();
+        finishAction = 'commit';
+        input.blur();
+        formWechseln('Tab', e.shiftKey);
         return;
       }
       if (e.key === 'Escape') {
