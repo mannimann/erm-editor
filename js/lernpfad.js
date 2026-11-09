@@ -1175,34 +1175,26 @@
       title: 'Krankenhaus-System',
       jsonFile: 'uebung-2-krankenhaus.json',
       // Übung 2: wichtige Wörter hervorgehoben, Kardinalitäten vorgegeben (ab Übung 3 nur noch im Text)
-      szenario: `<p>Ein Krankenhaus soll nachvollziehen können, welche Patienten behandelt werden, welche Ärzte die Behandlungen durchführen und auf welcher Station ein Patient liegt.</p>
-        <p>Für die Entitätsklasse <strong>„Patient“</strong> werden <strong>„Versicherungsnummer“</strong>, <strong>„Name“</strong>, <strong>„Geburtsdatum“</strong> und <strong>„Adresse“</strong> gespeichert, für <strong>„Arzt“</strong> <strong>„Personalnummer“</strong>, <strong>„Name“</strong> und <strong>„Fachbereich“</strong>, für <strong>„Station“</strong> <strong>„Stationscode“</strong>, <strong>„Name“</strong> und <strong>„Bettenzahl“</strong>. Jeder medizinische Vorgang wird als <strong>„Behandlung“</strong> mit <strong>„Behandlungsnummer“</strong>, <strong>„Datum“</strong>, <strong>„Diagnose“</strong> und <strong>„Medikation“</strong> dokumentiert. Primärschlüssel sind die Versicherungsnummer, die Personalnummer, der Stationscode und die Behandlungsnummer.</p>
+      szenario: `<p>Ein Krankenhaus soll nachvollziehen können, welche Ärzte welche Patienten betreuen, auf welcher Station ein Patient liegt und welcher Arzt eine Station leitet.</p>
+        <p>Für die Entitätsklasse <strong>„Patient“</strong> werden <strong>„Versicherungsnummer“</strong>, <strong>„Name“</strong>, <strong>„Geburtsdatum“</strong> und <strong>„Adresse“</strong> gespeichert, für <strong>„Arzt“</strong> <strong>„Personalnummer“</strong>, <strong>„Name“</strong> und <strong>„Fachbereich“</strong>, für <strong>„Station“</strong> <strong>„Stationscode“</strong>, <strong>„Name“</strong> und <strong>„Bettenzahl“</strong>. Primärschlüssel sind die Versicherungsnummer, die Personalnummer und der Stationscode.</p>
         <p>Lege diese Beziehungen mit ihren Kardinalitäten an:</p>
         <ul>
-          <li><strong>„erhält“</strong>: Patient <strong>1 : n</strong> Behandlung – ein Patient erhält viele Behandlungen, jede Behandlung gehört zu genau einem Patienten.</li>
-          <li><strong>„führt durch“</strong>: Arzt <strong>1 : n</strong> Behandlung – ein Arzt führt viele Behandlungen durch, jede Behandlung verantwortet genau ein Arzt.</li>
-          <li><strong>„arbeitet auf“</strong>: Arzt <strong>n : 1</strong> Station – ein Arzt arbeitet auf genau einer Station, auf einer Station arbeiten viele Ärzte.</li>
           <li><strong>„liegt auf“</strong>: Patient <strong>n : 1</strong> Station – ein Patient liegt auf genau einer Station, eine Station nimmt viele Patienten auf.</li>
+          <li><strong>„leitet“</strong>: Arzt <strong>1 : 1</strong> Station – ein Arzt leitet höchstens eine Station, jede Station wird von genau einem Arzt geleitet.</li>
+          <li><strong>„betreut“</strong>: Arzt <strong>n : m</strong> Patient – ein Arzt betreut viele Patienten, ein Patient wird von mehreren Ärzten betreut.</li>
         </ul>`,
       masterlösung: {
-        entities: ['Patient', 'Arzt', 'Behandlung', 'Station'],
+        entities: ['Patient', 'Arzt', 'Station'],
         attributes: {
           Patient: ['Versicherungsnummer', 'Name', 'Geburtsdatum', 'Adresse'],
           Arzt: ['Personalnummer', 'Name', 'Fachbereich'],
-          Behandlung: ['Behandlungsnummer', 'Datum', 'Diagnose', 'Medikation'],
           Station: ['Stationscode', 'Name', 'Bettenzahl'],
         },
-        primaryKeys: {
-          Patient: 'Versicherungsnummer',
-          Arzt: 'Personalnummer',
-          Behandlung: 'Behandlungsnummer',
-          Station: 'Stationscode',
-        },
+        primaryKeys: { Patient: 'Versicherungsnummer', Arzt: 'Personalnummer', Station: 'Stationscode' },
         relationships: [
-          { name: 'erhält', from: 'Patient', to: 'Behandlung', cardinality: '1:n' },
-          { name: 'führt durch', from: 'Arzt', to: 'Behandlung', cardinality: '1:n' },
-          { name: 'arbeitet auf', from: 'Arzt', to: 'Station', cardinality: 'n:1' },
           { name: 'liegt auf', from: 'Patient', to: 'Station', cardinality: 'n:1' },
+          { name: 'leitet', from: 'Arzt', to: 'Station', cardinality: '1:1' },
+          { name: 'betreut', from: 'Arzt', to: 'Patient', cardinality: 'n:m' },
         ],
       },
     },
@@ -1210,7 +1202,7 @@
       title: 'Bibliothek',
       jsonFile: 'uebung-3-bibliothek.json',
       szenario: `<p>Eine Stadtbibliothek möchte ihren Bestand und die Ausleihe so organisieren, dass nicht nur Titel, sondern auch einzelne physische Exemplare sauber nachverfolgt werden können. Mitglieder sollen mit ihrer Mitgliedsnummer eindeutig erfasst werden; zusätzlich werden Name, Adresse und Telefonnummer gespeichert. Bücher werden über ihre ISBN identifiziert, außerdem sollen Titel, Autor und Erscheinungsjahr festgehalten werden. Da ein Buch mehrfach im Regal stehen kann, braucht jedes konkrete Exemplar eine eigene Inventarnummer; zu jedem Exemplar werden außerdem Anschaffungsdatum und Zustand dokumentiert.</p>
-        <p>Wenn ein Mitglied ein Exemplar ausleiht, soll dies über einen eigenen Ausleihe-Vorgang laufen. Für jede Ausleihe gibt es daher eine Ausleihnummer sowie die Angaben Ausleihdatum, Fälligkeitsdatum und Rückgabedatum. Aus dem Modell soll hervorgehen, dass ein Buch viele Exemplare haben kann, ein Exemplar aber immer genau zu einem Buch gehört (ist Exemplar von). Ebenso kann ein Mitglied im Laufe der Zeit mehrere Ausleihen auslösen, während jede einzelne Ausleihe genau einem Mitglied zugeordnet ist (leiht aus). Auch ein Exemplar kann mehrfach ausgeliehen werden, jede konkrete Ausleihe bezieht sich jedoch immer auf genau ein Exemplar (wird ausgeliehen in).</p>`,
+        <p>Wenn ein Mitglied ein Exemplar ausleiht, soll dies über einen eigenen Ausleihe-Vorgang laufen. Für jede Ausleihe gibt es daher eine Ausleihnummer sowie die Angaben Ausleihdatum, Fälligkeitsdatum und Rückgabedatum. Aus dem Modell soll hervorgehen, dass ein Buch viele Exemplare haben kann, ein Exemplar aber immer genau zu einem Buch gehört (ist Exemplar von). Ebenso kann ein Mitglied im Laufe der Zeit mehrere Ausleihen auslösen, während jede einzelne Ausleihe genau einem Mitglied zugeordnet ist (leiht aus). Auch ein Exemplar kann mehrfach ausgeliehen werden, jede konkrete Ausleihe bezieht sich jedoch immer auf genau ein Exemplar (wird ausgeliehen in). Außerdem kann ein Mitglied viele Bücher vormerken, und ein Buch kann von vielen Mitgliedern vorgemerkt werden (merkt vor).</p>`,
       masterlösung: {
         entities: ['Mitglied', 'Buch', 'Exemplar', 'Ausleihe'],
         attributes: {
@@ -1229,6 +1221,7 @@
           { name: 'ist Exemplar von', from: 'Exemplar', to: 'Buch', cardinality: 'n:1' },
           { name: 'leiht aus', from: 'Mitglied', to: 'Ausleihe', cardinality: '1:n' },
           { name: 'wird ausgeliehen in', from: 'Exemplar', to: 'Ausleihe', cardinality: '1:n' },
+          { name: 'merkt vor', from: 'Mitglied', to: 'Buch', cardinality: 'n:m' },
         ],
       },
     },
@@ -1257,18 +1250,24 @@
     fitnessstudio: {
       title: 'Fitnessstudio-Kursplanung',
       szenario: `<p>Ein Fitnessstudio möchte seine Kursorganisation so abbilden, dass sichtbar wird, welche Mitglieder an welchen Kursen teilnehmen und welche Trainer welche Kurse übernehmen. Für Mitglied sollen Mitgliedsnummer, Name, Telefonnummer und E-Mail gespeichert werden. Für Kurs werden Kurscode, Titel, Schwierigkeitsstufe und Maximalplätze erfasst. Für Trainer sollen Trainerkürzel, Name und Lizenz geführt werden.</p>
-        <p>Ein Mitglied kann im Laufe der Zeit mehrere Kurse belegen, und ein Kurs kann von vielen Mitgliedern besucht werden (belegt). Ebenso kann ein Trainer mehrere Kurse leiten, während ein Kurs auch von mehreren Trainern betreut werden kann (leitet).</p>`,
+        <p>Ein Mitglied kann im Laufe der Zeit mehrere Kurse belegen, und ein Kurs kann von vielen Mitgliedern besucht werden (belegt). Ein Trainer kann mehrere Kurse leiten, jeder Kurs wird von genau einem Trainer geleitet (leitet). Außerdem kann ein Mitglied einen Spind mieten: Für jeden Spind werden Spindnummer und Bereich gespeichert. Ein Mitglied mietet höchstens einen Spind, und ein Spind ist höchstens an ein Mitglied vermietet (mietet).</p>
+        <p>Jeder Kurs findet in genau einem Raum statt, in einem Raum finden viele Kurse statt (findet statt in). Für jeden Raum werden Raumnummer, Etage und Plätze gespeichert. Außerdem kann ein Trainer bei mehreren Kursen als Vertretung eingetragen sein, und ein Kurs kann mehrere Vertretungen haben (vertritt).</p>`,
       masterlösung: {
-        entities: ['Mitglied', 'Kurs', 'Trainer'],
+        entities: ['Mitglied', 'Kurs', 'Trainer', 'Spind', 'Raum'],
         attributes: {
           Mitglied: ['Mitgliedsnummer', 'Name', 'Telefonnummer', 'E-Mail'],
           Kurs: ['Kurscode', 'Titel', 'Schwierigkeitsstufe', 'Maximalplätze'],
           Trainer: ['Trainerkürzel', 'Name', 'Lizenz'],
+          Spind: ['Spindnummer', 'Bereich'],
+          Raum: ['Raumnummer', 'Etage', 'Plätze'],
         },
-        primaryKeys: { Mitglied: 'Mitgliedsnummer', Kurs: 'Kurscode', Trainer: 'Trainerkürzel' },
+        primaryKeys: { Mitglied: 'Mitgliedsnummer', Kurs: 'Kurscode', Trainer: 'Trainerkürzel', Spind: 'Spindnummer', Raum: 'Raumnummer' },
         relationships: [
           { name: 'belegt', from: 'Mitglied', to: 'Kurs', cardinality: 'n:m' },
-          { name: 'leitet', from: 'Trainer', to: 'Kurs', cardinality: 'n:m' },
+          { name: 'leitet', from: 'Trainer', to: 'Kurs', cardinality: '1:n' },
+          { name: 'mietet', from: 'Mitglied', to: 'Spind', cardinality: '1:1' },
+          { name: 'findet statt in', from: 'Kurs', to: 'Raum', cardinality: 'n:1' },
+          { name: 'vertritt', from: 'Trainer', to: 'Kurs', cardinality: 'n:m' },
         ],
       },
     },
@@ -1345,7 +1344,7 @@
       title: 'Universität',
       jsonFile: 'experten-3-universitaet.json',
       szenario: `<p>Eine Hochschule möchte ihre Lehrorganisation so modellieren, dass sichtbar wird, welche Dozenten welche Vorlesungen halten, welche Hilfskräfte sie dabei unterstützen und welche Seminare zu einer Vorlesung gehören. Für Dozent werden Dozentenkürzel, Name und Fachgebiet gespeichert. Für Student werden Matrikelnummer, Name, Telefonnummer und E-Mail erfasst. Nicht jeder Student arbeitet zusätzlich an der Hochschule, aber einige Studierende sind zugleich Hilfskraft. Für Hilfskraft sollen HiwiNummer, Wochenstunden und Vertragsbeginn gespeichert werden.</p>
-        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt, jedes Seminar mit Seminarnummer, Wochentag und Raum. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Eine Vorlesung kann mehrere andere Vorlesungen voraussetzen und selbst Voraussetzung für mehrere andere sein (setzt voraus). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
+        <p>Jede Vorlesung wird mit Vorlesungscode, Titel und Credits geführt, jedes Seminar mit Seminarnummer, Wochentag und Raum. Ein Dozent kann mehrere Vorlesungen halten, jede Vorlesung wird jedoch genau von einem Dozenten gehalten (hält). Eine Hilfskraft unterstützt genau einen Dozenten, ein Dozent kann jedoch mehrere Hilfskräfte haben (hat Hilfskraft). Gleichzeitig ist jede Hilfskraft genau einem Studenten zugeordnet, denn eine Hilfskraft ist immer auch ein Student (ist). Zu jeder Vorlesung können mehrere Seminare gehören, jedes Seminar gehört aber genau zu einer Vorlesung (gehört zu). Ein Seminar wird jeweils genau von einer Hilfskraft geleitet, eine Hilfskraft kann jedoch mehrere Seminare leiten (leitet).</p>
         <p>Auch die Teilnahme der Studierenden soll abgebildet werden. Ein Student kann an mehreren Vorlesungen teilnehmen, und eine Vorlesung kann von vielen Studenten besucht werden (besucht). Zu jedem Besuch einer Vorlesung wird die Note festgehalten. Dasselbe gilt für Seminare: Ein Student kann mehrere Seminare besuchen, und ein Seminar kann viele Studenten haben (nimmt teil an).</p>`,
       masterlösung: {
         entities: ['Dozent', 'Student', 'Hilfskraft', 'Vorlesung', 'Seminar'],
@@ -1371,7 +1370,6 @@
           { name: 'leitet', from: 'Hilfskraft', to: 'Seminar', cardinality: '1:n' },
           { name: 'besucht', from: 'Student', to: 'Vorlesung', cardinality: 'n:m', attributes: ['Note'] },
           { name: 'nimmt teil an', from: 'Student', to: 'Seminar', cardinality: 'n:m' },
-          { name: 'setzt voraus', from: 'Vorlesung', to: 'Vorlesung', cardinality: 'n:m' },
         ],
       },
       regeln: [
@@ -1424,13 +1422,13 @@
         },
       ],
     },
-    // Knackpunkte: Verbundschlüssel aus Gebäude und Raumnummer, Kann-Beziehung, n:m-Selbstbeziehung.
+    // Knackpunkte: Verbundschlüssel aus Gebäude und Raumnummer, Kann-Beziehung, n:m-Selbstbeziehung (Aufgabe 3).
     tagung: {
       title: 'Tagung',
       jsonFile: 'experten-4-tagung.json',
       szenario: `<p>Eine Fachtagung soll so geplant werden, dass klar ist, wer welchen Vortrag hält, in welchem Raum er stattfindet und welche Helfer die Räume betreuen. Jeder Referent hat eine eindeutige Referentennummer; außerdem werden Name und Fachgebiet gespeichert. Jeder Vortrag hat eine eindeutige Vortragsnummer sowie Titel, Datum, Startzeit und Endzeit. Jeder Helfer hat eine eindeutige Helfernummer, dazu Name und Telefonnummer.</p>
         <p>Die Tagung nutzt mehrere Gebäude. Einen Raum erkennt man erst an Gebäude und Raumnummer zusammen – Raum 101 gibt es in jedem Gebäude. Zu jedem Raum wird außerdem die Kapazität gespeichert.</p>
-        <p>Ein Referent kann mehrere Vorträge halten, jeder Vortrag wird von genau einem Referenten gehalten (hält). In einem Raum finden viele Vorträge statt; jeder Vortrag findet in höchstens einem Raum statt – solange die Raumplanung läuft, steht bei manchen Vorträgen noch kein Raum fest (findet statt in).</p>
+        <p>Ein Referent kann mehrere Vorträge halten, jeder Vortrag wird von genau einem Referenten gehalten (hält). In einem Raum finden viele Vorträge statt; jeder Vortrag findet in höchstens einem Raum statt – solange die Raumplanung läuft, steht bei manchen Vorträgen noch kein Raum fest (findet statt in). Jeden Vortrag moderiert genau ein Helfer, ein Helfer kann mehrere Vorträge moderieren (moderiert).</p>
         <p>Ein Helfer betreut mehrere Räume, und jeder Raum wird von mehreren Helfern betreut (betreut). Zu jeder Betreuung wird die Schicht festgehalten. Erfahrene Helfer arbeiten neue ein: Ein Helfer kann mehrere andere einarbeiten und selbst von mehreren eingearbeitet werden (arbeitet ein).</p>`,
       masterlösung: {
         entities: ['Referent', 'Vortrag', 'Raum', 'Helfer'],
@@ -1449,6 +1447,7 @@
         relationships: [
           { name: 'hält', from: 'Referent', to: 'Vortrag', cardinality: '1:n' },
           { name: 'findet statt in', from: 'Vortrag', to: 'Raum', cardinality: 'n:1' },
+          { name: 'moderiert', from: 'Helfer', to: 'Vortrag', cardinality: '1:n' },
           { name: 'betreut', from: 'Helfer', to: 'Raum', cardinality: 'n:m', attributes: ['Schicht'] },
           { name: 'arbeitet ein', from: 'Helfer', to: 'Helfer', cardinality: 'n:m' },
         ],
@@ -1582,14 +1581,15 @@
   const EXPERTEN = [
     SZENARIEN.fahrschule,
     SZENARIEN.flugbetrieb,
-    SZENARIEN.universitaet,
     SZENARIEN.tagung,
     SZENARIEN.katastrophenschutz,
+    SZENARIEN.universitaet,
   ];
 
   const ermUebungAufgaben = nummeriert(UEBUNG.map(ermSzenarioAufgabe));
   const ermExpertenAufgaben = nummeriert(EXPERTEN.map(ermSzenarioAufgabe));
-  // Relationenmodell auf der Stufe Einstieg: nur 1:1 und 1:n, deshalb Fußball ohne „Spiel“ und ohne Fitnessstudio
+  // Relationenmodell auf der Stufe Einstieg: nur 1:1 und 1:n. Die ER-Modelle sind die der ERM-Übung ohne n:m-Beziehungen,
+  // Fußball zusätzlich ohne „Spiel“, das Fitnessstudio entfällt (fast nur n:m).
   const RM_UEBUNG = [
     SZENARIEN.hotel,
     SZENARIEN.krankenhaus,
@@ -2005,6 +2005,8 @@
       untertitel: 'Knifflige Szenarien selbst modellieren',
       abschlussText:
         'Du modellierst jetzt auch knifflige Szenarien – mit n:m-Beziehungen, mehreren Beziehungen zwischen denselben Entitätsklassen, Beziehungsattributen, Selbstbeziehungen und Verbundschlüsseln.',
+      // Version 2: Reihenfolge nach Umfang – die Nummern passen nicht mehr
+      version: 2,
       aufgaben: ermExpertenAufgaben,
     },
     {
@@ -2030,6 +2032,8 @@
       untertitel: 'Knifflige ER-Modelle überführen',
       abschlussText:
         'Du überführst jetzt auch Beziehungstabellen mit Beziehungsattributen, Selbstbeziehungen, mehrere Beziehungen zwischen denselben Entitätsklassen und Verbundschlüssel. Weiter geht es mit dem Lernpfad „SQL-Übung“.',
+      // Version 2: Reihenfolge nach Umfang – die Nummern passen nicht mehr
+      version: 2,
       aufgaben: rmExpertenAufgaben,
     },
     {
@@ -2042,8 +2046,8 @@
       untertitel: 'Muss, Kann, NOT NULL und UNIQUE',
       // Das Relationenmodell ist vorgegeben (Musterlösung), geübt wird nur „SQL erzeugen“
       rmVorgabe: true,
-      // Version 2: Aufgabe 1 „Muss, Kann und UNIQUE“ vor den Szenarien – der alte Stand passt nicht mehr
-      version: 2,
+      // Version 3: Szenarien nach Umfang geordnet – der alte Stand passt nicht mehr
+      version: 3,
       abschlussText:
         'Du legst jetzt mit NOT NULL fest, welche Fremdschlüssel nicht leer bleiben dürfen, und sicherst 1:1-Beziehungen mit UNIQUE ab.',
       aufgaben: sqlUebungAufgaben,

@@ -154,8 +154,18 @@ for (const id of ['erm-uebung', 'erm-experten'])
 const rmSzenarien = ['rm-uebung', 'rm-experten'].flatMap((id) =>
   Lernpfad.getAlleAufgaben(id).filter((q) => q.jsonFile),
 );
-// Die Fußball-Variante der Stufe Einstieg lässt „Spiel“ absichtlich weg und passt nicht zur ERM-Aufgabe
-const rmSzenarienMitErm = rmSzenarien.filter((q) => q.jsonFile !== 'uebung-4-fussball-rm.json');
+// Die Relationenmodell-Aufgaben der Stufe Einstieg lassen n:m weg und passen daher nicht genau zur ERM-Aufgabe
+const ohneNm = ['uebung-2-krankenhaus.json', 'uebung-3-bibliothek.json', 'uebung-4-fussball-rm.json'];
+const rmSzenarienMitErm = rmSzenarien.filter((q) => !ohneNm.includes(q.jsonFile));
+
+pruefe('Relationenmodell-Übung (Einstieg): keine n:m-Beziehung, sonst dieselben Beziehungen wie in der ERM-Übung', () => {
+  for (const q of Lernpfad.getAlleAufgaben('rm-uebung')) {
+    const hand = ermSzenarien.get(q.title).masterlösung.relationships.filter((r) => r.cardinality !== 'n:m');
+    const auto = Lernpfad.masterAusErm(ermLaden(q.jsonFile)).relationships;
+    assert(auto.every((r) => r.cardinality !== 'n:m'), `${q.jsonFile}: n:m`);
+    assert.strictEqual(auto.map((r) => r.name).sort().join('|'), hand.map((r) => r.name).sort().join('|'), q.jsonFile);
+  }
+});
 
 pruefe('Jedes ER-Modell erfüllt die Musterlösung seiner ERM-Aufgabe', () => {
   for (const q of rmSzenarienMitErm) {
@@ -1119,8 +1129,8 @@ pruefe('Prüfung: Korrekturliste ERM – Musterlösung alles ✓, leer alles ✗
   assert(alle(p).some((z) => z.art === 'Kardinalitäten'), 'Kardinalitäten als eigene Zeilen');
   // falsche Kardinalität: Beziehung ✓, Kardinalität ✗ mit dem, was gezeichnet ist
   const state = ermLaden('uebung-2-krankenhaus.json');
-  const kante = state.edges.find((e) => e.edgeType === 'relationship');
-  kante.chenFrom = kante.chenTo = kante.chenTo === '1' ? 'n' : '1';
+  const kante = state.edges.find((e) => e.edgeType === 'relationship' && e.chenFrom === '1' && e.chenTo === '1');
+  kante.chenFrom = kante.chenTo = 'n';
   const extra = { id: 'x1', type: 'entity', name: 'Rechnung', x: 0, y: 0 };
   state.nodes.push(extra);
   context.AppState = { state };

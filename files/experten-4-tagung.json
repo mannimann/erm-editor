@@ -177,6 +177,14 @@
       "y": 450,
       "name": "Schicht",
       "isPrimaryKey": false
+    },
+    {
+      "id": "s50",
+      "type": "relationship",
+      "x": 340,
+      "y": 220,
+      "name": "moderiert",
+      "isPrimaryKey": false
     }
   ],
   "edges": [
@@ -333,7 +341,23 @@
       "fromId": "s7",
       "toId": "s48",
       "edgeType": "attribute"
+    },
+    {
+      "id": "s51",
+      "fromId": "s50",
+      "toId": "s4",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "1"
+    },
+    {
+      "id": "s52",
+      "fromId": "s50",
+      "toId": "s3",
+      "edgeType": "relationship",
+      "chenFrom": "1",
+      "chenTo": "n"
     }
   ],
-  "nextId": 50
+  "nextId": 53
 }
