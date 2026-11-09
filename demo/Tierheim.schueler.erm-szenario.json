@@ -1,9 +1,0 @@
-{
-  "format": "erm-editor-szenario",
-  "version": 1,
-  "titel": "Tierheim",
-  "text": "Ein Tierheim möchte seine Daten verwalten. Jeder Pfleger hat eine eindeutige Personalnummer, außerdem werden Name und Telefonnummer gespeichert. Jedes Tier hat eine eindeutige Tiernummer, einen Namen und eine Art. Jedes Gehege hat eine eindeutige Gehegenummer, einen Standort und eine Größe.\n\nEin Pfleger betreut mehrere Tiere, und ein Tier wird von mehreren Pflegern betreut. Jedes Tier lebt in genau einem Gehege, in einem Gehege leben mehrere Tiere.",
-  "aufgabe": "erm",
-  "kardinalitaeten": true,
-  "pruefung": true
-}
