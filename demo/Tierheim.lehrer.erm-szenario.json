@@ -1,0 +1,216 @@
+{
+  "format": "erm-editor-szenario",
+  "version": 1,
+  "titel": "Tierheim",
+  "text": "Ein Tierheim möchte seine Daten verwalten. Jeder Pfleger hat eine eindeutige Personalnummer, außerdem werden Name und Telefonnummer gespeichert. Jedes Tier hat eine eindeutige Tiernummer, einen Namen und eine Art. Jedes Gehege hat eine eindeutige Gehegenummer, einen Standort und eine Größe.\n\nEin Pfleger betreut mehrere Tiere, und ein Tier wird von mehreren Pflegern betreut. Jedes Tier lebt in genau einem Gehege, in einem Gehege leben mehrere Tiere.",
+  "aufgabe": "erm",
+  "kardinalitaeten": true,
+  "erm": {
+    "nodes": [
+      {
+        "id": "e0",
+        "type": "entity",
+        "name": "Pfleger",
+        "x": 200,
+        "y": 320,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "a00",
+        "type": "attribute",
+        "name": "Personalnummer",
+        "x": 20,
+        "y": 220,
+        "isPrimaryKey": true
+      },
+      {
+        "id": "a01",
+        "type": "attribute",
+        "name": "Name",
+        "x": 200,
+        "y": 160,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "a02",
+        "type": "attribute",
+        "name": "Telefonnummer",
+        "x": 380,
+        "y": 220,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "e1",
+        "type": "entity",
+        "name": "Tier",
+        "x": 760,
+        "y": 320,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "a10",
+        "type": "attribute",
+        "name": "Tiernummer",
+        "x": 580,
+        "y": 220,
+        "isPrimaryKey": true
+      },
+      {
+        "id": "a11",
+        "type": "attribute",
+        "name": "Name",
+        "x": 760,
+        "y": 160,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "a12",
+        "type": "attribute",
+        "name": "Art",
+        "x": 940,
+        "y": 220,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "e2",
+        "type": "entity",
+        "name": "Gehege",
+        "x": 760,
+        "y": 720,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "a20",
+        "type": "attribute",
+        "name": "Gehegenummer",
+        "x": 580,
+        "y": 820,
+        "isPrimaryKey": true
+      },
+      {
+        "id": "a21",
+        "type": "attribute",
+        "name": "Standort",
+        "x": 760,
+        "y": 880,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "a22",
+        "type": "attribute",
+        "name": "Größe",
+        "x": 940,
+        "y": 820,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "r0",
+        "type": "relationship",
+        "name": "betreut",
+        "x": 480,
+        "y": 320,
+        "isPrimaryKey": false
+      },
+      {
+        "id": "r1",
+        "type": "relationship",
+        "name": "lebt in",
+        "x": 760,
+        "y": 520,
+        "isPrimaryKey": false
+      }
+    ],
+    "edges": [
+      {
+        "id": "k00",
+        "fromId": "e0",
+        "toId": "a00",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k01",
+        "fromId": "e0",
+        "toId": "a01",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k02",
+        "fromId": "e0",
+        "toId": "a02",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k10",
+        "fromId": "e1",
+        "toId": "a10",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k11",
+        "fromId": "e1",
+        "toId": "a11",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k12",
+        "fromId": "e1",
+        "toId": "a12",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k20",
+        "fromId": "e2",
+        "toId": "a20",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k21",
+        "fromId": "e2",
+        "toId": "a21",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "k22",
+        "fromId": "e2",
+        "toId": "a22",
+        "edgeType": "attribute"
+      },
+      {
+        "id": "b0",
+        "fromId": "e0",
+        "toId": "r0",
+        "edgeType": "relationship",
+        "chenFrom": "n",
+        "chenTo": "1"
+      },
+      {
+        "id": "b1",
+        "fromId": "e1",
+        "toId": "r0",
+        "edgeType": "relationship",
+        "chenFrom": "m",
+        "chenTo": "1"
+      },
+      {
+        "id": "b2",
+        "fromId": "e2",
+        "toId": "r1",
+        "edgeType": "relationship",
+        "chenFrom": "1",
+        "chenTo": "1"
+      },
+      {
+        "id": "b3",
+        "fromId": "e1",
+        "toId": "r1",
+        "edgeType": "relationship",
+        "chenFrom": "n",
+        "chenTo": "1"
+      }
+    ],
+    "kardinalitaeten": true,
+    "diagramTitle": "Tierheim",
+    "snapToGrid": true
+  },
+  "pruefung": true
+}
